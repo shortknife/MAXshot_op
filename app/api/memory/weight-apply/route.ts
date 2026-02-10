@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils'
 import { AuditLog } from '../../../../../server-actions/types'
 
 export async function POST(req: Request) {
@@ -8,10 +9,17 @@ export async function POST(req: Request) {
     const memoryId = body?.memory_id as string | undefined
     const sourceExecutionId = body?.source_execution_id as string | undefined
     const operatorId = body?.approved_by as string | undefined
+    const confirmToken = body?.confirm_token as string | undefined
     const approved = body?.approved === true
     const recommendedWeight = body?.recommended_weight
     const reasonCode = body?.reason_code as string | undefined
 
+    
+    try {
+      assertWriteEnabled({ operatorId, confirmToken })
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 })
+    }
     if (!approved) return NextResponse.json({ error: 'approval_required' }, { status: 400 })
     if (!memoryId || !sourceExecutionId || !operatorId) return NextResponse.json({ error: 'missing_fields' }, { status: 400 })
     if (typeof recommendedWeight !== 'number') return NextResponse.json({ error: 'invalid_weight' }, { status: 400 })

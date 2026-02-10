@@ -5,7 +5,7 @@ import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
-import { READ_ONLY_DEMO, demoExecutions } from '@/lib/demo-data'
+import { READ_ONLY_DEMO, WRITE_ENABLED, demoExecutions } from '@/lib/demo-data'
 import { useRouter } from 'next/navigation'
 import { formatDateTime } from '@/lib/utils'
 
@@ -22,6 +22,9 @@ export default function ConfirmationsPage() {
   const [pending, setPending] = useState<PendingExecution[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [operatorId, setOperatorId] = useState('admin')
+  const [confirmToken, setConfirmToken] = useState('')
+  const [writeApproved, setWriteApproved] = useState(false)
 
   useEffect(() => {
     loadPending()
@@ -64,7 +67,7 @@ export default function ConfirmationsPage() {
     const res = await fetch('/api/execution/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ execution_id: executionId, decision: 'confirm', actor_id: 'admin', actor_role: 'admin' }),
+      body: JSON.stringify({ execution_id: executionId, decision: 'confirm', actor_id: operatorId.trim(), actor_role: 'admin', confirm_token: confirmToken.trim() }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -77,7 +80,7 @@ export default function ConfirmationsPage() {
     const res = await fetch('/api/execution/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ execution_id: executionId, decision: 'reject', actor_id: 'admin', actor_role: 'admin' }),
+      body: JSON.stringify({ execution_id: executionId, decision: 'reject', actor_id: operatorId.trim(), actor_role: 'admin', confirm_token: confirmToken.trim() }),
     })
     const data = await res.json()
     if (!res.ok) {
@@ -127,7 +130,38 @@ export default function ConfirmationsPage() {
               </CardContent>
             </Card>
           )}
-          {loading && <p className="text-gray-500">Loading...</p>}
+
+          {!READ_ONLY_DEMO && !WRITE_ENABLED && (
+            <Card className="mb-6 border-red-200 bg-red-50">
+              <CardContent className="pt-6 text-sm text-red-800">
+                Write mode disabled. Set NEXT_PUBLIC_WRITE_ENABLE=true and provide confirm token to enable actions.
+              </CardContent>
+            </Card>
+          )}
+
+          
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-base">Write Confirmation</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm">operator_id</label>
+                  <input className="mt-1 w-full rounded border px-3 py-2 text-sm" value={operatorId} onChange={(e) => setOperatorId(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm">confirm_token</label>
+                  <input className="mt-1 w-full rounded border px-3 py-2 text-sm" value={confirmToken} onChange={(e) => setConfirmToken(e.target.value)} placeholder="WRITE_CONFIRM_TOKEN" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" checked={writeApproved} onChange={(e) => setWriteApproved(e.target.checked)} />
+                <span>I confirm this is an approved write action</span>
+              </div>
+            </CardContent>
+          </Card>
+{loading && <p className="text-gray-500">Loading...</p>}
           {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
 
           {!loading && pending.length === 0 && (
@@ -151,7 +185,7 @@ export default function ConfirmationsPage() {
                     confirmation_request: {JSON.stringify(item.confirmation_request || {})}
                   </div>
                   <div className="flex gap-2 pt-2">
-                    {!READ_ONLY_DEMO && (
+                    {!READ_ONLY_DEMO && WRITE_ENABLED && writeApproved && confirmToken.trim().length > 0 && operatorId.trim().length > 0 && (
                       <>
                         <Button onClick={() => handleConfirm(item.execution_id)}>Confirm</Button>
                         <Button variant="outline" onClick={() => handleReject(item.execution_id)}>Reject</Button>

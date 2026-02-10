@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeRouter } from '../../../../server-actions/router/router-main';
+import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
 
 /**
  * POST /api/execution/run
@@ -8,8 +9,14 @@ import { executeRouter } from '../../../../server-actions/router/router-main';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { execution_id } = body;
+    const { execution_id, operator_id, confirm_token } = body;
 
+    
+    try {
+      assertWriteEnabled({ operatorId: operator_id, confirmToken: confirm_token })
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 });
+    }
     if (!execution_id) {
       return NextResponse.json({ error: 'Missing execution_id' }, { status: 400 });
     }

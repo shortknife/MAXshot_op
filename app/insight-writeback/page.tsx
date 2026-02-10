@@ -5,7 +5,7 @@ import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { READ_ONLY_DEMO, getDemoSnapshotById } from '@/lib/demo-data'
+import { READ_ONLY_DEMO, WRITE_ENABLED, getDemoSnapshotById } from '@/lib/demo-data'
 import { ReadOnlyBanner } from '@/components/read-only-banner'
 import { buildAttribution } from '../../../server-actions/evolution/attribution'
 import { Label } from '@/components/ui/label'
@@ -38,6 +38,7 @@ export default function InsightWritebackPage() {
   const [error, setError] = useState<string | null>(null)
   const [memoryType, setMemoryType] = useState<(typeof MEMORY_TYPES)[number]>('insight')
   const [operatorId, setOperatorId] = useState('')
+  const [confirmToken, setConfirmToken] = useState('')
   const [approved, setApproved] = useState(false)
   const [submitState, setSubmitState] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle')
   const [submitMessage, setSubmitMessage] = useState<string | null>(null)
@@ -83,6 +84,7 @@ export default function InsightWritebackPage() {
           approved,
           recommended_weight: weightRec.recommendation.recommended_weight,
           reason_code: weightRec.recommendation.reason_code,
+          confirm_token: confirmToken.trim(),
         }),
       })
       const data = await res.json()
@@ -162,6 +164,7 @@ export default function InsightWritebackPage() {
           memory_type: memoryType,
           approved_by: operatorId.trim(),
           approved,
+          confirm_token: confirmToken.trim(),
         }),
       })
       const data = await res.json()
@@ -199,6 +202,11 @@ export default function InsightWritebackPage() {
               {READ_ONLY_DEMO && (
                 <p className="text-red-600">Read-only demo mode: write-back disabled.</p>
               )}
+
+              {!READ_ONLY_DEMO && !WRITE_ENABLED && (
+                <p className="text-red-600">Write mode disabled. Set NEXT_PUBLIC_WRITE_ENABLE=true and provide confirm token to enable actions.</p>
+              )}
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <Label>Memory Type</Label>
@@ -214,13 +222,19 @@ export default function InsightWritebackPage() {
                   <Label>Approved By</Label>
                   <Input value={operatorId} onChange={(e) => setOperatorId(e.target.value)} placeholder="operator_id" />
                 </div>
+
+                <div>
+                  <Label>confirm_token</Label>
+                  <Input value={confirmToken} onChange={(e) => setConfirmToken(e.target.value)} placeholder="WRITE_CONFIRM_TOKEN" />
+                </div>
+
               </div>
               <div className="flex items-center gap-2">
                 <input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} />
                 <span>I confirm this write-back is approved</span>
               </div>
               <Button
-                disabled={READ_ONLY_DEMO || !candidate || !approved || operatorId.trim().length === 0 || submitState === 'submitting'}
+                disabled={READ_ONLY_DEMO || !WRITE_ENABLED || !candidate || !approved || operatorId.trim().length === 0 || !confirmToken.trim() || submitState === 'submitting'}
                 onClick={submitWriteback}
               >
                 Approve & Write
@@ -255,7 +269,7 @@ export default function InsightWritebackPage() {
               )}
               {weightRec?.error && <div className="text-red-600">{weightRec.error}</div>}
               <Button
-                disabled={READ_ONLY_DEMO || !weightRec?.recommendation || !approved || operatorId.trim().length === 0 || submitState === 'submitting'}
+                disabled={READ_ONLY_DEMO || !WRITE_ENABLED || !weightRec?.recommendation || !approved || operatorId.trim().length === 0 || !confirmToken.trim() || submitState === 'submitting'}
                 onClick={applyWeightUpdate}
               >
                 Approve Weight Update

@@ -27,6 +27,7 @@ export type DemoExecution = {
 }
 
 export const READ_ONLY_DEMO = process.env.NEXT_PUBLIC_READ_ONLY_DEMO === 'true'
+export const WRITE_ENABLED = process.env.NEXT_PUBLIC_WRITE_ENABLE === 'true'
 
 export const demoExecutions = demoExecutionsRaw as DemoExecution[]
 

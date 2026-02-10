@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
 
 /**
  * POST /api/execution/confirm
@@ -9,8 +10,14 @@ import { supabase } from '@/lib/supabase';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { execution_id, decision, actor_id, actor_role } = body;
+    const { execution_id, decision, actor_id, actor_role, confirm_token } = body;
 
+    
+    try {
+      assertWriteEnabled({ operatorId: actor_id, confirmToken: confirm_token })
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 });
+    }
     if (!execution_id || !decision || !['confirm', 'reject'].includes(decision)) {
       return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
     }

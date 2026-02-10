@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
 import { randomUUID } from 'crypto';
 
 /**
@@ -29,8 +30,16 @@ export async function POST(req: NextRequest) {
       require_confirmation,
       confirmation_request,
       reason_for_pending,
+      operator_id,
+      confirm_token,
     } = body;
 
+    
+    try {
+      assertWriteEnabled({ operatorId: operator_id, confirmToken: confirm_token })
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 });
+    }
     // --- 强力包容性解析 (Resilient Parsing) ---
     // 如果 payload 整体是一个字符串，说明 external-orchestrator (disabled) 传过来的是未解析的 LLM 输出
     if (typeof payload === 'string' || (payload && typeof payload.intent === 'string' && payload.intent.includes('```'))) {

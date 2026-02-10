@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase'
-import { READ_ONLY_DEMO, demoExecutions, getDemoSnapshotById, validateDemoDataset } from '@/lib/demo-data'
+import { READ_ONLY_DEMO, WRITE_ENABLED, demoExecutions, getDemoSnapshotById, validateDemoDataset } from '@/lib/demo-data'
 import { formatDateTime } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 
@@ -32,6 +32,9 @@ export default function OperationsPage() {
   const [error, setError] = useState<string | null>(null)
   const [compareA, setCompareA] = useState('')
   const [compareB, setCompareB] = useState('')
+  const [operatorId, setOperatorId] = useState('admin')
+  const [confirmToken, setConfirmToken] = useState('')
+  const [writeApproved, setWriteApproved] = useState(false)
   const [snapshotA, setSnapshotA] = useState<unknown>(null)
   const [snapshotB, setSnapshotB] = useState<unknown>(null)
   const [demoErrors] = useState<string[]>(READ_ONLY_DEMO ? validateDemoDataset() : [])
@@ -129,7 +132,7 @@ export default function OperationsPage() {
     await fetch('/api/execution/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ execution_id: executionId }),
+      body: JSON.stringify({ execution_id: executionId, operator_id: operatorId.trim(), confirm_token: confirmToken.trim() }),
     })
   }
 
@@ -138,7 +141,7 @@ export default function OperationsPage() {
     await fetch('/api/execution/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ execution_id: executionId, decision: 'confirm', actor_id: 'admin', actor_role: 'admin' }),
+      body: JSON.stringify({ execution_id: executionId, decision: 'confirm', actor_id: operatorId.trim(), actor_role: 'admin', confirm_token: confirmToken.trim() }),
     })
     await loadExecutions()
   }
@@ -148,7 +151,7 @@ export default function OperationsPage() {
     await fetch('/api/execution/confirm', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ execution_id: executionId, decision: 'reject', actor_id: 'admin', actor_role: 'admin' }),
+      body: JSON.stringify({ execution_id: executionId, decision: 'reject', actor_id: operatorId.trim(), actor_role: 'admin', confirm_token: confirmToken.trim() }),
     })
     await loadExecutions()
   }
@@ -162,7 +165,7 @@ export default function OperationsPage() {
     const res = await fetch('/api/execution/snapshot', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ execution_id: executionId }),
+      body: JSON.stringify({ execution_id: executionId, operator_id: operatorId.trim(), confirm_token: confirmToken.trim() }),
     })
     const data = await res.json()
     if (!res.ok) throw new Error(data.error || data.details || 'Snapshot failed')
@@ -203,6 +206,14 @@ export default function OperationsPage() {
               </CardContent>
             </Card>
           )}
+
+          {!READ_ONLY_DEMO && !WRITE_ENABLED && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="pt-6 text-sm text-red-800">
+                Write mode disabled. Set NEXT_PUBLIC_WRITE_ENABLE=true and provide confirm token to enable actions.
+              </CardContent>
+            </Card>
+          )}
           {demoErrors.length > 0 && (
             <Card className="border-red-200 bg-red-50">
               <CardContent className="pt-6 text-sm text-red-700">
@@ -210,6 +221,28 @@ export default function OperationsPage() {
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Write Confirmation</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm">operator_id</label>
+                  <input className="mt-1 w-full rounded border px-3 py-2 text-sm" value={operatorId} onChange={(e) => setOperatorId(e.target.value)} />
+                </div>
+                <div>
+                  <label className="text-sm">confirm_token</label>
+                  <input className="mt-1 w-full rounded border px-3 py-2 text-sm" value={confirmToken} onChange={(e) => setConfirmToken(e.target.value)} placeholder="WRITE_CONFIRM_TOKEN" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" checked={writeApproved} onChange={(e) => setWriteApproved(e.target.checked)} />
+                <span>I confirm this is an approved write action</span>
+              </div>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader>
               <CardTitle>Execution Queue</CardTitle>
@@ -284,13 +317,13 @@ export default function OperationsPage() {
                               <Button variant="outline" onClick={() => router.push(`/outcome?exec_id=${row.execution_id}`)}>Outcome</Button>
                               <Button variant="outline" onClick={() => router.push(`/insight-review?exec_id=${row.execution_id}`)}>Insight Review</Button>
                               <Button variant="outline" onClick={() => router.push(`/insight-candidate?exec_id=${row.execution_id}`)}>Insight Candidate</Button>
-                              {!READ_ONLY_DEMO && row.status === 'pending_confirmation' && (
+                              {!READ_ONLY_DEMO && WRITE_ENABLED && writeApproved && confirmToken.trim().length > 0 && operatorId.trim().length > 0 && row.status === 'pending_confirmation' && (
                                 <>
                                   <Button onClick={() => confirmExecution(row.execution_id)}>Confirm</Button>
                                   <Button variant="outline" onClick={() => rejectExecution(row.execution_id)}>Reject</Button>
                                 </>
                               )}
-                              {!READ_ONLY_DEMO && row.status === 'confirmed' && (
+                              {!READ_ONLY_DEMO && WRITE_ENABLED && writeApproved && confirmToken.trim().length > 0 && operatorId.trim().length > 0 && row.status === 'confirmed' && (
                                 <Button onClick={() => runExecution(row.execution_id)}>Run</Button>
                               )}
                             </div>

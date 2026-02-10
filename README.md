@@ -34,6 +34,28 @@ npm run dev
 
 访问 [http://localhost:3000](http://localhost:3000)
 
+
+## 运行模式（严格读写控制）
+
+**v0.2-write-enabled：** 已支持受控写入路径，所有写入意图（含阻断）均产生 `write_blocked` 审计事件。
+
+- **默认：严格 read-only**（不写入数据 / 不触发 Execution / 无自动反馈）
+- **写入模式：必须显式开启 + 人工确认**
+
+### Read-only 启动（默认）
+```bash
+NEXT_PUBLIC_READ_ONLY_DEMO=true NEXT_PUBLIC_WRITE_ENABLE=false NEXT_TELEMETRY_DISABLED=1 PORT=3003 npm run dev
+```
+
+### 写入模式启动（仅在人工审批场景）
+- **write_blocked 已实现**：任意写入被阻断（read-only / token / operator_id）都会记录审计事件
+> 仍需 UI 内输入 `confirm_token` + 勾选确认，才允许写入。
+
+```bash
+NEXT_PUBLIC_READ_ONLY_DEMO=false NEXT_PUBLIC_WRITE_ENABLE=true WRITE_CONFIRM_TOKEN=your-confirm-token NEXT_TELEMETRY_DISABLED=1 PORT=3003 npm run dev
+```
+
+
 ## 📋 功能模块
 
 ### 1. 登录页 (`/login`)

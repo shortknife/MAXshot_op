@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils'
 import { buildMemoryInsert, buildWritebackEvents, isValidMemoryType } from '../../../../../server-actions/memory/writeback'
 import { AuditLog } from '../../../../../server-actions/types'
 
@@ -10,8 +11,15 @@ export async function POST(req: Request) {
     const candidate = body?.candidate
     const memoryType = body?.memory_type as string | undefined
     const approvedBy = body?.approved_by as string | undefined
+    const confirmToken = body?.confirm_token as string | undefined
     const approved = body?.approved === true
 
+    
+    try {
+      assertWriteEnabled({ operatorId: approvedBy, confirmToken })
+    } catch (e) {
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 })
+    }
     if (!approved) {
       return NextResponse.json({ error: 'approval_required' }, { status: 400 })
     }

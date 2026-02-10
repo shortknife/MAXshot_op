@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useRouter } from 'next/navigation'
-import { READ_ONLY_DEMO } from '@/lib/demo-data'
+import { READ_ONLY_DEMO, WRITE_ENABLED } from '@/lib/demo-data'
 
 export default function OpsRequestPage() {
   const router = useRouter()
@@ -21,6 +21,9 @@ export default function OpsRequestPage() {
   const [status, setStatus] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [operatorId, setOperatorId] = useState('admin')
+  const [confirmToken, setConfirmToken] = useState('')
+  const [writeApproved, setWriteApproved] = useState(false)
 
   const analyzeRawQuery = async () => {
     if (READ_ONLY_DEMO) return
@@ -89,6 +92,8 @@ export default function OpsRequestPage() {
           require_confirmation: true,
           confirmation_request: gate.confirmation_request || { reason: 'human_approval_required', message: 'Requires human confirmation' },
           reason_for_pending: gate.reason_for_pending || 'human_approval_required',
+          operator_id: operatorId.trim(),
+          confirm_token: confirmToken.trim(),
         }),
       })
       const created = await createRes.json()
@@ -126,6 +131,15 @@ export default function OpsRequestPage() {
               </CardContent>
             </Card>
           )}
+
+          {!READ_ONLY_DEMO && !WRITE_ENABLED && (
+            <Card className="border-red-200 bg-red-50">
+              <CardContent className="pt-6 text-sm text-red-800">
+                Write mode disabled. Set NEXT_PUBLIC_WRITE_ENABLE=true and provide confirm token to create entries.
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle>Create Ops Execution</CardTitle>
@@ -165,7 +179,22 @@ export default function OpsRequestPage() {
                 </div>
               </div>
 
-              <Button onClick={submitRequest} disabled={READ_ONLY_DEMO || loading}>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>operator_id</Label>
+                  <Input value={operatorId} onChange={(e) => setOperatorId(e.target.value)} disabled={READ_ONLY_DEMO} />
+                </div>
+                <div>
+                  <Label>confirm_token</Label>
+                  <Input value={confirmToken} onChange={(e) => setConfirmToken(e.target.value)} placeholder="WRITE_CONFIRM_TOKEN" disabled={READ_ONLY_DEMO} />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" checked={writeApproved} onChange={(e) => setWriteApproved(e.target.checked)} />
+                <span>I confirm this is an approved write action</span>
+              </div>
+              <Button onClick={submitRequest} disabled={READ_ONLY_DEMO || !WRITE_ENABLED || !writeApproved || !confirmToken.trim() || loading}>
                 Create Execution
               </Button>
 
