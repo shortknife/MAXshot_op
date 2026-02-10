@@ -1,0 +1,665 @@
+[
+  {
+    "execution_id": "exec_demo_001",
+    "task_id": "task_demo_001",
+    "entry_type": "raw_query",
+    "requester_id": "admin",
+    "intent_name": "ops_query",
+    "payload": {
+      "raw_query": "What is the APY of the USDC vault?",
+      "intent": {
+        "type": "ops_query",
+        "extracted_slots": {
+          "metric": "apy",
+          "asset": "USDC"
+        },
+        "confidence": 0.84
+      },
+      "slots": {
+        "metric": "apy",
+        "asset": "USDC"
+      },
+      "user_id": "admin",
+      "context": {
+        "source": "demo"
+      }
+    },
+    "reason_for_pending": null,
+    "confirmation_request": null,
+    "confirmation_result": null,
+    "status": "completed",
+    "audit_log": {
+      "execution_id": "exec_demo_001",
+      "created_at": "2026-02-07T09:00:00.000Z",
+      "events": [
+        {
+          "timestamp": "2026-02-07T09:00:01.000Z",
+          "event_type": "entry_created",
+          "data": {
+            "execution_id": "exec_demo_001",
+            "status": "created",
+            "entry_type": "raw_query",
+            "entry_channel": "admin_os",
+            "requester_id": "admin",
+            "intent_name": "ops_query",
+            "reason": null,
+            "idempotency_key": "demo-ops-001"
+          }
+        },
+        {
+          "timestamp": "2026-02-07T09:00:02.000Z",
+          "event_type": "router_preflight",
+          "data": {
+            "execution_id": "exec_demo_001",
+            "status": "confirmed"
+          }
+        },
+        {
+          "timestamp": "2026-02-07T09:00:03.000Z",
+          "event_type": "router_start",
+          "data": {
+            "execution_id": "exec_demo_001",
+            "status": "in_progress"
+          }
+        },
+        {
+          "timestamp": "2026-02-07T09:00:04.000Z",
+          "event_type": "capability_executed",
+          "data": {
+            "execution_id": "exec_demo_001",
+            "capability_id": "capability.data_fact_query",
+            "status": "completed",
+            "used_skills": [
+              "data_fact_query"
+            ],
+            "evidence": {
+              "sources": [
+                "tables: vault_metrics"
+              ],
+              "fallback_reason": null
+            }
+          }
+        },
+        {
+          "timestamp": "2026-02-07T09:00:05.000Z",
+          "event_type": "capability_executed",
+          "data": {
+            "execution_id": "exec_demo_001",
+            "capability_id": "capability.product_doc_qna",
+            "status": "completed",
+            "used_skills": [
+              "product_doc_qna"
+            ],
+            "evidence": {
+              "sources": [
+                "docs: USDC Vault FAQ"
+              ],
+              "fallback_reason": null
+            }
+          }
+        },
+        {
+          "timestamp": "2026-02-07T09:00:06.000Z",
+          "event_type": "router_complete",
+          "data": {
+            "execution_id": "exec_demo_001",
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    "idempotency_key": "demo-ops-001",
+    "result": {
+      "final_answer": "USDC vault APY is 4.2% (as of 2026-02-07).",
+      "capability_outputs": [
+        {
+          "capability_id": "capability.data_fact_query",
+          "status": "completed",
+          "evidence": {
+            "sources": [
+              "tables: vault_metrics"
+            ],
+            "fallback_reason": null
+          },
+          "audit": {
+            "capability_id": "capability.data_fact_query",
+            "status": "completed",
+            "used_skills": [
+              "data_fact_query"
+            ]
+          }
+        },
+        {
+          "capability_id": "capability.product_doc_qna",
+          "status": "completed",
+          "evidence": {
+            "sources": [
+              "docs: USDC Vault FAQ"
+            ],
+            "fallback_reason": null
+          },
+          "audit": {
+            "capability_id": "capability.product_doc_qna",
+            "status": "completed",
+            "used_skills": [
+              "product_doc_qna"
+            ]
+          }
+        }
+      ]
+    },
+    "created_at": "2026-02-07T09:00:00.000Z",
+    "updated_at": "2026-02-07T09:00:06.000Z"
+  },
+  {
+    "execution_id": "exec_demo_002",
+    "task_id": "task_demo_002",
+    "entry_type": "structured",
+    "requester_id": "admin",
+    "intent_name": "marketing_copy",
+    "payload": {
+      "raw_query": "Generate a launch tweet",
+      "intent": {
+        "type": "marketing_copy",
+        "extracted_slots": {
+          "platform": "x",
+          "tone": "professional",
+          "topic": "new USDC vault"
+        },
+        "confidence": 0.72
+      },
+      "slots": {
+        "platform": "x",
+        "tone": "professional",
+        "topic": "new USDC vault"
+      },
+      "user_id": "admin",
+      "context": {
+        "source": "demo"
+      }
+    },
+    "reason_for_pending": null,
+    "confirmation_request": null,
+    "confirmation_result": null,
+    "status": "completed",
+    "audit_log": {
+      "execution_id": "exec_demo_002",
+      "created_at": "2026-02-07T10:00:00.000Z",
+      "events": [
+        {
+          "timestamp": "2026-02-07T10:00:01.000Z",
+          "event_type": "entry_created",
+          "data": {
+            "execution_id": "exec_demo_002",
+            "status": "created",
+            "entry_type": "structured",
+            "entry_channel": "admin_os",
+            "requester_id": "admin",
+            "intent_name": "marketing_copy",
+            "reason": null,
+            "idempotency_key": "demo-mkt-001"
+          }
+        },
+        {
+          "timestamp": "2026-02-07T10:00:02.000Z",
+          "event_type": "router_preflight",
+          "data": {
+            "execution_id": "exec_demo_002",
+            "status": "confirmed"
+          }
+        },
+        {
+          "timestamp": "2026-02-07T10:00:03.000Z",
+          "event_type": "router_start",
+          "data": {
+            "execution_id": "exec_demo_002",
+            "status": "in_progress"
+          }
+        },
+        {
+          "timestamp": "2026-02-07T10:00:04.000Z",
+          "event_type": "capability_executed",
+          "data": {
+            "execution_id": "exec_demo_002",
+            "capability_id": "capability.content_generator",
+            "status": "completed",
+            "used_skills": [
+              "content_generator"
+            ],
+            "evidence": {
+              "sources": [],
+              "fallback_reason": "missing_template"
+            }
+          }
+        },
+        {
+          "timestamp": "2026-02-07T10:00:05.000Z",
+          "event_type": "capability_fallback",
+          "data": {
+            "execution_id": "exec_demo_002",
+            "capability_id": "capability.content_generator",
+            "reason": "missing_template"
+          }
+        },
+        {
+          "timestamp": "2026-02-07T10:00:06.000Z",
+          "event_type": "router_complete",
+          "data": {
+            "execution_id": "exec_demo_002",
+            "status": "completed"
+          }
+        }
+      ]
+    },
+    "idempotency_key": "demo-mkt-001",
+    "result": {
+      "final_answer": "Launching the new USDC vault: steady yield, clear terms, and instant access.",
+      "capability_outputs": [
+        {
+          "capability_id": "capability.content_generator",
+          "status": "completed",
+          "evidence": {
+            "sources": [],
+            "fallback_reason": "missing_template"
+          },
+          "audit": {
+            "capability_id": "capability.content_generator",
+            "status": "completed",
+            "used_skills": [
+              "content_generator"
+            ]
+          }
+        }
+      ]
+    },
+    "created_at": "2026-02-07T10:00:00.000Z",
+    "updated_at": "2026-02-07T10:00:06.000Z"
+  },
+  {
+    "execution_id": "exec_demo_003",
+    "task_id": "task_demo_003",
+    "entry_type": "raw_query",
+    "requester_id": "admin",
+    "intent_name": "ops_query",
+    "payload": {
+      "raw_query": "What is the max withdraw limit today?",
+      "intent": {
+        "type": "ops_query",
+        "extracted_slots": {
+          "metric": "withdraw_limit"
+        },
+        "confidence": 0.61
+      },
+      "slots": {
+        "metric": "withdraw_limit"
+      },
+      "user_id": "admin",
+      "context": {
+        "source": "demo"
+      }
+    },
+    "reason_for_pending": "side_effect",
+    "confirmation_request": {
+      "reason": "side_effect",
+      "message": "Requires confirmation"
+    },
+    "confirmation_result": {
+      "decision": "reject",
+      "actor_id": "admin",
+      "actor_role": "admin"
+    },
+    "status": "rejected",
+    "audit_log": {
+      "execution_id": "exec_demo_003",
+      "created_at": "2026-02-07T11:00:00.000Z",
+      "events": [
+        {
+          "timestamp": "2026-02-07T11:00:01.000Z",
+          "event_type": "entry_created",
+          "data": {
+            "execution_id": "exec_demo_003",
+            "status": "pending_confirmation",
+            "entry_type": "raw_query",
+            "entry_channel": "admin_os",
+            "requester_id": "admin",
+            "intent_name": "ops_query",
+            "reason": "side_effect",
+            "idempotency_key": "demo-ops-003"
+          }
+        },
+        {
+          "timestamp": "2026-02-07T11:00:02.000Z",
+          "event_type": "execution_rejected",
+          "data": {
+            "execution_id": "exec_demo_003",
+            "status": "rejected",
+            "actor_id": "admin",
+            "actor_role": "admin"
+          }
+        }
+      ]
+    },
+    "idempotency_key": "demo-ops-003",
+    "result": {
+      "final_answer": null,
+      "capability_outputs": []
+    },
+    "created_at": "2026-02-07T11:00:00.000Z",
+    "updated_at": "2026-02-07T11:00:02.000Z"
+  },
+  {
+    "execution_id": "exec_demo_004",
+    "task_id": "task_demo_004",
+    "entry_type": "structured",
+    "requester_id": "admin",
+    "intent_name": "marketing_copy",
+    "payload": {
+      "raw_query": "Create campaign brief for new yield product",
+      "intent": {
+        "type": "marketing_copy",
+        "extracted_slots": {
+          "topic": "yield product",
+          "platform": "newsletter",
+          "tone": "neutral"
+        },
+        "confidence": 0.78
+      },
+      "slots": {
+        "topic": "yield product",
+        "platform": "newsletter",
+        "tone": "neutral"
+      },
+      "user_id": "admin",
+      "context": {
+        "source": "demo"
+      }
+    },
+    "reason_for_pending": null,
+    "confirmation_request": null,
+    "confirmation_result": null,
+    "status": "completed",
+    "audit_log": {
+      "execution_id": "exec_demo_004",
+      "created_at": "2026-02-08T09:00:00.000Z",
+      "events": [
+        {
+          "timestamp": "2026-02-08T09:00:01.000Z",
+          "event_type": "entry_created",
+          "data": {
+            "execution_id": "exec_demo_004",
+            "status": "created",
+            "entry_type": "structured",
+            "entry_channel": "admin_os",
+            "requester_id": "admin",
+            "intent_name": "marketing_copy",
+            "reason": null,
+            "idempotency_key": "demo-mkt-004"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T09:00:02.000Z",
+          "event_type": "router_preflight",
+          "data": {
+            "execution_id": "exec_demo_004",
+            "status": "confirmed"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T09:00:03.000Z",
+          "event_type": "router_start",
+          "data": {
+            "execution_id": "exec_demo_004",
+            "status": "in_progress"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T09:00:04.000Z",
+          "event_type": "capability_executed",
+          "data": {
+            "execution_id": "exec_demo_004",
+            "capability_id": "capability.content_generator",
+            "status": "completed",
+            "used_skills": [
+              "content_generator"
+            ],
+            "evidence": {
+              "sources": [
+                "slots: topic/platform/tone"
+              ],
+              "fallback_reason": null
+            }
+          }
+        },
+        {
+          "timestamp": "2026-02-08T09:00:05.000Z",
+          "event_type": "router_complete",
+          "data": {
+            "execution_id": "exec_demo_004",
+            "status": "completed"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T09:00:06.000Z",
+          "event_type": "attribution_generated",
+          "data": {
+            "execution_id": "exec_demo_004"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T09:00:06.500Z",
+          "event_type": "recommendation_generated",
+          "data": {
+            "execution_id": "exec_demo_004"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T09:00:07.000Z",
+          "event_type": "memory_writeback_requested",
+          "data": {
+            "execution_id": "exec_demo_004",
+            "memory_type": "insight",
+            "operator_id": "admin"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T09:00:07.100Z",
+          "event_type": "memory_writeback_approved",
+          "data": {
+            "execution_id": "exec_demo_004",
+            "memory_type": "insight",
+            "operator_id": "admin"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T09:00:07.200Z",
+          "event_type": "memory_writeback_written",
+          "data": {
+            "execution_id": "exec_demo_004",
+            "memory_type": "insight",
+            "operator_id": "admin"
+          }
+        }
+      ]
+    },
+    "idempotency_key": "demo-mkt-004",
+    "result": {
+      "final_answer": "Draft campaign brief created.",
+      "capability_outputs": [
+        {
+          "capability_id": "capability.content_generator",
+          "status": "completed",
+          "evidence": {
+            "sources": [
+              "slots: topic/platform/tone"
+            ],
+            "fallback_reason": null
+          },
+          "audit": {
+            "capability_id": "capability.content_generator",
+            "status": "completed",
+            "used_skills": [
+              "content_generator"
+            ]
+          }
+        }
+      ]
+    },
+    "created_at": "2026-02-08T09:00:00.000Z",
+    "updated_at": "2026-02-08T09:00:07.200Z"
+  },
+  {
+    "execution_id": "exec_demo_005",
+    "task_id": "task_demo_005",
+    "entry_type": "structured",
+    "requester_id": "admin",
+    "intent_name": "ops_query",
+    "payload": {
+      "raw_query": "Check BTC price",
+      "intent": {
+        "type": "ops_query",
+        "extracted_slots": {
+          "metric": "external_ops_price",
+          "asset_id": "bitcoin",
+          "vs_currency": "usd"
+        },
+        "confidence": 0.8
+      },
+      "slots": {
+        "metric": "external_ops_price",
+        "asset_id": "bitcoin",
+        "vs_currency": "usd"
+      },
+      "user_id": "admin",
+      "context": {
+        "source": "demo"
+      }
+    },
+    "reason_for_pending": null,
+    "confirmation_request": null,
+    "confirmation_result": null,
+    "status": "completed",
+    "audit_log": {
+      "execution_id": "exec_demo_005",
+      "created_at": "2026-02-08T10:00:00.000Z",
+      "events": [
+        {
+          "timestamp": "2026-02-08T10:00:01.000Z",
+          "event_type": "entry_created",
+          "data": {
+            "execution_id": "exec_demo_005",
+            "status": "created",
+            "entry_type": "structured",
+            "entry_channel": "admin_os",
+            "requester_id": "admin",
+            "intent_name": "ops_query",
+            "reason": null,
+            "idempotency_key": "demo-ops-005"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T10:00:02.000Z",
+          "event_type": "router_preflight",
+          "data": {
+            "execution_id": "exec_demo_005",
+            "status": "confirmed"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T10:00:03.000Z",
+          "event_type": "router_start",
+          "data": {
+            "execution_id": "exec_demo_005",
+            "status": "in_progress"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T10:00:04.000Z",
+          "event_type": "capability_executed",
+          "data": {
+            "execution_id": "exec_demo_005",
+            "capability_id": "capability.data_fact_query",
+            "status": "completed",
+            "used_skills": [
+              "data_fact_query"
+            ],
+            "evidence": {
+              "sources": [
+                "external_api: coingecko"
+              ],
+              "fallback_reason": null
+            }
+          }
+        },
+        {
+          "timestamp": "2026-02-08T10:00:05.000Z",
+          "event_type": "router_complete",
+          "data": {
+            "execution_id": "exec_demo_005",
+            "status": "completed"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T10:00:06.000Z",
+          "event_type": "memory_weight_adjustment_requested",
+          "data": {
+            "execution_id": "exec_demo_005",
+            "memory_id": "mem-demo-001",
+            "previous_weight": 0.5,
+            "new_weight": 0.6,
+            "operator_id": "admin",
+            "reason_code": "high_confidence_verified"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T10:00:06.200Z",
+          "event_type": "memory_weight_adjustment_approved",
+          "data": {
+            "execution_id": "exec_demo_005",
+            "memory_id": "mem-demo-001",
+            "previous_weight": 0.5,
+            "new_weight": 0.6,
+            "operator_id": "admin",
+            "reason_code": "high_confidence_verified"
+          }
+        },
+        {
+          "timestamp": "2026-02-08T10:00:06.400Z",
+          "event_type": "memory_weight_adjustment_applied",
+          "data": {
+            "execution_id": "exec_demo_005",
+            "memory_id": "mem-demo-001",
+            "previous_weight": 0.5,
+            "new_weight": 0.6,
+            "operator_id": "admin",
+            "reason_code": "high_confidence_verified"
+          }
+        }
+      ]
+    },
+    "idempotency_key": "demo-ops-005",
+    "result": {
+      "final_answer": "BTC price fetched from external source.",
+      "capability_outputs": [
+        {
+          "capability_id": "capability.data_fact_query",
+          "status": "completed",
+          "evidence": {
+            "sources": [
+              "external_api: coingecko"
+            ],
+            "fallback_reason": null
+          },
+          "audit": {
+            "capability_id": "capability.data_fact_query",
+            "status": "completed",
+            "used_skills": [
+              "data_fact_query"
+            ]
+          }
+        }
+      ]
+    },
+    "created_at": "2026-02-08T10:00:00.000Z",
+    "updated_at": "2026-02-08T10:00:06.400Z"
+  }
+]

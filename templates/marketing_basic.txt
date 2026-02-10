@@ -1,0 +1,1 @@
+[MARKETING/{{platform}}] {{topic}} — tone: {{tone}}. include_data={{include_data}}
