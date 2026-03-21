@@ -1,22 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-
-type AuditEvent = { timestamp?: string; event_type?: string; data?: Record<string, unknown> };
-
-function extractAuditEvents(auditLog: unknown): AuditEvent[] {
-  if (!auditLog || typeof auditLog !== 'object') return [];
-  const events = (auditLog as { events?: unknown }).events;
-  if (!Array.isArray(events)) return [];
-  return events.filter((e): e is AuditEvent => typeof e === 'object' && e !== null);
-}
-
-function sortByTimestamp(events: AuditEvent[]) {
-  return events.slice().sort((a, b) => {
-    const ta = Date.parse(a.timestamp || '') || 0;
-    const tb = Date.parse(b.timestamp || '') || 0;
-    return ta - tb;
-  });
-}
+import { extractNormalizedAuditEvents, sortAuditEventsByTimestamp } from '@/lib/router/audit-read';
 
 export async function GET(req: NextRequest) {
   try {
@@ -39,7 +23,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Execution not found', execution_id: executionId }, { status: 404 });
     }
 
-    const events = sortByTimestamp(extractAuditEvents(execution.audit_log));
+    const events = sortAuditEventsByTimestamp(extractNormalizedAuditEvents(execution.audit_log, executionId));
 
     return NextResponse.json({
       execution_id: executionId,
@@ -47,6 +31,7 @@ export async function GET(req: NextRequest) {
       timeline: events.map(e => ({
         timestamp: e.timestamp || null,
         event_type: e.event_type || null,
+        event_type_canonical: (e as { event_type_canonical?: string }).event_type_canonical || null,
         data: e.data || {},
       })),
     });

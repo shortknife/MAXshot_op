@@ -23,7 +23,7 @@ export default function LoginPage() {
       const result = await login(email)
       
       if (result.success) {
-        router.push('/dashboard')
+        router.push('/chat')
       } else {
         setError(result.error || 'Login failed')
       }

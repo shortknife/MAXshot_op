@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -22,11 +22,7 @@ export default function DigestPage() {
   const [error, setError] = useState<string | null>(null)
   const [windowSize, setWindowSize] = useState<'50' | '200' | '500'>('200')
 
-  useEffect(() => {
-    loadExecutions()
-  }, [windowSize])
-
-  const loadExecutions = async () => {
+  const loadExecutions = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -43,7 +39,11 @@ export default function DigestPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [windowSize])
+
+  useEffect(() => {
+    loadExecutions()
+  }, [loadExecutions])
 
   const stats = useMemo(() => {
     const total = rows.length

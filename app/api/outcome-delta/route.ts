@@ -3,6 +3,8 @@ import { supabase } from '@/lib/supabase';
 
 type AuditEvent = { timestamp?: string; event_type?: string; data?: Record<string, unknown> };
 
+type Delta = { path: string; before: unknown; after: unknown };
+
 function extractAuditEvents(auditLog: unknown): AuditEvent[] {
   if (!auditLog || typeof auditLog !== 'object') return [];
   const events = (auditLog as { events?: unknown }).events;
@@ -11,36 +13,53 @@ function extractAuditEvents(auditLog: unknown): AuditEvent[] {
 }
 
 function findSourceExecutionId(events: AuditEvent[]): string | null {
-  const retryEvent = events.find(e => e.event_type === 'execution_retry_created');
+  const retryEvent = events.find((e) => e.event_type === 'execution_retry_created');
   const source = retryEvent?.data?.source_execution_id;
   return typeof source === 'string' && source ? source : null;
 }
 
-function diffJson(a: unknown, b: unknown, path = '', acc: Array<Record<string, unknown>> = [], limit = 50) {
-  if (acc.length >= limit) return acc;
-  if (a === b) return acc;
+function diffJson(a: unknown, b: unknown, limit = 50) {
+  const deltas: Delta[] = [];
+  let truncated = false;
 
-  const aType = typeof a;
-  const bType = typeof b;
-  if (a == null || b == null || aType !== 'object' || bType !== 'object') {
-    acc.push({ path, before: a ?? null, after: b ?? null });
-    return acc;
-  }
+  const walk = (left: unknown, right: unknown, path = '') => {
+    if (deltas.length >= limit) {
+      truncated = true;
+      return;
+    }
+    if (left === right) return;
 
-  const aObj = a as Record<string, unknown>;
-  const bObj = b as Record<string, unknown>;
-  const keys = new Set([...Object.keys(aObj), ...Object.keys(bObj)]);
-  for (const key of keys) {
-    if (acc.length >= limit) break;
-    diffJson(aObj[key], bObj[key], path ? `${path}.${key}` : key, acc, limit);
-  }
-  return acc;
+    const leftType = typeof left;
+    const rightType = typeof right;
+    if (left == null || right == null || leftType !== 'object' || rightType !== 'object') {
+      deltas.push({ path, before: left ?? null, after: right ?? null });
+      return;
+    }
+
+    const leftObj = left as Record<string, unknown>;
+    const rightObj = right as Record<string, unknown>;
+    const keys = new Set([...Object.keys(leftObj), ...Object.keys(rightObj)]);
+    for (const key of keys) {
+      if (deltas.length >= limit) {
+        truncated = true;
+        break;
+      }
+      walk(leftObj[key], rightObj[key], path ? `${path}.${key}` : key);
+    }
+  };
+
+  walk(a, b);
+  return { deltas, truncated };
 }
 
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const executionId = searchParams.get('execution_id');
+    const counterpartParam = searchParams.get('counterpart_execution_id');
+    const limitParam = searchParams.get('limit');
+    const limit = Math.min(Math.max(Number(limitParam || 50) || 50, 1), 200);
+
     if (!executionId) {
       return NextResponse.json({ error: 'Missing execution_id' }, { status: 400 });
     }
@@ -58,20 +77,34 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Execution not found', execution_id: executionId }, { status: 404 });
     }
 
-    const events = extractAuditEvents(execution.audit_log);
-    let parentId = findSourceExecutionId(events);
-    let direction: 'parent_to_child' | 'child_to_parent' | 'none' = 'none';
+    let direction: 'parent_to_child' | 'child_to_parent' | 'explicit' | 'none' = 'none';
     let counterpart: { execution_id: string; result: unknown } | null = null;
 
-    if (parentId) {
-      const { data: parent } = await supabase
+    if (counterpartParam) {
+      const { data: other } = await supabase
         .from('task_executions_op')
         .select('execution_id, result')
-        .eq('execution_id', parentId)
+        .eq('execution_id', counterpartParam)
         .maybeSingle();
-      if (parent) {
-        counterpart = parent;
-        direction = 'parent_to_child';
+      if (other) {
+        counterpart = other;
+        direction = 'explicit';
+      }
+    }
+
+    if (!counterpart) {
+      const events = extractAuditEvents(execution.audit_log);
+      const parentId = findSourceExecutionId(events);
+      if (parentId) {
+        const { data: parent } = await supabase
+          .from('task_executions_op')
+          .select('execution_id, result')
+          .eq('execution_id', parentId)
+          .maybeSingle();
+        if (parent) {
+          counterpart = parent;
+          direction = 'parent_to_child';
+        }
       }
     }
 
@@ -81,9 +114,9 @@ export async function GET(req: NextRequest) {
         .select('execution_id, result, audit_log, created_at')
         .order('created_at', { ascending: true })
         .limit(200);
-      const children = (recent || []).filter(row => {
+      const children = (recent || []).filter((row) => {
         const evs = extractAuditEvents(row.audit_log);
-        return evs.some(e => e.event_type === 'execution_retry_created' && e.data?.source_execution_id === executionId);
+        return evs.some((e) => e.event_type === 'execution_retry_created' && e.data?.source_execution_id === executionId);
       });
       if (children.length > 0) {
         counterpart = { execution_id: children[0].execution_id, result: children[0].result };
@@ -102,14 +135,16 @@ export async function GET(req: NextRequest) {
 
     const before = direction === 'parent_to_child' ? counterpart.result : execution.result;
     const after = direction === 'parent_to_child' ? execution.result : counterpart.result;
-    const deltas = diffJson(before, after);
+    const { deltas, truncated } = diffJson(before, after, limit);
 
     return NextResponse.json({
       execution_id: executionId,
       counterpart_execution_id: counterpart.execution_id,
       direction,
       deltas,
-      triggered_by: 'execution_retry_created',
+      truncated,
+      limit,
+      triggered_by: direction === 'explicit' ? 'manual_compare' : 'execution_retry_created',
     });
   } catch (error: unknown) {
     return NextResponse.json(

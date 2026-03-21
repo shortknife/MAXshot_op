@@ -1,22 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { extractNormalizedAuditEvents } from '@/lib/router/audit-read';
 
-type AuditEvent = { timestamp?: string; event_type?: string; data?: Record<string, unknown> };
-
-function extractAuditEvents(auditLog: unknown): AuditEvent[] {
-  if (!auditLog || typeof auditLog !== 'object') return [];
-  const events = (auditLog as { events?: unknown }).events;
-  if (!Array.isArray(events)) return [];
-  return events.filter((e): e is AuditEvent => typeof e === 'object' && e !== null);
-}
-
-function findSourceExecutionId(events: AuditEvent[]): string | null {
+function findSourceExecutionId(events: Array<{ event_type?: string; data?: Record<string, unknown> }>): string | null {
   const retryEvent = events.find(e => e.event_type === 'execution_retry_created');
   const source = retryEvent?.data?.source_execution_id;
   return typeof source === 'string' && source ? source : null;
 }
 
-function buildReplayNodes(executionId: string, events: AuditEvent[]) {
+function buildReplayNodes(executionId: string, events: Array<{ event_type?: string; timestamp?: string }>) {
   const replayEvents = events.filter(e => e.event_type === 'execution_replay_requested');
   return replayEvents.map(e => {
     const ts = e.timestamp || '';
@@ -50,7 +42,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Execution not found', execution_id: executionId }, { status: 404 });
     }
 
-    const events = extractAuditEvents(target.audit_log);
+    const events = extractNormalizedAuditEvents(target.audit_log, executionId);
     const sourceExecutionId = findSourceExecutionId(events);
 
     const nodes: Array<Record<string, unknown>> = [
@@ -96,7 +88,7 @@ export async function GET(req: NextRequest) {
     }
 
     const children = (recent || []).filter(row => {
-      const evs = extractAuditEvents(row.audit_log);
+      const evs = extractNormalizedAuditEvents(row.audit_log, row.execution_id);
       return evs.some(e => e.event_type === 'execution_retry_created' && e.data?.source_execution_id === executionId);
     });
 

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils'
-import { buildMemoryInsert, buildWritebackEvents, isValidMemoryType } from '../../../../../server-actions/memory/writeback'
-import { AuditLog } from '../../../../../server-actions/types'
+import { buildMemoryInsert, buildWritebackEvents, isValidMemoryType } from '@/lib/memory/writeback'
+import { AuditLog } from '@/lib/types'
+import { buildAuditEvent } from '@/lib/router/audit-event'
 
 export async function POST(req: Request) {
   try {
@@ -18,6 +19,27 @@ export async function POST(req: Request) {
     try {
       assertWriteEnabled({ operatorId: approvedBy, confirmToken })
     } catch (e) {
+      if (sourceExecutionId) {
+        const blocked = buildWriteBlockedEvent({
+          reason: e instanceof Error ? e.message : 'write_blocked',
+          operatorId: approvedBy,
+          requestPath: '/api/memory/writeback',
+        })
+        const { data: existing } = await supabase
+          .from('task_executions_op')
+          .select('audit_log')
+          .eq('execution_id', sourceExecutionId)
+          .maybeSingle()
+        const existingLog = (existing?.audit_log as AuditLog | undefined) || {
+          execution_id: sourceExecutionId,
+          events: [],
+          created_at: new Date().toISOString(),
+        }
+        await supabase
+          .from('task_executions_op')
+          .update({ audit_log: { ...existingLog, events: [...(existingLog.events || []), blocked] } })
+          .eq('execution_id', sourceExecutionId)
+      }
       return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 })
     }
     if (!approved) {
@@ -74,7 +96,13 @@ export async function POST(req: Request) {
       execution_id: sourceExecutionId,
       memory_type: memoryType,
       operator_id: approvedBy,
-    })
+    }).map((event) =>
+      buildAuditEvent(sourceExecutionId, {
+        timestamp: event.timestamp,
+        event_type: String(event.event_type || ''),
+        data: event.data || {},
+      })
+    )
 
     const auditLog: AuditLog = {
       execution_id: sourceExecutionId,
@@ -96,7 +124,7 @@ export async function POST(req: Request) {
       memory_id: memoryRow?.id || null,
       events: events.map((e) => e.event_type),
     })
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'writeback_failed' }, { status: 500 })
   }
 }

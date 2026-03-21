@@ -1,17 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
+import { buildAuditEvent } from '@/lib/router/audit-event';
 
 /**
  * POST /api/execution/replay
- * 显式回放入口：仅返回 execution 的 payload/result/audit，不写入 DB。
+ * In-place replay marker: appends replay event and returns the same execution id.
+ * This endpoint does not create a child execution.
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { execution_id } = body;
+    const { execution_id, operator_id, confirm_token, actor_role } = body;
 
     if (!execution_id) {
       return NextResponse.json({ error: 'Missing execution_id' }, { status: 400 });
+    }
+
+
+    try {
+      assertWriteEnabled({ operatorId: operator_id, confirmToken: confirm_token });
+    } catch (e) {
+      const blocked = buildWriteBlockedEvent({
+        reason: e instanceof Error ? e.message : 'write_blocked',
+        operatorId: operator_id,
+        requestPath: '/api/execution/replay',
+      });
+      const { data: existing } = await supabase
+        .from('task_executions_op')
+        .select('audit_log')
+        .eq('execution_id', execution_id)
+        .maybeSingle();
+      const auditLog = existing?.audit_log || { execution_id, events: [], created_at: new Date().toISOString() };
+      await supabase
+        .from('task_executions_op')
+        .update({ audit_log: { ...auditLog, events: [...(auditLog.events || []), blocked] } })
+        .eq('execution_id', execution_id);
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 });
     }
 
     const { data: execution, error: execError } = await supabase
@@ -33,19 +58,18 @@ export async function POST(req: NextRequest) {
       ...auditLog,
       events: [
         ...(auditLog.events || []),
-        {
-          timestamp: new Date().toISOString(),
+        buildAuditEvent(execution_id, {
           event_type: 'execution_replay_requested',
           data: {
-            execution_id,
             status: execution.status,
-            actor_id: null,
-            actor_role: null,
+            actor_id: operator_id || null,
+            actor_role: actor_role || null,
           },
-        },
+        }),
       ],
     };
 
+    const replayedAt = new Date().toISOString();
     await supabase
       .from('task_executions_op')
       .update({ audit_log: nextAudit })
@@ -53,6 +77,11 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      mode: 'in_place',
+      execution_id: execution.execution_id,
+      status: execution.status,
+      replayed_at: replayedAt,
+      message: 'Replay event appended to existing execution.',
       execution: {
         execution_id: execution.execution_id,
         task_id: execution.task_id,

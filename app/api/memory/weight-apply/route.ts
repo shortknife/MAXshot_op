@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils'
-import { AuditLog } from '../../../../../server-actions/types'
+import { AuditLog } from '@/lib/types'
+import { buildAuditEvent } from '@/lib/router/audit-event'
 
 export async function POST(req: Request) {
   try {
@@ -18,6 +19,27 @@ export async function POST(req: Request) {
     try {
       assertWriteEnabled({ operatorId, confirmToken })
     } catch (e) {
+      if (sourceExecutionId) {
+        const blocked = buildWriteBlockedEvent({
+          reason: e instanceof Error ? e.message : 'write_blocked',
+          operatorId,
+          requestPath: '/api/memory/weight-apply',
+        })
+        const { data: existing } = await supabase
+          .from('task_executions_op')
+          .select('audit_log')
+          .eq('execution_id', sourceExecutionId)
+          .maybeSingle()
+        const existingLog = (existing?.audit_log as AuditLog | undefined) || {
+          execution_id: sourceExecutionId,
+          events: [],
+          created_at: new Date().toISOString(),
+        }
+        await supabase
+          .from('task_executions_op')
+          .update({ audit_log: { ...existingLog, events: [...(existingLog.events || []), blocked] } })
+          .eq('execution_id', sourceExecutionId)
+      }
       return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 })
     }
     if (!approved) return NextResponse.json({ error: 'approval_required' }, { status: 400 })
@@ -73,9 +95,42 @@ export async function POST(req: Request) {
 
     const now = new Date().toISOString()
     const events = [
-      { timestamp: now, event_type: 'memory_weight_adjustment_requested', data: { execution_id: sourceExecutionId, memory_id: memoryRow.id, previous_weight: memoryRow.weight, new_weight: recommendedWeight, operator_id: operatorId, reason_code: reasonCode || 'unknown' } },
-      { timestamp: now, event_type: 'memory_weight_adjustment_approved', data: { execution_id: sourceExecutionId, memory_id: memoryRow.id, previous_weight: memoryRow.weight, new_weight: recommendedWeight, operator_id: operatorId, reason_code: reasonCode || 'unknown' } },
-      { timestamp: now, event_type: 'memory_weight_adjustment_applied', data: { execution_id: sourceExecutionId, memory_id: memoryRow.id, previous_weight: memoryRow.weight, new_weight: recommendedWeight, operator_id: operatorId, reason_code: reasonCode || 'unknown' } },
+      buildAuditEvent(sourceExecutionId, {
+        timestamp: now,
+        event_type: 'memory_weight_adjustment_requested',
+        data: {
+          status: 'pending_confirmation',
+          memory_id: memoryRow.id,
+          previous_weight: memoryRow.weight,
+          new_weight: recommendedWeight,
+          operator_id: operatorId,
+          reason_code: reasonCode || 'unknown',
+        },
+      }),
+      buildAuditEvent(sourceExecutionId, {
+        timestamp: now,
+        event_type: 'memory_weight_adjustment_approved',
+        data: {
+          status: 'confirmed',
+          memory_id: memoryRow.id,
+          previous_weight: memoryRow.weight,
+          new_weight: recommendedWeight,
+          operator_id: operatorId,
+          reason_code: reasonCode || 'unknown',
+        },
+      }),
+      buildAuditEvent(sourceExecutionId, {
+        timestamp: now,
+        event_type: 'memory_weight_adjustment_applied',
+        data: {
+          status: 'completed',
+          memory_id: memoryRow.id,
+          previous_weight: memoryRow.weight,
+          new_weight: recommendedWeight,
+          operator_id: operatorId,
+          reason_code: reasonCode || 'unknown',
+        },
+      }),
     ]
 
     const existingLog = (existing?.audit_log as AuditLog | undefined) || {

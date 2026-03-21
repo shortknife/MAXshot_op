@@ -1,0 +1,614 @@
+{
+  "registry_id": "capability_registry_v1",
+  "version": "1.0.0",
+  "updated_at": "2026-03-20",
+  "basis": {
+    "capability_catalog": "lib/router/capability-catalog.ts",
+    "semantic_index": "app/configs/capability-index/business_data_query.index.json"
+  },
+  "capabilities": [
+    {
+      "capability_id": "capability.data_fact_query",
+      "aliases": [
+        "data_fact_query",
+        "business_data_query"
+      ],
+      "name": "Business Data Query",
+      "description": "Answer natural language questions over MAXshot business facts such as vaults, executions, APY, allocation, and rebalance outcomes.",
+      "lifecycle": "active",
+      "risk_class": "read_only",
+      "examples": [
+        "MAXshot 有哪些 vault 可以用？",
+        "当前 vault APY 怎么样？",
+        "给我最近一笔 execution 详情",
+        "最近7天按链 APY 排名"
+      ],
+      "prompt_slot_schema": {
+        "description": "Prompt-facing slots used by the capability matcher and clarification prompt.",
+        "fields": [
+          {
+            "name": "scope",
+            "type": "enum",
+            "required": false,
+            "values": [
+              "yield",
+              "vault",
+              "execution",
+              "rebalance",
+              "allocation",
+              "unknown"
+            ]
+          },
+          {
+            "name": "time_window",
+            "type": "natural_language",
+            "required": false,
+            "examples": [
+              "最近7天",
+              "最近30天",
+              "今天"
+            ]
+          },
+          {
+            "name": "aggregation",
+            "type": "enum",
+            "required": false,
+            "values": [
+              "avg",
+              "max",
+              "min",
+              "realtime"
+            ]
+          },
+          {
+            "name": "vault_name",
+            "type": "natural_language",
+            "required": false
+          },
+          {
+            "name": "chain",
+            "type": "natural_language",
+            "required": false
+          },
+          {
+            "name": "protocol",
+            "type": "natural_language",
+            "required": false
+          },
+          {
+            "name": "execution_id",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "dimension",
+            "type": "enum",
+            "required": false,
+            "values": [
+              "chain",
+              "protocol",
+              "vault"
+            ]
+          },
+          {
+            "name": "top_n",
+            "type": "integer",
+            "required": false,
+            "minimum": 1,
+            "maximum": 20
+          }
+        ]
+      },
+      "runtime_slot_schema": {
+        "type": "object",
+        "required": [
+          "scope"
+        ],
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "yield",
+              "vault",
+              "execution",
+              "rebalance",
+              "allocation",
+              "unknown"
+            ]
+          },
+          "time_window_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 365
+          },
+          "metric_agg": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "avg",
+              "max",
+              "min",
+              "realtime",
+              null
+            ]
+          },
+          "vault_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "chain": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "protocol": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "execution_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dimension": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "chain",
+              "protocol",
+              "vault",
+              null
+            ]
+          },
+          "top_n": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 20
+          },
+          "include_testnets": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "clarification_policy": {
+        "max_turns": 2,
+        "ui_mode": "natural_language_only",
+        "allow_multi_match": true,
+        "max_multi_match": 3,
+        "ask_for": [
+          "time_window",
+          "aggregation",
+          "vault_name",
+          "chain",
+          "protocol",
+          "execution_id"
+        ],
+        "default_time_window_interpretation": "average_over_window",
+        "default_aggregation": "avg",
+        "prefer_examples_over_buttons": true
+      },
+      "tags": [
+        "business_data",
+        "data_query",
+        "yield",
+        "vault",
+        "execution",
+        "rebalance",
+        "allocation",
+        "sql"
+      ]
+    },
+    {
+      "capability_id": "capability.product_doc_qna",
+      "aliases": [
+        "product_doc_qna"
+      ],
+      "name": "Product Document QnA",
+      "description": "Answer questions about MAXshot product docs, concepts, product scope, and terminology from approved documentation sources.",
+      "lifecycle": "active",
+      "risk_class": "read_only",
+      "examples": [
+        "MAXshot 这个产品的目标是什么？",
+        "Capability Contract v1 的核心边界是什么？",
+        "FSD 里对 Router 的职责怎么定义？"
+      ],
+      "prompt_slot_schema": {
+        "description": "Natural language question plus optional doc scope.",
+        "fields": [
+          {
+            "name": "question",
+            "type": "natural_language",
+            "required": true
+          },
+          {
+            "name": "doc_scope",
+            "type": "enum",
+            "required": false,
+            "values": [
+              "FSD",
+              "status",
+              "reference",
+              "all"
+            ]
+          },
+          {
+            "name": "topic",
+            "type": "natural_language",
+            "required": false
+          }
+        ]
+      },
+      "runtime_slot_schema": {
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "properties": {
+          "question": {
+            "type": "string",
+            "minLength": 1
+          },
+          "doc_scope": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "FSD",
+              "status",
+              "reference",
+              "all",
+              null
+            ]
+          },
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "clarification_policy": {
+        "max_turns": 1,
+        "ui_mode": "natural_language_only",
+        "allow_multi_match": false,
+        "max_multi_match": 1,
+        "ask_for": [
+          "topic",
+          "doc_scope"
+        ],
+        "prefer_examples_over_buttons": true
+      },
+      "tags": [
+        "docs",
+        "knowledge",
+        "read_only",
+        "maxshot",
+        "fsd"
+      ]
+    },
+    {
+      "capability_id": "capability.content_generator",
+      "aliases": [
+        "content_generator"
+      ],
+      "name": "Content Generator",
+      "description": "Generate and rewrite content drafts for marketing and social publishing workflows.",
+      "lifecycle": "active",
+      "risk_class": "read_only",
+      "examples": [
+        "写一条关于新品发布的帖子",
+        "把这段文案缩短一点",
+        "帮我把 CTA 写得更强"
+      ],
+      "prompt_slot_schema": {
+        "description": "Content generation slots for topic, style, channel and tone.",
+        "fields": [
+          {
+            "name": "topic",
+            "type": "natural_language",
+            "required": false
+          },
+          {
+            "name": "style",
+            "type": "enum",
+            "required": false,
+            "values": [
+              "casual",
+              "stronger_cta",
+              "shorter"
+            ]
+          },
+          {
+            "name": "channel",
+            "type": "enum",
+            "required": false,
+            "values": [
+              "x",
+              "linkedin",
+              "xiaohongshu",
+              "general"
+            ]
+          },
+          {
+            "name": "language",
+            "type": "enum",
+            "required": false,
+            "values": [
+              "zh",
+              "en",
+              "auto"
+            ]
+          },
+          {
+            "name": "tone",
+            "type": "natural_language",
+            "required": false
+          }
+        ]
+      },
+      "runtime_slot_schema": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "style": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "casual",
+              "stronger_cta",
+              "shorter",
+              null
+            ]
+          },
+          "channel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "x",
+              "linkedin",
+              "xiaohongshu",
+              "general",
+              null
+            ]
+          },
+          "language": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "zh",
+              "en",
+              "auto",
+              null
+            ]
+          },
+          "tone": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "clarification_policy": {
+        "max_turns": 1,
+        "ui_mode": "natural_language_only",
+        "allow_multi_match": false,
+        "max_multi_match": 1,
+        "ask_for": [
+          "topic",
+          "channel",
+          "style"
+        ],
+        "prefer_examples_over_buttons": true
+      },
+      "tags": [
+        "marketing",
+        "content",
+        "rewrite",
+        "draft",
+        "social"
+      ]
+    },
+    {
+      "capability_id": "capability.context_assembler",
+      "aliases": [
+        "context_assembler"
+      ],
+      "name": "Context Assembler",
+      "description": "Assemble router context and memory references for downstream capabilities.",
+      "lifecycle": "active",
+      "risk_class": "read_only",
+      "examples": [
+        "继续上轮对话",
+        "把 memory refs 注入当前任务",
+        "补全这次执行需要的上下文"
+      ],
+      "prompt_slot_schema": {
+        "description": "Operational slots used to select and package context.",
+        "fields": [
+          {
+            "name": "session_id",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "memory_refs",
+            "type": "array",
+            "required": false
+          },
+          {
+            "name": "entry_channel",
+            "type": "enum",
+            "required": false,
+            "values": [
+              "chat",
+              "ops",
+              "audit",
+              "marketing"
+            ]
+          }
+        ]
+      },
+      "runtime_slot_schema": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "session_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "memory_refs": {
+            "type": "array"
+          },
+          "entry_channel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "clarification_policy": {
+        "max_turns": 1,
+        "ui_mode": "hidden_system",
+        "allow_multi_match": false,
+        "max_multi_match": 1,
+        "ask_for": [
+          "session_id",
+          "memory_refs"
+        ],
+        "prefer_examples_over_buttons": false
+      },
+      "tags": [
+        "context",
+        "memory",
+        "router",
+        "orchestration"
+      ]
+    },
+    {
+      "capability_id": "capability.publisher",
+      "aliases": [
+        "publisher"
+      ],
+      "name": "Publisher",
+      "description": "Reserved side-effect capability for approved external publishing. Inactive in current MVP.",
+      "lifecycle": "inactive",
+      "risk_class": "side_effect",
+      "examples": [
+        "发布到 Telegram",
+        "发到 Notion",
+        "确认后发布这条内容"
+      ],
+      "prompt_slot_schema": {
+        "description": "Side-effect slots for target channel and approved payload.",
+        "fields": [
+          {
+            "name": "target_channel",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "telegram",
+              "notion",
+              "webhook"
+            ]
+          },
+          {
+            "name": "payload",
+            "type": "object",
+            "required": true
+          },
+          {
+            "name": "confirmation_token",
+            "type": "string",
+            "required": false
+          }
+        ]
+      },
+      "runtime_slot_schema": {
+        "type": "object",
+        "required": [
+          "target_channel",
+          "payload"
+        ],
+        "properties": {
+          "target_channel": {
+            "type": "string",
+            "enum": [
+              "telegram",
+              "notion",
+              "webhook"
+            ]
+          },
+          "payload": {
+            "type": "object"
+          },
+          "confirmation_token": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "clarification_policy": {
+        "max_turns": 1,
+        "ui_mode": "confirmation_required",
+        "allow_multi_match": false,
+        "max_multi_match": 1,
+        "ask_for": [
+          "target_channel",
+          "payload",
+          "confirmation_token"
+        ],
+        "prefer_examples_over_buttons": true
+      },
+      "tags": [
+        "publish",
+        "side_effect",
+        "approval",
+        "delivery"
+      ]
+    }
+  ]
+}

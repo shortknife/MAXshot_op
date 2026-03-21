@@ -1,0 +1,32 @@
+{
+  "id": "latest_executions",
+  "name": "Latest Executions",
+  "description": "Fetch latest executions ordered by created_at.",
+  "category": "ops",
+  "version": "1.1",
+  "allowed_tables": [
+    "task_executions_op"
+  ],
+  "output_schema": {
+    "execution_id": "text",
+    "status": "text",
+    "intent_name": "text",
+    "requester_id": "text",
+    "created_at": "timestamptz",
+    "updated_at": "timestamptz"
+  },
+  "slots": {
+    "limit": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "examples": [
+    {
+      "limit": 3
+    },
+    {
+      "limit": 10
+    }
+  ]
+}

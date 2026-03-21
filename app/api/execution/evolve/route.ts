@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
+import { buildAuditEvent } from '@/lib/router/audit-event';
 
 /**
  * POST /api/execution/evolve
@@ -56,11 +57,9 @@ export async function POST(req: NextRequest) {
       ...auditLog,
       events: [
         ...(auditLog.events || []),
-        {
-          timestamp: new Date().toISOString(),
+        buildAuditEvent(execution_id, {
           event_type: 'recommendation_received',
           data: {
-            execution_id,
             status: execution.status,
             decision: 'not_applied',
             recommendation: {
@@ -69,7 +68,7 @@ export async function POST(req: NextRequest) {
               target: 'working_mind',
             },
           },
-        },
+        }),
       ],
     };
 

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { READ_ONLY_DEMO, WRITE_ENABLED, getDemoSnapshotById } from '@/lib/demo-data'
 import { ReadOnlyBanner } from '@/components/read-only-banner'
-import { buildAttribution } from '../../../server-actions/evolution/attribution'
+import { buildAttribution } from '@/lib/evolution/attribution'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 
@@ -49,6 +49,37 @@ export default function InsightWritebackPage() {
 
   const attribution = useMemo(() => buildAttribution({ result: (snapshot?.result as any) || null, audit_log: (snapshot?.audit_log as any) || null }), [snapshot])
 
+  const describeError = (code?: string) => {
+    switch (code) {
+      case 'write_blocked_read_only':
+        return 'Write blocked: read-only demo mode.'
+      case 'write_blocked_disabled':
+        return 'Write blocked: NEXT_PUBLIC_WRITE_ENABLE is false.'
+      case 'write_blocked_missing_operator':
+        return 'Missing operator_id. Fill in operator_id before submitting.'
+      case 'write_blocked_invalid_token':
+        return 'Invalid confirm_token. Please double-check WRITE_CONFIRM_TOKEN and restart dev server.'
+      case 'approval_required':
+        return 'Approval checkbox is required.'
+      case 'missing_source_execution_id':
+        return 'Missing source execution id.'
+      case 'missing_approved_by':
+        return 'Missing operator_id.'
+      case 'invalid_memory_type':
+        return 'Invalid memory type.'
+      case 'missing_candidate':
+        return 'Missing candidate payload.'
+      case 'missing_fields':
+        return 'Missing required fields. Check memory_id, operator_id, confirm_token.'
+      case 'invalid_weight':
+        return 'Recommended weight is invalid.'
+      case 'memory_not_found':
+        return 'Memory record not found.'
+      default:
+        return code || 'Unexpected error.'
+    }
+  }
+
   const fetchWeightRecommendation = async () => {
     if (!execId || !memoryId || READ_ONLY_DEMO) return
     setWeightLoading(true)
@@ -71,6 +102,21 @@ export default function InsightWritebackPage() {
 
   const applyWeightUpdate = async () => {
     if (!weightRec?.recommendation || READ_ONLY_DEMO) return
+    if (!approved) {
+      setSubmitState('error')
+      setSubmitMessage('Approval checkbox is required.')
+      return
+    }
+    if (!operatorId.trim() || !confirmToken.trim()) {
+      setSubmitState('error')
+      setSubmitMessage('Missing operator_id or confirm_token.')
+      return
+    }
+    if (!memoryId.trim()) {
+      setSubmitState('error')
+      setSubmitMessage('Missing memory_id for weight update.')
+      return
+    }
     setSubmitState('submitting')
     setSubmitMessage(null)
     try {
@@ -88,7 +134,7 @@ export default function InsightWritebackPage() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'weight_apply_failed')
+      if (!res.ok) throw new Error(describeError(data.error) || 'weight_apply_failed')
       setSubmitState('success')
       setSubmitMessage(`Weight updated. Events: ${data.events?.join(', ')}`)
     } catch (e) {
@@ -152,6 +198,16 @@ export default function InsightWritebackPage() {
 
   const submitWriteback = async () => {
     if (!candidate || READ_ONLY_DEMO) return
+    if (!approved) {
+      setSubmitState('error')
+      setSubmitMessage('Approval checkbox is required.')
+      return
+    }
+    if (!operatorId.trim() || !confirmToken.trim()) {
+      setSubmitState('error')
+      setSubmitMessage('Missing operator_id or confirm_token.')
+      return
+    }
     setSubmitState('submitting')
     setSubmitMessage(null)
     try {
@@ -168,7 +224,7 @@ export default function InsightWritebackPage() {
         }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'writeback_failed')
+      if (!res.ok) throw new Error(describeError(data.error) || 'writeback_failed')
       setSubmitState('success')
       setSubmitMessage(`Memory written: ${data.memory_id || 'ok'}`)
     } catch (e) {
@@ -233,6 +289,9 @@ export default function InsightWritebackPage() {
                 <input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} />
                 <span>I confirm this write-back is approved</span>
               </div>
+              {submitMessage && (
+                <p className="text-sm text-gray-700">{submitMessage}</p>
+              )}
               <Button
                 disabled={READ_ONLY_DEMO || !WRITE_ENABLED || !candidate || !approved || operatorId.trim().length === 0 || !confirmToken.trim() || submitState === 'submitting'}
                 onClick={submitWriteback}

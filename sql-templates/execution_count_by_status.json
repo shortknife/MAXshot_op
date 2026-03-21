@@ -1,0 +1,34 @@
+{
+  "id": "execution_count_by_status",
+  "name": "Execution Count By Status",
+  "description": "Count executions by status from task_executions_op.",
+  "category": "ops",
+  "version": "1.1",
+  "allowed_tables": [
+    "task_executions_op"
+  ],
+  "output_schema": {
+    "count": "integer"
+  },
+  "slots": {
+    "status": {
+      "type": "string",
+      "required": true,
+      "enum": [
+        "pending_confirmation",
+        "confirmed",
+        "in_progress",
+        "completed",
+        "failed"
+      ]
+    }
+  },
+  "examples": [
+    {
+      "status": "pending_confirmation"
+    },
+    {
+      "status": "completed"
+    }
+  ]
+}

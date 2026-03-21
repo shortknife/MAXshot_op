@@ -1,0 +1,35 @@
+{
+  "id": "latest_audit_events",
+  "name": "Latest Audit Events",
+  "description": "Flatten audit_log events and return recent ones.",
+  "category": "audit",
+  "version": "1.0",
+  "allowed_tables": [
+    "task_executions_op"
+  ],
+  "output_schema": {
+    "execution_id": "text",
+    "event_type": "text",
+    "timestamp": "timestamptz"
+  },
+  "slots": {
+    "event_type": {
+      "type": "string",
+      "required": false
+    },
+    "limit": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "examples": [
+    {
+      "event_type": "sql_template_executed",
+      "limit": 10
+    },
+    {
+      "event_type": null,
+      "limit": 10
+    }
+  ]
+}

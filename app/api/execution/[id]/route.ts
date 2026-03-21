@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { extractNormalizedAuditEvents } from '@/lib/router/audit-read';
 
 /**
  * GET /api/execution/[id]
@@ -31,7 +32,7 @@ export async function GET(
       return NextResponse.json({ error: 'Execution not found', execution_id }, { status: 404 });
     }
 
-    const auditEvents = (execution as { audit_log?: { events?: unknown[] } })?.audit_log?.events || [];
+    const auditEvents = extractNormalizedAuditEvents((execution as { audit_log?: unknown })?.audit_log, execution_id);
 
     return NextResponse.json({
       execution: {

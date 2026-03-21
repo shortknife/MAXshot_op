@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { parseIntent } from '../../../../server-actions/intent-analyzer/intent-parsing';
+import { parseIntent } from '@/lib/intent-analyzer/intent-parsing';
 
 /**
  * POST /api/intent/analyze
@@ -15,7 +15,20 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await parseIntent(raw_query, session_context);
-    return NextResponse.json({ success: true, intent: result.intent, raw_query: result.raw_query });
+    return NextResponse.json({
+      success: true,
+      intent: result.intent,
+      raw_query: result.raw_query,
+      trace: {
+        analyzer: 'intent-analyzer',
+        source: result.prompt_meta?.source || 'local_stub',
+        prompt_slug: result.prompt_meta?.slug || null,
+        prompt_version: result.prompt_meta?.version || null,
+        prompt_hash: result.prompt_meta?.hash || null,
+        session_context_present: Boolean(session_context),
+        tokens_used: result.tokens_used ?? 0,
+      },
+    });
   } catch (error: unknown) {
     return NextResponse.json(
       { error: 'Intent analysis failed', details: error instanceof Error ? error.message : String(error) },

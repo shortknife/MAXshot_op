@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -35,11 +35,7 @@ export default function ContentPage() {
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('queue')
 
-  useEffect(() => {
-    loadContent()
-  }, [activeTab])
-
-  const loadContent = async () => {
+  const loadContent = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -68,11 +64,15 @@ export default function ContentPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [activeTab])
+
+  useEffect(() => {
+    loadContent()
+  }, [loadContent])
 
   const handleApprove = async (id: string) => {
     // 这里可以添加审批逻辑，如果需要的话
-    alert('Approval feature to be implemented')
+    alert(`Approval feature to be implemented: ${id}`)
   }
 
   const handleReject = async (id: string) => {

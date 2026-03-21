@@ -1,7 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
+import { assertWriteEnabled } from '@/lib/utils';
 import { randomUUID } from 'crypto';
+import { buildAuditEvent } from '@/lib/router/audit-event';
+import {
+  getPrimaryCapabilityId,
+  inferLegacyIntentTypeFromCapabilityIds,
+  MAX_MATCHED_CAPABILITIES,
+  normalizeCapabilityCandidates,
+  resolveCapabilityIds,
+} from '@/lib/router/capability-catalog';
 
 /**
  * EM-T1 扩展：Sealer 统一写入 tasks_op + task_executions_op
@@ -25,6 +33,8 @@ export async function POST(req: NextRequest) {
       entry_type,
       requester_id,
       intent_name,
+      matched_capability_ids,
+      capability_binding,
       entry_channel,
       idempotency_key,
       require_confirmation,
@@ -63,10 +73,40 @@ export async function POST(req: NextRequest) {
     const finalEntryType = entry_type || 'raw_query'; // 默认 raw_query（兼容现有 M2）
     const finalRequesterId = requester_id || metadata?.user_id || 'system_external-orchestrator (disabled)';
     const finalEntryChannel = entry_channel || metadata?.source || 'external-orchestrator (disabled)_v2';
+    const finalTaskId = task_id || randomUUID();
 
     // 2. 严格校验 (The Seal)
     // 此时 payload 应该是已经被"掰正"的对象了
-    const finalIntent = intent_name || payload?.intent || payload?.extracted_slots?.intent; 
+    const requestedCapabilityCandidates = normalizeCapabilityCandidates([
+      ...(Array.isArray(matched_capability_ids) ? matched_capability_ids : []),
+      ...(Array.isArray(payload?.matched_capability_ids) ? payload.matched_capability_ids : []),
+      ...(Array.isArray(payload?.extracted_slots?.matched_capability_ids) ? payload.extracted_slots.matched_capability_ids : []),
+      capability_binding?.capability_id,
+      payload?.matched_capability_id,
+      payload?.extracted_slots?.matched_capability_id,
+    ])
+    if (requestedCapabilityCandidates.length > MAX_MATCHED_CAPABILITIES) {
+      return NextResponse.json(
+        {
+          error: 'too_many_capability_matches',
+          details: `At most ${MAX_MATCHED_CAPABILITIES} capability matches are allowed before task sealing.`,
+          requested_capability_candidates: requestedCapabilityCandidates,
+        },
+        { status: 400 }
+      );
+    }
+    const finalMatchedCapabilityIds = resolveCapabilityIds(
+      requestedCapabilityCandidates,
+      MAX_MATCHED_CAPABILITIES
+    )
+    const primaryCapabilityId =
+      getPrimaryCapabilityId(finalMatchedCapabilityIds) ||
+      (capability_binding?.capability_id ? String(capability_binding.capability_id) : null)
+    const finalIntent =
+      intent_name ||
+      payload?.intent ||
+      payload?.extracted_slots?.intent ||
+      inferLegacyIntentTypeFromCapabilityIds(finalMatchedCapabilityIds);
     const finalSlots = payload?.slots || payload?.extracted_slots || {};
 
     if (!finalIntent) {
@@ -98,26 +138,29 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 4. 封印至 tasks_op 表（保持现有逻辑 + 可选补足 entry_type）
+    // 4. 封印至 tasks_op 表（仅写入已存在字段；其他信息落入 schedule_config）
     const { data: taskData, error: taskError } = await supabase
       .from('tasks_op')
       .insert({
-        channel: finalEntryChannel,
-        intent: finalIntent, // Note: Mike 可能改为 intent_name，到时同步
-        payload: {
-          intent: finalIntent,
-          slots: finalSlots
-        },
-        requester: finalRequesterId, // Note: Mike 可能改为 requester_id，到时同步
-        status: 'pending',
-        metadata: {
-          ...metadata,
-          entry_type: finalEntryType, // 可选：若 Mike 在 tasks 表加 entry_type 列
+        task_id: finalTaskId,
+        task_type: 'ad_hoc',
+        schedule_config: {
+          entry_type: finalEntryType,
+          entry_channel: finalEntryChannel,
+          requester_id: finalRequesterId,
+          intent_name: finalIntent,
+          idempotency_key: idempotency_key || null,
+          payload: {
+            intent: finalIntent,
+            slots: finalSlots,
+            matched_capability_ids: finalMatchedCapabilityIds,
+            primary_capability_id: primaryCapabilityId,
+          },
           raw_query: metadata?.raw_query || '',
-          chat_id: metadata?.chat_id || 'default',
-          timestamp: new Date().toISOString()
+          context: metadata?.context || {},
+          timestamp: new Date().toISOString(),
         },
-        created_at: new Date().toISOString()
+        status: 'active',
       })
       .select();
 
@@ -126,7 +169,7 @@ export async function POST(req: NextRequest) {
       throw taskError;
     }
 
-    const createdTaskId = taskData[0].task_id;
+    const createdTaskId = taskData?.[0]?.task_id || finalTaskId;
 
     // 5. 生成 execution_id（由 Sam Sealer 创建，返回给 Alex 供 Router 使用）
     const executionId = randomUUID();
@@ -136,11 +179,9 @@ export async function POST(req: NextRequest) {
     const auditLog = {
       execution_id: executionId,
       events: [
-        {
-          timestamp: new Date().toISOString(),
+        buildAuditEvent(executionId, {
           event_type: 'entry_created',
           data: {
-            execution_id: executionId,
             status: initialStatus,
             entry_type: finalEntryType,
             entry_channel: finalEntryChannel,
@@ -148,13 +189,13 @@ export async function POST(req: NextRequest) {
             intent_name: finalIntent,
             reason: pendingConfirmation ? (reason_for_pending || 'side_effect') : null,
           },
-        },
+        }),
       ],
       created_at: new Date().toISOString(),
     };
 
     // 6. 封印至 task_executions_op 表（Mike EM-T3 已建表，启用写入）
-    const { data: execData, error: execError } = await supabase
+    const { error: execError } = await supabase
       .from('task_executions_op')
       .insert({
         execution_id: executionId,
@@ -166,10 +207,17 @@ export async function POST(req: NextRequest) {
           raw_query: metadata?.raw_query || '',
           intent: {
             type: finalIntent,
-            extracted_slots: finalSlots,
+            extracted_slots: {
+              ...finalSlots,
+              matched_capability_ids: finalMatchedCapabilityIds,
+              matched_capability_id: primaryCapabilityId,
+            },
             confidence: 0.8,
           },
           slots: finalSlots,
+          matched_capability_ids: finalMatchedCapabilityIds,
+          primary_capability_id: primaryCapabilityId,
+          capability_binding: primaryCapabilityId ? { capability_id: primaryCapabilityId } : null,
           user_id: finalRequesterId,
           context: metadata?.context || {},
         },

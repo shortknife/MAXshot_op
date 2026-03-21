@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { computeWeightRecommendation } from '../../../../../server-actions/memory/weight-recommendation'
+import { computeWeightRecommendation } from '@/lib/memory/weight-recommendation'
 
 export async function POST(req: Request) {
   try {

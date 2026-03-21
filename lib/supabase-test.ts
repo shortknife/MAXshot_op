@@ -1,8 +1,30 @@
 import { supabase } from './supabase'
+import fs from 'node:fs'
+import path from 'node:path'
+
+function loadEnvLocal() {
+  const envPath = path.join(process.cwd(), '.env.local')
+  if (!fs.existsSync(envPath)) return
+  const lines = fs.readFileSync(envPath, 'utf-8').split(/\r?\n/)
+  for (const line of lines) {
+    if (!line || line.trim().startsWith('#')) continue
+    const idx = line.indexOf('=')
+    if (idx == -1) continue
+    const key = line.slice(0, idx).trim()
+    let val = line.slice(idx + 1).trim()
+    if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+      val = val.slice(1, -1)
+    }
+    if (!process.env[key]) process.env[key] = val
+  }
+}
+
+loadEnvLocal()
+
 
 export async function testConnection(): Promise<boolean> {
   try {
-    const { data, error } = await supabase.from('tasks_op').select('*').limit(1)
+    const { error } = await supabase.from('tasks_op').select('*').limit(1)
     if (error) {
       console.error('Connection test failed:', error)
       return false

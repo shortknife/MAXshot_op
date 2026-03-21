@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const BASE_URL = 'http://localhost:3000';
+const BASE_URL = process.env.E2E_BASE_URL || process.env.BASE_URL || 'http://127.0.0.1:3003';
 const VALID_EMAIL = 'admin@MAXshot.com'; // 假设在白名单中
 const INVALID_EMAIL = 'test@example.com'; // 不在白名单中
 const INVALID_FORMAT_EMAIL = 'invalid-email';
@@ -140,7 +140,6 @@ test.describe('Admin OS Frontend Tests', () => {
     await expect(page.getByText('最新执行日志')).toBeVisible();
     
     // 验证显示最多10条记录（或显示"暂无执行日志"）
-    const logsSection = page.getByText('最新执行日志').locator('..');
     const hasLogs = await page.getByText('暂无执行日志').isVisible().catch(() => false);
     
     if (!hasLogs) {
@@ -348,4 +347,3 @@ test.describe('Admin OS Frontend Tests', () => {
     await expect(page).toHaveURL(/.*\/login/);
   });
 });
-

@@ -1,0 +1,28 @@
+{
+  "id": "execution_status_breakdown",
+  "name": "Execution Status Breakdown",
+  "description": "Aggregate executions by status.",
+  "category": "ops",
+  "version": "1.0",
+  "allowed_tables": [
+    "task_executions_op"
+  ],
+  "output_schema": {
+    "status": "text",
+    "count": "integer"
+  },
+  "slots": {
+    "days": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "examples": [
+    {
+      "days": 7
+    },
+    {
+      "days": 30
+    }
+  ]
+}

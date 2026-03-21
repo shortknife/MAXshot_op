@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
 import { randomUUID } from 'crypto';
+import { buildAuditEvent } from '@/lib/router/audit-event';
 
 /**
  * POST /api/execution/retry
@@ -9,10 +11,34 @@ import { randomUUID } from 'crypto';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { execution_id, actor_id, actor_role, reason } = body;
+    const { execution_id, actor_id, actor_role, reason, confirm_token } = body;
 
     if (!execution_id) {
       return NextResponse.json({ error: 'Missing execution_id' }, { status: 400 });
+    }
+
+
+    try {
+      assertWriteEnabled({ operatorId: actor_id, confirmToken: confirm_token });
+    } catch (e) {
+      const blocked = buildWriteBlockedEvent({
+        reason: e instanceof Error ? e.message : 'write_blocked',
+        operatorId: actor_id,
+        requestPath: '/api/execution/retry',
+      });
+      if (execution_id) {
+        const { data: existing } = await supabase
+          .from('task_executions_op')
+          .select('audit_log')
+          .eq('execution_id', execution_id)
+          .maybeSingle();
+        const auditLog = existing?.audit_log || { execution_id, events: [], created_at: new Date().toISOString() };
+        await supabase
+          .from('task_executions_op')
+          .update({ audit_log: { ...auditLog, events: [...(auditLog.events || []), blocked] } })
+          .eq('execution_id', execution_id);
+      }
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 });
     }
 
     const { data: execution, error: execError } = await supabase
@@ -46,18 +72,16 @@ export async function POST(req: NextRequest) {
     const auditLog = {
       execution_id: newExecutionId,
       events: [
-        {
-          timestamp: new Date().toISOString(),
+        buildAuditEvent(newExecutionId, {
           event_type: 'execution_retry_created',
           data: {
-            execution_id: newExecutionId,
             status: 'pending_confirmation',
             source_execution_id: execution.execution_id,
             actor_id: actor_id || null,
             actor_role: actor_role || null,
             reason: reason || null,
           },
-        },
+        }),
       ],
       created_at: new Date().toISOString(),
     };
@@ -83,9 +107,12 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      mode: 'child_execution',
+      source_execution_id: execution.execution_id,
       execution_id: newExecutionId,
       status: 'pending_confirmation',
       confirmation_request: confirmationRequest,
+      message: 'Retry execution created. Confirmation required before run.',
     });
   } catch (error: unknown) {
     return NextResponse.json(

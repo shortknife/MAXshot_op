@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
+import { buildAuditEvent } from '@/lib/router/audit-event';
 
 /**
  * POST /api/execution/confirm
@@ -16,6 +17,23 @@ export async function POST(req: NextRequest) {
     try {
       assertWriteEnabled({ operatorId: actor_id, confirmToken: confirm_token })
     } catch (e) {
+      if (execution_id) {
+        const blocked = buildWriteBlockedEvent({
+          reason: e instanceof Error ? e.message : 'write_blocked',
+          operatorId: actor_id,
+          requestPath: '/api/execution/confirm',
+        });
+        const { data: existing } = await supabase
+          .from('task_executions_op')
+          .select('audit_log')
+          .eq('execution_id', execution_id)
+          .maybeSingle();
+        const auditLog = existing?.audit_log || { execution_id, events: [], created_at: new Date().toISOString() };
+        await supabase
+          .from('task_executions_op')
+          .update({ audit_log: { ...auditLog, events: [...(auditLog.events || []), blocked] } })
+          .eq('execution_id', execution_id);
+      }
       return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 });
     }
     if (!execution_id || !decision || !['confirm', 'reject'].includes(decision)) {
@@ -58,17 +76,15 @@ export async function POST(req: NextRequest) {
       ...auditLog,
       events: [
         ...(auditLog.events || []),
-        {
-          timestamp: new Date().toISOString(),
+        buildAuditEvent(execution_id, {
           event_type: eventType,
           data: {
-            execution_id,
             status: nextStatus,
             decision: nextStatus,
             actor_id: actor_id || null,
             actor_role: actor_role || null,
           },
-        },
+        }),
       ],
     };
 

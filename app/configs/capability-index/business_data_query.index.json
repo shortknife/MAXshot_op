@@ -1,0 +1,172 @@
+{
+  "capability_id": "business_data_query",
+  "version": "1.0.0",
+  "updated_at": "2026-03-07",
+  "timezone": "Asia/Shanghai",
+  "sources": {
+    "priority": [
+      "dim_vaults",
+      "market_metrics",
+      "allocation_snapshots",
+      "executions",
+      "rebalance_decisions",
+      "execution_logs_rag"
+    ],
+    "semantics": {
+      "net_apy": "yield_metric",
+      "tvl": "state_metric_latest_snapshot",
+      "total_allocated": "state_metric_latest_snapshot",
+      "created_at": "snapshot_timestamp",
+      "updated_at": "snapshot_timestamp"
+    }
+  },
+  "intents": [
+    {
+      "id": "vault_list",
+      "description": "列出当前可用 vault",
+      "examples": [
+        "MAXshot 有哪些 vault 可以用？",
+        "当前有哪些 vault",
+        "列出所有可用金库"
+      ],
+      "required_slots": [],
+      "optional_slots": [
+        "chain",
+        "protocol"
+      ],
+      "defaults": {
+        "include_testnets": false
+      },
+      "plan_id": "vault_list_v1",
+      "fallback_provider": "vanna"
+    },
+    {
+      "id": "yield_summary",
+      "description": "查询 APY 汇总",
+      "examples": [
+        "当前 vault APY 怎么样？",
+        "最近7天 APY 是多少",
+        "Maxshot Omni Vault USDC 的 APY 怎么样"
+      ],
+      "required_slots": [
+        "time_window"
+      ],
+      "optional_slots": [
+        "vault_name",
+        "chain",
+        "protocol",
+        "aggregation"
+      ],
+      "defaults": {
+        "aggregation": "avg",
+        "include_testnets": false
+      },
+      "semantics": {
+        "default_time_window_interpretation": "average_over_window",
+        "tvl_policy": "latest_snapshot_sum"
+      },
+      "clarification_order": [
+        "time_window",
+        "vault_name",
+        "aggregation"
+      ],
+      "plan_id": "yield_summary_v1",
+      "fallback_provider": "vanna"
+    },
+    {
+      "id": "yield_trend",
+      "description": "查询 APY 趋势",
+      "examples": [
+        "最近7天 APY 走势如何",
+        "哪天 APY 最高",
+        "最近30天 APY 每天变化"
+      ],
+      "required_slots": [
+        "time_window",
+        "granularity"
+      ],
+      "optional_slots": [
+        "vault_name",
+        "chain",
+        "protocol"
+      ],
+      "defaults": {
+        "granularity": "day"
+      },
+      "plan_id": "yield_trend_v1",
+      "fallback_provider": "vanna"
+    },
+    {
+      "id": "yield_ranking",
+      "description": "按 chain / protocol / vault 做 APY 排名",
+      "examples": [
+        "最近7天按链 APY 排名",
+        "按协议看 APY Top 3",
+        "哪个 vault 收益最高"
+      ],
+      "required_slots": [
+        "time_window",
+        "dimension"
+      ],
+      "optional_slots": [
+        "top_n",
+        "chain",
+        "protocol"
+      ],
+      "defaults": {
+        "top_n": 10
+      },
+      "plan_id": "yield_ranking_v1",
+      "fallback_provider": "vanna"
+    },
+    {
+      "id": "execution_detail",
+      "description": "查看 execution 单条详情",
+      "examples": [
+        "给我最近一笔 execution 详情",
+        "execution 123 的详情",
+        "这个 execution 为什么失败"
+      ],
+      "required_slots": [],
+      "optional_slots": [
+        "execution_id",
+        "time_window"
+      ],
+      "defaults": {
+        "sort": "latest_first"
+      },
+      "plan_id": "execution_detail_v1",
+      "fallback_provider": "vanna"
+    },
+    {
+      "id": "execution_summary",
+      "description": "查看 execution 汇总",
+      "examples": [
+        "最近7天 execution 状态汇总",
+        "最近有哪些失败 execution",
+        "执行成功率如何"
+      ],
+      "required_slots": [
+        "time_window"
+      ],
+      "optional_slots": [
+        "status",
+        "vault_name"
+      ],
+      "defaults": {
+        "group_by": "status"
+      },
+      "plan_id": "execution_summary_v1",
+      "fallback_provider": "vanna"
+    }
+  ],
+  "follow_up_policy": {
+    "next_actions_are_examples": true,
+    "ui_mode": "natural_language_only",
+    "max_clarification_turns": 2
+  },
+  "clarification_policy": {
+    "timezone": "Asia/Shanghai",
+    "default_yield_aggregation": "avg"
+  }
+}

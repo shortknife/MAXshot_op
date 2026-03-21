@@ -52,8 +52,11 @@ export function buildWriteBlockedEvent(params: {
   return {
     timestamp: new Date().toISOString(),
     event_type: 'write_blocked',
+    event_type_canonical: 'safety.policy_event',
     data: {
       reason: params.reason,
+      status: 'blocked',
+      step_status: 'blocked',
       operator_id: params.operatorId || null,
       request_path: params.requestPath || null,
       ip: params.ip || null,

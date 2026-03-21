@@ -1,12 +1,26 @@
 {
   "name": "admin-os",
   "version": "0.1.0",
+  "type": "module",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:phase0": "node ./scripts/phase0-smoke.mjs",
+    "test:phase1": "node ./scripts/phase1-smoke.mjs",
+    "test:phase2": "node ./scripts/phase2-smoke.mjs",
+    "test:all": "node ./scripts/phase-all-smoke.mjs",
+    "test:all:report": "node ./scripts/phase-all-smoke.mjs --report ../docs/status/PHASE_ALL_SMOKE_REPORT.md",
+    "test:all:with-dev": "node ./scripts/test-all-with-dev.mjs",
+    "test:e2e:admin": "playwright test e2e/mvp-smoke.spec.ts --reporter=line",
+    "test:e2e:install": "playwright install chromium",
+    "test:prompt:intent:report": "node ./scripts/prompt-intent-10case-report.mjs",
+    "test:main-flow:9step:report": "node ./scripts/main-flow-9step-acceptance-report.mjs",
+    "build:business-schema": "node ./scripts/build-business-schema.mjs",
+    "release:preflight": "node ./scripts/release-preflight.mjs",
+    "uat:pack": "node ./scripts/uat-pack.mjs"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.8",
@@ -18,14 +32,14 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.556.0",
-    "next": "^14.2.35",
+    "next": "^16.1.6",
     "react": "18.3.1",
     "react-dom": "18.3.1",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",
-    "@tailwindcss/postcss": "^4",
+    "@tailwindcss/postcss": "^4.1.18",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

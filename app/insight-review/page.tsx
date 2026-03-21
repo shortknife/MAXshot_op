@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { formatDateTime } from '@/lib/utils'
 import { READ_ONLY_DEMO, getDemoSnapshotById } from '@/lib/demo-data'
-import { buildAttribution } from '../../../server-actions/evolution/attribution'
-import { buildRecommendation } from '../../../server-actions/evolution/candidate'
+import { buildAttribution } from '@/lib/evolution/attribution'
+import { buildRecommendation } from '@/lib/evolution/candidate'
 import { ReadOnlyBanner } from '@/components/read-only-banner'
 
 type Snapshot = {
@@ -36,6 +36,11 @@ export default function InsightReviewPage() {
   const [loading, setLoading] = useState(!!execIdFromUrl)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [operatorId, setOperatorId] = useState('admin')
+  const [confirmToken, setConfirmToken] = useState('')
+  const [hypothesisResult, setHypothesisResult] = useState<Record<string, unknown> | null>(null)
+  const [hypothesisError, setHypothesisError] = useState<string | null>(null)
+  const [hypothesisLoading, setHypothesisLoading] = useState(false)
 
   useEffect(() => {
     if (execIdFromUrl) {
@@ -148,6 +153,31 @@ export default function InsightReviewPage() {
     }
   }
 
+  const generateHypothesis = async () => {
+    if (!snapshot?.execution_id) return
+    setHypothesisLoading(true)
+    setHypothesisError(null)
+    setHypothesisResult(null)
+    try {
+      const res = await fetch('/api/evolution/hypothesis', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          execution_id: snapshot.execution_id,
+          operator_id: operatorId.trim(),
+          confirm_token: confirmToken.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || data.details || 'hypothesis_generate_failed')
+      setHypothesisResult(data)
+    } catch (e) {
+      setHypothesisError(e instanceof Error ? e.message : 'hypothesis_generate_failed')
+    } finally {
+      setHypothesisLoading(false)
+    }
+  }
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-gray-50">
@@ -185,6 +215,41 @@ export default function InsightReviewPage() {
                   <pre className="text-xs font-mono break-all whitespace-pre-wrap">{JSON.stringify(attribution, null, 2)}</pre>
                   <div className="mt-3 text-xs text-gray-500">Recommendation JSON (structured)</div>
                   <pre className="text-xs font-mono break-all whitespace-pre-wrap">{JSON.stringify(recommendation, null, 2)}</pre>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Hypothesis Generator (P2)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">operator_id</div>
+                      <input
+                        className="w-full border rounded px-3 py-2 text-sm"
+                        value={operatorId}
+                        onChange={(e) => setOperatorId(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <div className="text-xs text-gray-500 mb-1">confirm_token</div>
+                      <input
+                        className="w-full border rounded px-3 py-2 text-sm"
+                        value={confirmToken}
+                        onChange={(e) => setConfirmToken(e.target.value)}
+                        placeholder="WRITE_CONFIRM_TOKEN"
+                      />
+                    </div>
+                  </div>
+                  <Button onClick={generateHypothesis} disabled={hypothesisLoading || !confirmToken.trim()}>
+                    {hypothesisLoading ? 'Generating...' : 'Generate Hypothesis'}
+                  </Button>
+                  {hypothesisError && <div className="text-sm text-red-600">{hypothesisError}</div>}
+                  {hypothesisResult && (
+                    <pre className="text-xs font-mono break-all whitespace-pre-wrap bg-slate-100 p-3 rounded">
+                      {JSON.stringify(hypothesisResult, null, 2)}
+                    </pre>
+                  )}
                 </CardContent>
               </Card>
               <Card>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { executeRouter } from '../../../../server-actions/router/router-main';
+import { executeRouter } from '@/lib/router/execute';
+import { supabase } from '@/lib/supabase';
 import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
 
 /**
@@ -15,6 +16,23 @@ export async function POST(req: NextRequest) {
     try {
       assertWriteEnabled({ operatorId: operator_id, confirmToken: confirm_token })
     } catch (e) {
+      if (execution_id) {
+        const blocked = buildWriteBlockedEvent({
+          reason: e instanceof Error ? e.message : 'write_blocked',
+          operatorId: operator_id,
+          requestPath: '/api/execution/run',
+        });
+        const { data: existing } = await supabase
+          .from('task_executions_op')
+          .select('audit_log')
+          .eq('execution_id', execution_id)
+          .maybeSingle();
+        const auditLog = existing?.audit_log || { execution_id, events: [], created_at: new Date().toISOString() };
+        await supabase
+          .from('task_executions_op')
+          .update({ audit_log: { ...auditLog, events: [...(auditLog.events || []), blocked] } })
+          .eq('execution_id', execution_id);
+      }
       return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 });
     }
     if (!execution_id) {

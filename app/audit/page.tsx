@@ -1,15 +1,17 @@
 'use client'
 
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useMemo, useState, Suspense } from 'react'
+import { useCallback, useEffect, useMemo, useState, Suspense } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useRouter } from 'next/navigation'
 import { formatDateTime } from '@/lib/utils'
 import { READ_ONLY_DEMO, getDemoExecutionById, getDemoAuditSteps } from '@/lib/demo-data'
+import { AppNav } from '@/components/app-nav'
 
 interface ExecutionRow {
   execution_id: string
@@ -33,6 +35,28 @@ interface AuditEvent {
   data?: Record<string, unknown>
 }
 
+function summarizeEvent(step: AuditEvent): string {
+  const type = step.event_type || 'unknown'
+  const data = step.data || {}
+  if (type === 'write_blocked') return `Write blocked: ${String(data.reason || 'unknown_reason')}`
+  if (type === 'execution_confirmed') return `Confirmed by ${String(data.actor_id || 'unknown')}`
+  if (type === 'execution_rejected') return `Rejected by ${String(data.actor_id || 'unknown')}`
+  if (type === 'execution_replay_requested') return `Replay requested by ${String(data.actor_id || 'unknown')}`
+  if (type === 'execution_expired') return `Execution expired (${String(data.status || 'unknown')})`
+  if (type === 'sql_template_executed') {
+    return `SQL ${String(data.template_id || '-')} executed, rows=${String(data.row_count ?? 0)}`
+  }
+  return type
+}
+
+function humanizeFailureReason(code: string): string {
+  if (code.includes('write_blocked_invalid_token')) return '写入拦截：confirm_token 无效'
+  if (code.includes('missing_topic')) return '内容生成失败：缺少主题'
+  if (code.includes('missing_slot')) return '查询失败：缺少参数'
+  if (code.includes('sql_template_explain')) return 'SQL 预检失败'
+  return code
+}
+
 function AuditContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
@@ -40,21 +64,73 @@ function AuditContent() {
   const [execIdInput, setExecIdInput] = useState(execIdFromUrl ?? '')
   const [execution, setExecution] = useState<ExecutionRow | null>(null)
   const [auditSteps, setAuditSteps] = useState<AuditEvent[]>([])
+  const [eventTypeFilter, setEventTypeFilter] = useState('all')
+  const [eventSearch, setEventSearch] = useState('')
+  const sortedAuditSteps = useMemo(() => {
+    return [...auditSteps].sort((a, b) => {
+      const ta = a.timestamp ? Date.parse(a.timestamp) : 0
+      const tb = b.timestamp ? Date.parse(b.timestamp) : 0
+      return ta - tb
+    })
+  }, [auditSteps])
+
+  const filteredAuditSteps = useMemo(() => {
+    return sortedAuditSteps.filter((step) => {
+      if (eventTypeFilter !== 'all' && step.event_type !== eventTypeFilter) return false
+      if (eventSearch.trim()) {
+        const hay = `${step.event_type || ''} ${JSON.stringify(step.data || {})}`.toLowerCase()
+        if (!hay.includes(eventSearch.trim().toLowerCase())) return false
+      }
+      return true
+    })
+  }, [sortedAuditSteps, eventTypeFilter, eventSearch])
   const [lineage, setLineage] = useState<{ nodes: unknown[]; edges: unknown[] } | null>(null)
   const [causality, setCausality] = useState<AuditEvent[]>([])
   const [delta, setDelta] = useState<{ deltas: unknown[]; direction?: string; counterpart_execution_id?: string } | null>(null)
   const [showRaw, setShowRaw] = useState(false)
   const [loading, setLoading] = useState(!!execIdFromUrl)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (execIdFromUrl) {
-      setExecIdInput(execIdFromUrl)
-      fetchExecution(execIdFromUrl)
+  const [metrics, setMetrics] = useState<{
+    total: number
+    status_counts: Record<string, number>
+    event_counts: Record<string, number>
+    failed_reason_counts: Record<string, number>
+    business_counts: {
+      total: number
+      question_type_counts: Record<string, number>
+      error_code_counts: Record<string, number>
     }
-  }, [execIdFromUrl])
+  } | null>(null)
+  const [metricsError, setMetricsError] = useState<string | null>(null)
+  const [timeWindow, setTimeWindow] = useState<'200' | '500'>('200')
+  const [sinceDays, setSinceDays] = useState<'7' | '30' | '90'>('7')
 
-  const fetchExecution = async (id: string) => {
+  const fetchMetrics = useCallback(async () => {
+    try {
+      const metricsRes = await fetch(`/api/audit/metrics?limit=${timeWindow}&days=${sinceDays}`)
+      const metricsData = await metricsRes.json()
+      if (metricsRes.ok && metricsData?.success) {
+        setMetrics({
+          total: metricsData.total ?? 0,
+          status_counts: metricsData.status_counts ?? {},
+          event_counts: metricsData.event_counts ?? {},
+          failed_reason_counts: metricsData.failed_reason_counts ?? {},
+          business_counts: {
+            total: metricsData.business_counts?.total ?? 0,
+            question_type_counts: metricsData.business_counts?.question_type_counts ?? {},
+            error_code_counts: metricsData.business_counts?.error_code_counts ?? {},
+          },
+        })
+        setMetricsError(null)
+      } else if (!metricsRes.ok) {
+        setMetricsError(metricsData?.error || 'metrics_failed')
+      }
+    } catch (e) {
+      setMetricsError(e instanceof Error ? e.message : 'metrics_failed')
+    }
+  }, [timeWindow, sinceDays])
+
+  const fetchExecution = useCallback(async (id: string) => {
     if (!id.trim()) return
     setLoading(true)
     setError(null)
@@ -120,6 +196,7 @@ function AuditContent() {
         direction: deltaData.direction,
         counterpart_execution_id: deltaData.counterpart_execution_id,
       })
+      await fetchMetrics()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Network error')
       setExecution(null)
@@ -130,7 +207,19 @@ function AuditContent() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [fetchMetrics])
+
+  useEffect(() => {
+    if (execIdFromUrl) {
+      setExecIdInput(execIdFromUrl)
+      fetchExecution(execIdFromUrl)
+    }
+  }, [execIdFromUrl, fetchExecution])
+
+  useEffect(() => {
+    if (!execution || READ_ONLY_DEMO) return
+    fetchMetrics()
+  }, [execution, fetchMetrics])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -177,9 +266,19 @@ function AuditContent() {
       entry_id: execution?.task_id ?? (data as any)?.entry_id ?? '—',
       entry_type: (execution as any)?.entry_type ?? (data as any)?.entry_type ?? '—',
       entry_channel: (data as any)?.entry_channel ?? '—',
+      correlation_id: (data as any)?.correlation_id ?? '—',
       idempotency_key: execution?.idempotency_key ?? (data as any)?.idempotency_key ?? '—',
     }
   }, [auditSteps, execution])
+
+  const eventCounts = useMemo(() => {
+    const counts: Record<string, number> = {}
+    for (const step of sortedAuditSteps) {
+      const key = step.event_type || 'unknown'
+      counts[key] = (counts[key] || 0) + 1
+    }
+    return counts
+  }, [sortedAuditSteps])
 
   const routerPath = useMemo(() => {
     return auditSteps
@@ -197,13 +296,7 @@ function AuditContent() {
         <header className="bg-white border-b">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <h1 className="text-2xl font-bold">MAXshot Admin OS</h1>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => router.push('/ops')}>Ops</Button>
-              <Button variant="outline" onClick={() => router.push('/marketing')}>Marketing</Button>
-              <Button variant="outline" onClick={() => router.push('/confirmations')}>Confirmations</Button>
-              <Button variant="outline" onClick={() => router.push('/outcome')}>Outcome Snapshot</Button>
-              <Button variant="outline" onClick={() => router.push('/dashboard')}>Dashboard</Button>
-            </div>
+            <AppNav current="audit" />
           </div>
         </header>
 
@@ -252,6 +345,116 @@ function AuditContent() {
               </Card>
 
               {/* 执行摘要 — FSD 02.3、09 审计责任 */}
+
+              {metrics && (
+                <>
+                  <Card className="mb-6">
+                  <CardHeader>
+                    <CardTitle>Audit KPI (Recent {timeWindow})</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        <Button variant={timeWindow === '200' ? 'default' : 'outline'} size="sm" onClick={() => setTimeWindow('200')}>Last 200</Button>
+                        <Button variant={timeWindow === '500' ? 'default' : 'outline'} size="sm" onClick={() => setTimeWindow('500')}>Last 500</Button>
+                        <Button variant={sinceDays === '7' ? 'default' : 'outline'} size="sm" onClick={() => setSinceDays('7')}>7d</Button>
+                        <Button variant={sinceDays === '30' ? 'default' : 'outline'} size="sm" onClick={() => setSinceDays('30')}>30d</Button>
+                        <Button variant={sinceDays === '90' ? 'default' : 'outline'} size="sm" onClick={() => setSinceDays('90')}>90d</Button>
+                        <Button variant="outline" size="sm" onClick={fetchMetrics}>Refresh</Button>
+                      </div>
+                    </CardContent>
+                    <CardContent className="grid grid-cols-1 md:grid-cols-6 gap-3 text-sm">
+                      <div className="border rounded p-3 bg-gray-50">
+                        <div className="text-gray-500 text-xs">Total Executions</div>
+                        <div className="text-lg font-semibold">{metrics.total}</div>
+                      </div>
+                      <div className="border rounded p-3 bg-gray-50">
+                        <div className="text-gray-500 text-xs">Completed</div>
+                        <div className="text-lg font-semibold">{metrics.status_counts?.completed || 0}</div>
+                      </div>
+                      <div className="border rounded p-3 bg-gray-50">
+                        <div className="text-gray-500 text-xs">Failed</div>
+                        <div className="text-lg font-semibold">{metrics.status_counts?.failed || 0}</div>
+                      </div>
+                      <div className="border rounded p-3 bg-gray-50">
+                        <div className="text-gray-500 text-xs">Write Blocked</div>
+                        <div className="text-lg font-semibold">{metrics.event_counts?.write_blocked || 0}</div>
+                      </div>
+                      <div className="border rounded p-3 bg-blue-50">
+                        <div className="text-gray-500 text-xs">Business Queries</div>
+                        <div className="text-lg font-semibold">{metrics.business_counts?.total || 0}</div>
+                      </div>
+                      <div className="border rounded p-3 bg-orange-50">
+                        <div className="text-gray-500 text-xs">Business Rejected</div>
+                        <div className="text-lg font-semibold">
+                          {Object.values(metrics.business_counts?.error_code_counts || {}).reduce((acc, n) => acc + n, 0)}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="mb-6">
+                    <CardHeader>
+                      <CardTitle>Audit Metrics (Recent {timeWindow})</CardTitle>
+                    </CardHeader>
+                    {metrics.status_counts?.failed > metrics.status_counts?.completed && (
+                      <CardContent className="pt-0">
+                        <div className="text-red-600 text-xs">Anomaly: failed &gt; completed</div>
+                      </CardContent>
+                    )}
+                    <CardContent className="space-y-3 text-xs">
+                      <div className="flex flex-wrap gap-2">
+                        <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700">total: {metrics.total}</span>
+                        {Object.entries(metrics.status_counts).map(([key, count]) => (
+                          <span key={key} className="px-2 py-0.5 rounded bg-gray-100 text-gray-700">status.{key}: {count}</span>
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {Object.entries(metrics.event_counts).slice(0, 12).map(([key, count]) => (
+                          <span key={key} className="px-2 py-0.5 rounded bg-gray-100 text-gray-700">{key}: {count}</span>
+                        ))}
+                      </div>
+                      {Object.keys(metrics.failed_reason_counts || {}).length > 0 && (
+                        <div>
+                          <div className="text-[11px] text-gray-500 mb-1">Failure Reasons</div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(metrics.failed_reason_counts).slice(0, 8).map(([key, count]) => (
+                              <span key={key} className="px-2 py-0.5 rounded bg-red-50 text-red-700">{humanizeFailureReason(key)}: {count}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {Object.keys(metrics.business_counts?.question_type_counts || {}).length > 0 && (
+                        <div>
+                          <div className="text-[11px] text-gray-500 mb-1">Business Query Types</div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(metrics.business_counts.question_type_counts).map(([key, count]) => (
+                              <span key={key} className="px-2 py-0.5 rounded bg-blue-50 text-blue-700">{key}: {count}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {Object.keys(metrics.business_counts?.error_code_counts || {}).length > 0 && (
+                        <div>
+                          <div className="text-[11px] text-gray-500 mb-1">Business Rejection Reasons</div>
+                          <div className="flex flex-wrap gap-2">
+                            {Object.entries(metrics.business_counts.error_code_counts).map(([key, count]) => (
+                              <span key={key} className="px-2 py-0.5 rounded bg-orange-50 text-orange-700">{key}: {count}</span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </>
+              )}
+
+              {metricsError && (
+                <Card className="mb-6 border-red-200 bg-red-50">
+                  <CardContent className="pt-6">
+                    <p className="text-red-700">Metrics error: {metricsError}</p>
+                  </CardContent>
+                </Card>
+              )}
               <Card className="mb-6">
                 <CardHeader>
                   <CardTitle>Execution Summary</CardTitle>
@@ -343,13 +546,84 @@ function AuditContent() {
                 </Card>
               )}
 
-              {auditSteps.length > 0 && (
+              {sortedAuditSteps.length > 0 && (
                 <Card className="mb-6">
                   <CardHeader>
                     <CardTitle>Audit Events</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3 text-sm">
-                    {auditSteps.map((step, i) => (
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {Object.entries(eventCounts).map(([key, count]) => (
+                        <span key={key} className="px-2 py-0.5 rounded bg-gray-100 text-gray-700">{key}: {count}</span>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant={eventTypeFilter === 'all' ? 'default' : 'outline'} onClick={() => setEventTypeFilter('all')}>all</Button>
+                      <Button size="sm" variant={eventTypeFilter === 'write_blocked' ? 'default' : 'outline'} onClick={() => setEventTypeFilter('write_blocked')}>write_blocked</Button>
+                      <Button size="sm" variant={eventTypeFilter === 'execution_confirmed' ? 'default' : 'outline'} onClick={() => setEventTypeFilter('execution_confirmed')}>execution_confirmed</Button>
+                      <Button size="sm" variant={eventTypeFilter === 'sql_template_executed' ? 'default' : 'outline'} onClick={() => setEventTypeFilter('sql_template_executed')}>sql_template_executed</Button>
+                      <Input
+                        value={eventSearch}
+                        onChange={(e) => setEventSearch(e.target.value)}
+                        placeholder="search event payload"
+                        className="max-w-xs"
+                      />
+                      <Button size="sm" variant="outline" onClick={() => setEventSearch('')}>clear search</Button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div>
+                        <Label>event_type filter</Label>
+                        <Select value={eventTypeFilter} onValueChange={(v) => setEventTypeFilter(v || 'all')}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="event type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">all</SelectItem>
+                            {Object.keys(eventCounts).map((key) => (
+                              <SelectItem key={key} value={key}>{key}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>search</Label>
+                        <Input value={eventSearch} onChange={(e) => setEventSearch(e.target.value)} placeholder="search in event_type/data" />
+                      </div>
+                    </div>
+
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <Button variant="outline" size="sm" onClick={() => setEventTypeFilter('failed')}>Filter: failed</Button>
+                    <Button variant="outline" size="sm" onClick={() => setEventTypeFilter('execution_rejected')}>Filter: rejected</Button>
+                    <Button variant="outline" size="sm" onClick={() => setEventTypeFilter('write_blocked')}>Filter: write_blocked</Button>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      const blob = new Blob([JSON.stringify(filteredAuditSteps, null, 2)], { type: 'application/json' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `audit_${execIdInput || 'all'}.json`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    }}>Export JSON</Button>
+                    <Button variant="outline" size="sm" onClick={() => {
+                      const header = ['timestamp','event_type','execution_id','status','reason']
+                      const rows = filteredAuditSteps.map((step) => [
+                        step.timestamp || '',
+                        step.event_type || '',
+                        (step.data as any)?.execution_id || '',
+                        (step.data as any)?.status || '',
+                        (step.data as any)?.reason || '',
+                      ])
+                      const csv = [header, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g,'\"')}"`).join(',')).join('\n')
+                      const blob = new Blob([csv], { type: 'text/csv' })
+                      const url = URL.createObjectURL(blob)
+                      const a = document.createElement('a')
+                      a.href = url
+                      a.download = `audit_${execIdInput || 'all'}.csv`
+                      a.click()
+                      URL.revokeObjectURL(url)
+                    }}>Export CSV</Button>
+                  </div>
+                    {filteredAuditSteps.map((step, i) => (
                       <div key={i} className="border-b pb-3 last:border-b-0 last:pb-0">
                         <div className="flex items-center gap-2">
                           <span className="px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium">
@@ -357,9 +631,16 @@ function AuditContent() {
                           </span>
                           <span className="text-xs text-gray-500">{step.timestamp ?? '—'}</span>
                         </div>
-                        <div className="text-xs font-mono break-all mt-1">
-                          {JSON.stringify(step.data ?? {})}
+                        <div className="text-xs text-gray-700 mt-1">{summarizeEvent(step)}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Button variant="outline" size="sm" onClick={() => setShowRaw((v) => !v)}>Toggle JSON</Button>
+                          <span className="text-xs text-gray-500">event data</span>
                         </div>
+                        {showRaw && (
+                          <div className="text-xs font-mono break-all mt-1">
+                            {JSON.stringify(step.data ?? {})}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </CardContent>
@@ -441,25 +722,32 @@ function AuditContent() {
                         counterpart: {delta.counterpart_execution_id ?? '—'}
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="border rounded p-3 bg-gray-50">
-                        <div className="text-gray-500 mb-2">Before</div>
-                        <pre className="font-mono break-all whitespace-pre-wrap">
-                          {JSON.stringify(delta.deltas ?? [], null, 2)}
-                        </pre>
+                    {delta.deltas?.length ? (
+                      <div className="space-y-2">
+                        {delta.deltas.map((item: any, idx: number) => (
+                          <div key={idx} className="border rounded p-2 bg-gray-50">
+                            <div className="font-mono text-[11px] text-gray-700">{item.path ?? '—'}</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-1">
+                              <div>
+                                <div className="text-gray-500">before</div>
+                                <pre className="font-mono break-all whitespace-pre-wrap">{JSON.stringify(item.before ?? null)}</pre>
+                              </div>
+                              <div>
+                                <div className="text-gray-500">after</div>
+                                <pre className="font-mono break-all whitespace-pre-wrap">{JSON.stringify(item.after ?? null)}</pre>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="border rounded p-3 bg-gray-50">
-                        <div className="text-gray-500 mb-2">After</div>
-                        <pre className="font-mono break-all whitespace-pre-wrap">
-                          {JSON.stringify(delta.deltas ?? [], null, 2)}
-                        </pre>
-                      </div>
-                    </div>
+                    ) : (
+                      <div className="text-gray-500">No delta available.</div>
+                    )}
                   </CardContent>
                 </Card>
               )}
 
-              {auditSteps.length === 0 && (
+              {filteredAuditSteps.length === 0 && (
                 <Card className="mb-6 border-amber-200 bg-amber-50">
                   <CardContent className="pt-6">
                     <p className="text-sm text-amber-800">
