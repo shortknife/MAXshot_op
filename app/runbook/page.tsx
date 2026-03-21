@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, type ReactElement } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -29,7 +29,7 @@ export default function RunbookPage() {
 
   const { nodes, toc } = useMemo(() => {
     const lines = content.split('\n')
-    const out: JSX.Element[] = []
+    const out: ReactElement[] = []
     const tocItems: Array<{ id: string; text: string }> = []
 
     const slugify = (text: string) =>

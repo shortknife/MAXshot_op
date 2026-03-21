@@ -37,7 +37,7 @@ export function normalizeAuditEvent(
   fallbackExecutionId?: string
 ) {
   const eventType = String(event.event_type || 'unknown_event')
-  const data = {
+  const data: Record<string, unknown> = {
     execution_id: fallbackExecutionId || null,
     ...(event.data || {}),
   }

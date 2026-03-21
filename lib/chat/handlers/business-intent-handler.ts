@@ -262,7 +262,7 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
   })
 
   if (output.status !== 'success') {
-    const reason = output.error || output.metadata?.rejected_reason || 'insufficient_business_data'
+    const reason = String(output.error || output.metadata?.rejected_reason || 'insufficient_business_data')
     await logBusinessQuery({
       userId: 'user_chat',
       rawQuery: effectiveQuery,
@@ -382,6 +382,14 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
     evidence_count: reasonBreakdown.evidence_count,
   }
   const vaultOptions = await fetchVaultOptions(20)
+  const evidenceSources = Array.isArray(output.evidence?.sources)
+    ? output.evidence.sources
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object')
+        .map((item) => ({
+          source_type: typeof item.source_type === 'string' ? item.source_type : undefined,
+          source_id: typeof item.source_id === 'string' ? item.source_id : undefined,
+        }))
+    : []
   const yieldNextActions =
     resolvedScope === 'yield'
       ? buildFollowUpExamples(
@@ -402,7 +410,7 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
     outputScope: (result.scope as string | null) || null,
     fallbackScope: String(parsed.intent.extracted_slots?.scope || 'business_query'),
     promptMeta: parsed.prompt_meta || null,
-    evidence: output.evidence?.sources || [],
+    evidence: evidenceSources,
   })
 
   return {
@@ -424,7 +432,7 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
       interpretation,
       resolvedScope,
       intentQuery,
-      evidence: output.evidence?.sources || [],
+      evidence: evidenceSources,
       narrativeEvidence,
       explanation: investigateExplanation,
       reasonTags,

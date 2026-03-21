@@ -32,6 +32,8 @@ export function buildOutOfScopeBusinessResponse(params: {
     data: buildUserOutcome({
       type: 'ops',
       summary: '我目前仅支持 MAXshot 业务查询与运营任务（Vault / Execution / APY / Marketing）。你可以这样问：当前 vault APY 怎么样？',
+      rows: [],
+      draft: null,
       error: 'out_of_scope',
       meta: {
         intent_type: params.intentType,
@@ -70,6 +72,8 @@ export function buildModelClarificationBusinessResponse(params: {
     data: buildUserOutcome({
       type: 'ops',
       summary: params.question,
+      rows: [],
+      draft: null,
       error: 'missing_required_clarification',
       meta: {
         intent_type: params.intentType,
@@ -122,6 +126,8 @@ export function buildBusinessFailureResponse(params: {
     data: buildUserOutcome({
       type: 'ops',
       summary: mapErrorToUserMessage(params.reason),
+      rows: [],
+      draft: null,
       error: params.reason,
       meta: {
         intent_type: params.intentType,

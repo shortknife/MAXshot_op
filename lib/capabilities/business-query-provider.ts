@@ -185,18 +185,19 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
       >()
 
       for (const row of narrowedRows) {
-        const chain = String(row.chain || '').trim() || null
-        const protocol = String(row.protocol || '').trim() || null
-        const marketName = String(row.market_name || '').trim() || 'Unknown Market'
-        const apy = toApyPercent(row.net_apy ?? row.base_apy ?? NaN)
+        const record = row as Record<string, unknown>
+        const chain = String(record.chain || '').trim() || null
+        const protocol = String(record.protocol || '').trim() || null
+        const marketName = String(record.market_name || '').trim() || 'Unknown Market'
+        const apy = toApyPercent(record.net_apy ?? record.base_apy ?? NaN)
         if (!Number.isFinite(apy)) continue
-        const compareTarget = String(row.__compare_target || '').trim() || null
+        const compareTarget = String(record.__compare_target || '').trim() || null
         const key =
           compareTargets.length >= 2
             ? `compare__${compareTarget || marketName}`
             : `${chain || ''}__${protocol || ''}__${marketName}`
-        const createdAt = String(row.created_at || '').trim() || null
-        const tvl = Number(row.tvl ?? 0)
+        const createdAt = String(record.created_at || '').trim() || null
+        const tvl = Number(record.tvl ?? 0)
         const existing = grouped.get(key)
         if (!existing) {
           grouped.set(key, {

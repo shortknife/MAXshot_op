@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { buildAttribution } from '../../@/lib/evolution/attribution'
+import { buildAttribution } from '@/lib/evolution/attribution'
 import { buildAuditEvent } from '@/lib/router/audit-event'
 
 export async function POST(req: Request) {

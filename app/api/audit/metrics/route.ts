@@ -63,7 +63,7 @@ export async function GET(request: Request) {
         const canonicalKey = ev?.event_type_canonical || 'unknown'
         eventCanonicalCounts[canonicalKey] = (eventCanonicalCounts[canonicalKey] || 0) + 1
         if (isFailureEvent(key)) {
-          const data = ev?.data || {}
+          const data = (ev?.data || {}) as Record<string, unknown>
           const reason =
             (data.reason as string | undefined) ||
             (data.error as string | undefined) ||

@@ -5,7 +5,7 @@ import { resolveChatIntentLane } from '@/lib/chat/chat-intent-lane'
 import type { PreparedChatRequest } from '@/lib/chat/chat-request-preprocess'
 
 export function resolveMaxClarificationTurns(): number {
-  const followUpPolicy = getBusinessFollowUpPolicy()
+  const followUpPolicy = getBusinessFollowUpPolicy() || {}
   return typeof followUpPolicy.max_clarification_turns === 'number' && followUpPolicy.max_clarification_turns > 0
     ? Math.floor(followUpPolicy.max_clarification_turns)
     : 2

@@ -46,7 +46,7 @@ export async function handleContentIntent(params: {
     return {
       handled: true,
       body: buildContentBriefFailureResponse({
-        errorCode: output.error || output.metadata?.rejected_reason,
+        errorCode: String(output.error || output.metadata?.rejected_reason || ''),
         intentType,
         canonicalIntentType,
         primaryCapabilityId,

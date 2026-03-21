@@ -89,7 +89,10 @@ export async function GET(req: NextRequest) {
 
     const children = (recent || []).filter(row => {
       const evs = extractNormalizedAuditEvents(row.audit_log, row.execution_id);
-      return evs.some(e => e.event_type === 'execution_retry_created' && e.data?.source_execution_id === executionId);
+      return evs.some(e => {
+        const data = (e.data || {}) as Record<string, unknown>;
+        return e.event_type === 'execution_retry_created' && data.source_execution_id === executionId;
+      });
     });
 
     for (const child of children) {

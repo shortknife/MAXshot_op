@@ -49,6 +49,7 @@ export class AuditLogger {
       normalizeAuditEvent(
         {
           ...event,
+          event_type: String(event.event_type || 'unknown_event'),
           data: {
             status: (event.data as any)?.status ?? undefined,
             reason: (event.data as any)?.reason ?? undefined,

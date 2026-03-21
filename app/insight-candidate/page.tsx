@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from 'react'
+import { Suspense } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,6 +27,14 @@ type CapabilityOutput = {
 type AuditEvent = { event_type?: string; timestamp?: string; data?: Record<string, unknown> }
 
 export default function InsightCandidatePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Loading...</div>}>
+      <InsightCandidatePageContent />
+    </Suspense>
+  )
+}
+
+function InsightCandidatePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const execIdFromUrl = searchParams.get('exec_id') || ''

@@ -18,10 +18,8 @@ export async function handleQnaIntent(params: {
 }): Promise<{ body: unknown }> {
   const { intentType, matchedCapabilityIds, primaryCapabilityId, parsed } = params
   const qna = await productDocQnA(buildChatEnvelope(intentType, parsed.intent.extracted_slots || {}))
-  const answer =
-    typeof (qna.result as { answer?: string })?.answer === 'string'
-      ? (qna.result as { answer?: string }).answer
-      : '当前没有可用答案。'
+  const resolvedAnswer = (qna.result as { answer?: string })?.answer
+  const answer: string = typeof resolvedAnswer === 'string' ? resolvedAnswer : '当前没有可用答案。'
 
   return {
     body: buildQnaSuccessResponse({

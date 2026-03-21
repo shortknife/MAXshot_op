@@ -116,7 +116,7 @@ export async function dataFactQuery(input: CapabilityInputEnvelope, client = sup
     inputContract = validateDataFactQueryInputContract({ input, slotsValid: true, templateId })
     const used_skills = ['sql-template', 'supabase-read', 'sql-explain']
     const templateSlots = ensureObjectParam((slots as any).template_slots || {}, 'template_slots')
-    const auditEvents = [
+    const auditEvents: Array<{ event_type: string; data: Record<string, unknown> }> = [
       {
         event_type: 'sql_template_requested',
         data: {
@@ -378,7 +378,11 @@ export async function dataFactQuery(input: CapabilityInputEnvelope, client = sup
       }
 
       case 'external_ops_price': {
-        const assetId = readStringParam(slots, 'asset_id', { required: true, label: 'asset_id' })
+        const assetId = readStringParam(slots, 'asset_id', { required: true, label: 'asset_id' }) || ''
+        if (!assetId) {
+          queryResult = buildFailure('missing_asset_id')
+          break
+        }
         const vsCurrency = readStringParam(slots, 'vs_currency') || 'usd'
         const endpoint = readStringParam(slots, 'endpoint') || 'https://api.coingecko.com/api/v3/simple/price'
         if (!isAllowedExternalHost(endpoint)) {

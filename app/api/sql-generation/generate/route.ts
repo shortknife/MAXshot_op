@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
-import { generateSQL, recordQuery } from '../../../../../server-actions/capabilities/sql-generation-engine'
-import { findMatchingTemplate, recordTemplateSuccess } from '../../../../../server-actions/capabilities/sql-template-engine'
+import { generateSQL, recordQuery } from '@/server-actions/capabilities/sql-generation-engine'
+import { findMatchingTemplate, recordTemplateSuccess } from '@/server-actions/capabilities/sql-template-engine'
 
 export async function POST(request: Request) {
   try {
@@ -57,7 +57,7 @@ export async function POST(request: Request) {
     if (templateMatch && templateMatch.confidence > 0.9) {
       // Use template
       tierUsed = 'template'
-      const { renderTemplate } = await import('../../../../../server-actions/capabilities/sql-template-engine')
+      const { renderTemplate } = await import('@/server-actions/capabilities/sql-template-engine')
       const rendered = renderTemplate(templateMatch.template, templateMatch.matched_parameters)
 
       result = {

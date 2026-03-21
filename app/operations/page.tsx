@@ -301,7 +301,7 @@ export default function OperationsPage() {
       body: JSON.stringify({ execution_id: executionId, operator_id: operatorId.trim(), confirm_token: confirmToken.trim() }),
     })
     const data = await res.json()
-    if (!res.ok) throw new Error(data.error || data.details || 'Snapshot failed')
+    if (!res.ok) throw new Error(String(data.error || data.details || 'Snapshot failed'))
     return data.execution
   }
 
@@ -312,7 +312,7 @@ export default function OperationsPage() {
     try {
       const res = await fetch(`/api/outcome-delta?execution_id=${encodeURIComponent(aId)}&counterpart_execution_id=${encodeURIComponent(bId)}`)
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || data.details || 'Compare delta failed')
+      if (!res.ok) throw new Error(String(data.error || data.details || 'Compare delta failed'))
       setCompareDelta({
         deltas: data.deltas ?? [],
         direction: data.direction,
@@ -354,7 +354,7 @@ export default function OperationsPage() {
         }),
       })
       const data = (await res.json()) as Record<string, unknown>
-      if (!res.ok) throw new Error(data.error || data.details || 'Replay failed')
+      if (!res.ok) throw new Error(String(data.error || data.details || 'Replay failed'))
       const replayId = typeof data.execution_id === 'string' ? data.execution_id : executionId
       setActionMessage(formatActionSuccess('replay', executionId, data))
       markActionAt()
@@ -384,7 +384,7 @@ export default function OperationsPage() {
         }),
       })
       const data = (await res.json()) as Record<string, unknown>
-      if (!res.ok) throw new Error(data.error || data.details || 'Retry failed')
+      if (!res.ok) throw new Error(String(data.error || data.details || 'Retry failed'))
       const retryId = typeof data.execution_id === 'string' ? data.execution_id : executionId
       setActionMessage(formatActionSuccess('retry', executionId, data))
       markActionAt()
@@ -417,7 +417,7 @@ export default function OperationsPage() {
         }),
       })
       const data = (await res.json()) as Record<string, unknown>
-      if (!res.ok) throw new Error(data.error || data.details || 'Expire failed')
+      if (!res.ok) throw new Error(String(data.error || data.details || 'Expire failed'))
       setActionMessage(formatActionSuccess('expire', executionId, data))
       markActionAt()
       await loadExecutions()
@@ -699,7 +699,7 @@ export default function OperationsPage() {
                 <Button onClick={handleCompare}>Compare</Button>
               </div>
 
-              {(snapshotA || snapshotB) && (
+              {(Boolean(snapshotA) || Boolean(snapshotB)) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card>
                     <CardHeader><CardTitle className="text-sm">Compare Delta</CardTitle></CardHeader>

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createTemplate } from '../../../../../server-actions/capabilities/sql-template-engine'
+import { createTemplate } from '@/server-actions/capabilities/sql-template-engine'
 
 export async function POST(request: Request) {
   try {

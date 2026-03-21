@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getDepositionCandidates } from '../../../../../server-actions/capabilities/sql-deposition-engine'
+import { getDepositionCandidates } from '@/server-actions/capabilities/sql-deposition-engine'
 
 export async function GET(request: Request) {
   try {
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
     }
 
     // Get the query history first
-    const { getQueryHistory } = await import('../../../../../server-actions/capabilities/sql-generation-engine')
+    const { getQueryHistory } = await import('@/server-actions/capabilities/sql-generation-engine')
     const queries = await getQueryHistory()
     const query = queries.find((q: any) => q.id === body.query_id)
 
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     }
 
     // Evaluate and deposit
-    const { evaluateDepositionCandidate, depositTemplate } = await import('../../../../../server-actions/capabilities/sql-deposition-engine')
+    const { evaluateDepositionCandidate, depositTemplate } = await import('@/server-actions/capabilities/sql-deposition-engine')
     const candidate = await evaluateDepositionCandidate(query)
 
     if (!candidate.meetsCriteria || !candidate.extractedTemplate) {

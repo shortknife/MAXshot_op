@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -30,6 +30,14 @@ type CapabilityOutput = {
 type AuditEvent = { event_type?: string; timestamp?: string; data?: Record<string, unknown> }
 
 export default function InsightWritebackPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 flex items-center justify-center text-gray-500">Loading...</div>}>
+      <InsightWritebackPageContent />
+    </Suspense>
+  )
+}
+
+function InsightWritebackPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const execId = searchParams.get('exec_id') || ''

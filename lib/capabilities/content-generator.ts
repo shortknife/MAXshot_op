@@ -243,10 +243,13 @@ export async function contentGenerator(input: CapabilityInputEnvelope): Promise<
     return buildFailure(reason)
   }
 
-  let topic: string | undefined
+  let topic = ''
   try {
-    topic = readStringParam(slots, 'topic', { required: true, label: 'topic' })
+    topic = readStringParam(slots, 'topic', { required: true, label: 'topic' }) || ''
   } catch {
+    return buildFailure('missing_topic')
+  }
+  if (!topic.trim()) {
     return buildFailure('missing_topic')
   }
   const tone = readStringParam(slots, 'tone') || 'neutral'

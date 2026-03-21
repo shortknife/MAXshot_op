@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { getTemplate, updateTemplate, deleteTemplate } from '../../../../../server-actions/capabilities/sql-template-engine'
+import { getTemplate, updateTemplate, deleteTemplate } from '@/server-actions/capabilities/sql-template-engine'
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
     const template = await getTemplate(params.id)
 
     if (!template) {
@@ -36,9 +37,10 @@ export async function GET(
 
 export async function PUT(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
     const body = await request.json()
 
     const template = await updateTemplate(params.id, body)
@@ -61,9 +63,10 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const params = await context.params
     await deleteTemplate(params.id)
 
     return NextResponse.json({

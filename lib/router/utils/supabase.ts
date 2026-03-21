@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { Execution, ExecutionStatus } from '../router/types/execution'
+import { Execution, ExecutionStatus } from '../types/execution'
 
 export async function getExecutionById(executionId: string): Promise<Execution | null> {
   const { data, error } = await supabase

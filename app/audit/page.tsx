@@ -662,7 +662,7 @@ function AuditContent() {
                               {String(node.type ?? 'node')}
                             </span>
                             <span className="font-mono text-xs break-all">{String(node.id ?? '—')}</span>
-                            {node.status && <span className={statusBadge(String(node.status))}>{String(node.status)}</span>}
+                            {Boolean(node.status) && <span className={statusBadge(String(node.status))}>{String(node.status)}</span>}
                           </div>
                         ))}
                       </div>

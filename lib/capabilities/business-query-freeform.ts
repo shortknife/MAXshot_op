@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { generateSQL } from '../../../server-actions/capabilities/sql-generation-engine'
+import { generateSQL } from '@/server-actions/capabilities/sql-generation-engine'
 import { assertReadOnlySql } from '@/lib/sql-templates/guard'
 import { businessRpc } from '@/lib/capabilities/business-data-access'
 import type { BusinessQueryResult as QueryResult } from '@/lib/capabilities/business-query-runtime'

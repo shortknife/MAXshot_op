@@ -59,6 +59,8 @@ export function buildBusinessSuccessResponse(params: BusinessSuccessResponsePara
       type: 'ops',
       summary: params.summary,
       rows: params.previewRows,
+      draft: null,
+      error: null,
       meta: {
         intent_type: params.intentType,
         intent_type_canonical: resolveCanonicalIntent(params),
