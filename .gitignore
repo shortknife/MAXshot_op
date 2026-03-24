@@ -28,8 +28,7 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
-# vercel env file (contains sensitive keys, but needed for deployment)
-# vercel.env
+vercel.env
 
 # vercel
 .vercel
@@ -37,3 +36,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local/deployment noise
+playwright-report/
+test-results/
+dev_server.pid
+admin-os@0.1.0
+node
+package 2.json
+package.json.broken
+tsconfig 2.json
+vitest.config.mjs
