@@ -53,13 +53,14 @@ export function clearStoredToken(): void {
 
 export async function checkWhitelist(email: string): Promise<AdminUser | null> {
   try {
-    console.log('Checking whitelist for email:', email)
+    const normalizedEmail = String(email || '').trim()
+    console.log('Checking whitelist for email:', normalizedEmail)
     
     const { data, error } = await supabase
       .from('admin_whitelist')
       .select('email, name, role')
-      .eq('email', email)
       .eq('is_active', true)
+      .ilike('email', normalizedEmail)
       .maybeSingle()
     
     if (error) {
@@ -89,29 +90,31 @@ export async function checkWhitelist(email: string): Promise<AdminUser | null> {
 }
 
 export async function login(email: string): Promise<{ success: boolean; user?: AdminUser; error?: string }> {
+  const normalizedEmail = String(email || '').trim()
+
   // 特殊处理：允许 'admin' 作为用户名
-  const isSpecialUser = email === 'admin'
+  const isSpecialUser = normalizedEmail.toLowerCase() === 'admin'
   
   // 验证邮箱格式（特殊用户除外）
   if (!isSpecialUser) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(normalizedEmail)) {
       return { success: false, error: 'Please enter a valid email address' }
     }
   }
   
   // 检查白名单
-  const user = await checkWhitelist(email)
+  const user = await checkWhitelist(normalizedEmail)
   if (!user) {
-    console.error('Login failed: User not in whitelist', { email })
+    console.error('Login failed: User not in whitelist', { email: normalizedEmail })
     return { success: false, error: 'Email not in whitelist' }
   }
   
   // 生成简单token（实际项目中可以使用JWT）
-  const token = `${email}_${Date.now()}_${Math.random().toString(36).substring(7)}`
+  const token = `${user.email}_${Date.now()}_${Math.random().toString(36).substring(7)}`
   
   // 存储token
-  setStoredToken(email, token)
+  setStoredToken(user.email, token)
   
   return { success: true, user }
 }
