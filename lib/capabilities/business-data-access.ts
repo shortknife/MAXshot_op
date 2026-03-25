@@ -14,10 +14,19 @@ export async function businessSelectLatestByCreatedAt(table: string, limit: numb
   return supabase.from(table).select('*').order('created_at', { ascending: false }).limit(limit)
 }
 
+export async function businessSelectLatestByFreshness(table: string, limit: number) {
+  return supabase
+    .from(table)
+    .select('*')
+    .order('updated_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false, nullsFirst: false })
+    .limit(limit)
+}
+
 export async function findExecutionByExecutionIdOrId(executionId: string) {
-  const byExecutionId = await supabase.from('executions').select('*').eq('execution_id', executionId).limit(1)
-  if ((byExecutionId.data || []).length > 0 || byExecutionId.error) return byExecutionId
-  return supabase.from('executions').select('*').eq('id', executionId).limit(1)
+  const byId = await supabase.from('executions').select('*').eq('id', executionId).limit(1)
+  if ((byId.data || []).length > 0 || byId.error) return byId
+  return supabase.from('executions').select('*').eq('n8n_execution_id', executionId).limit(1)
 }
 
 export async function findAllocationExecutionIdsByVaultKeyword(keyword: string) {

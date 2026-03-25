@@ -3,6 +3,7 @@ import {
   businessRpc,
   businessSelect,
   businessSelectLatestByCreatedAt,
+  businessSelectLatestByFreshness,
   findAllocationExecutionIdsByVaultKeyword,
   findExecutionByExecutionIdOrId,
   queryMarketMetricsSince,
@@ -95,6 +96,24 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
         return { ok: true, rows: (ordered.data || []) as Record<string, unknown>[] }
       }
       const plain = await withRetry(() => businessSelect(table, limit))
+      if (plain.error) return { ok: false, rows: [], error: plain.error.message }
+      return { ok: true, rows: (plain.data || []) as Record<string, unknown>[] }
+    } catch (e) {
+      return { ok: false, rows: [], error: e instanceof Error ? e.message : String(e) }
+    }
+  }
+
+  async function tryExecutionLatest(limit = 10): Promise<{ ok: boolean; rows: Record<string, unknown>[]; error?: string }> {
+    try {
+      const ordered = await withRetry(() => businessSelectLatestByFreshness('executions', limit))
+      if (!ordered.error) {
+        return { ok: true, rows: (ordered.data || []) as Record<string, unknown>[] }
+      }
+      const legacy = await withRetry(() => businessSelectLatestByCreatedAt('executions', limit))
+      if (!legacy.error) {
+        return { ok: true, rows: (legacy.data || []) as Record<string, unknown>[] }
+      }
+      const plain = await withRetry(() => businessSelect('executions', limit))
       if (plain.error) return { ok: false, rows: [], error: plain.error.message }
       return { ok: true, rows: (plain.data || []) as Record<string, unknown>[] }
     } catch (e) {
@@ -339,7 +358,7 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
       }
     }
 
-    const table = await tryTableLatest('executions', 10)
+    const table = await tryExecutionLatest(10)
     if (table.ok) {
       const rows = executionId
         ? table.rows.filter((r) => String(r.execution_id || r.id || '') === executionId)
