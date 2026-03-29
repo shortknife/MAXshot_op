@@ -11,6 +11,7 @@ import { prepareChatRequest } from '@/lib/chat/chat-request-preprocess'
 import { buildEarlyGateResponse, resolveMaxClarificationTurns } from '@/lib/chat/chat-request-gates'
 import { dispatchNonBusinessIntent } from '@/lib/chat/handlers/non-business-intent-dispatcher'
 import { ensureCanonicalIntentMeta } from '@/lib/chat/chat-response-normalize'
+import { finalizeDelivery } from '@/lib/chat/delivery-critic'
 
 export type ChatAskServiceResult = {
   status: number
@@ -22,12 +23,13 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   const rewriteAction = String(body?.rewrite_action || '').trim()
   const draft = String(body?.draft || '').trim()
   const sessionId = getClarificationSessionId(body?.session_id)
+  const finalize = (payload: Record<string, unknown>) => finalizeDelivery(payload)
 
   if (rewriteAction) {
     const rewritten = rewriteDraft(draft, rewriteAction)
     return {
       status: 200,
-      body: {
+      body: finalize({
         success: true,
         data: buildUserOutcome({
           type: 'marketing',
@@ -35,7 +37,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
           draft: rewritten,
           meta: { rewrite_action: rewriteAction },
         }),
-      },
+      }),
     }
   }
 
@@ -75,13 +77,13 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   if (gateResponse) {
     return {
       status: 200,
-      body: ensureCanonicalIntentMeta(
+      body: finalize(ensureCanonicalIntentMeta(
         gateResponse.body,
         intentType,
         canonicalIntentType,
         matchedCapabilityIds,
         primaryCapabilityId
-      ),
+      )),
     }
   }
 
@@ -104,13 +106,13 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   if (businessHandled.handled) {
     return {
       status: 200,
-      body: ensureCanonicalIntentMeta(
+      body: finalize(ensureCanonicalIntentMeta(
         businessHandled.body,
         intentType,
         canonicalIntentType,
         matchedCapabilityIds,
         primaryCapabilityId
-      ),
+      )),
     }
   }
 
@@ -124,12 +126,12 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   })
   return {
     status: 200,
-    body: ensureCanonicalIntentMeta(
+    body: finalize(ensureCanonicalIntentMeta(
       nonBusinessBody,
       intentType,
       canonicalIntentType,
       matchedCapabilityIds,
       primaryCapabilityId
-    ),
+    )),
   }
 }

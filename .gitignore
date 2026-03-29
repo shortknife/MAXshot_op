@@ -12,3 +12,5 @@ admin-os/.vercel/
 admin-os/*.log
 admin-os/.env
 admin-os/.env.*
+.cx-index.db
+**/.cx-index.db

@@ -31,17 +31,21 @@ function extractRawQuery(update: TgUpdate): string {
   return text
 }
 
-function toTelegramReply(payload: unknown): string {
+export function toTelegramReply(payload: unknown): string {
   const body = payload as {
     success?: boolean
     error?: string
     details?: string
-    data?: { summary?: string; error?: string; meta?: { next_actions?: string[] } }
+    delivery_envelope?: { summary?: string; meta?: { next_actions?: string[] } }
+    data?: { summary?: string; error?: string; meta?: { next_actions?: string[]; delivery_envelope?: { summary?: string; meta?: { next_actions?: string[] } } } }
   }
   if (body?.error) return `${body.error}${body.details ? `: ${body.details}` : ''}`
-  const summary = String(body?.data?.summary || '').trim()
-  const nextActions = Array.isArray(body?.data?.meta?.next_actions)
-    ? body.data.meta.next_actions.filter(Boolean).slice(0, 3)
+  const envelope = body?.delivery_envelope || body?.data?.meta?.delivery_envelope
+  const summary = String(envelope?.summary || body?.data?.summary || '').trim()
+  const nextActions = Array.isArray(envelope?.meta?.next_actions)
+    ? envelope.meta.next_actions.filter(Boolean).slice(0, 3)
+    : Array.isArray(body?.data?.meta?.next_actions)
+      ? body.data.meta.next_actions.filter(Boolean).slice(0, 3)
     : []
   if (!summary) return '已收到你的问题，但当前没有可展示结果。'
   if (!nextActions.length) return summary
