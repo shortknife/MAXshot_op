@@ -40,7 +40,25 @@ export async function POST(req: NextRequest) {
     }
 
     const result = await executeRouter(execution_id);
-    return NextResponse.json({ success: true, execution_id, result });
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          execution_id,
+          error: result.error || 'router_blocked',
+          routing_decision: (result as Record<string, unknown>).routing_decision || null,
+          result,
+        },
+        { status: 409 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      execution_id,
+      routing_decision: (result as Record<string, unknown>).routing_decision || null,
+      result,
+    });
   } catch (error: unknown) {
     return NextResponse.json(
       { error: 'Execution run failed', details: error instanceof Error ? error.message : String(error) },

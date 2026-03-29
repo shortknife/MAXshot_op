@@ -9,6 +9,7 @@ import { AuditLogger } from './audit-logging'
 import { createHash } from 'crypto'
 import { buildCapabilityRegistryRefIds, resolveCapabilityIds } from './capability-catalog'
 import { buildMemoryRuntime } from '@/lib/capabilities/memory-refs'
+import { buildRoutingDecisionFromExecution } from './routing-decision'
 
 function toMemoryRefsRef(memoryRefs: unknown[]): string[] {
   if (!Array.isArray(memoryRefs)) return []
@@ -135,24 +136,27 @@ export async function executeRouter(executionId: string) {
       throw new Error(`Execution not found: ${executionId}`)
     }
 
+    const routingDecision = buildRoutingDecisionFromExecution(execution)
+
     logger.log('router_preflight', {
       execution_id: executionId,
       status: execution.status,
-      reason: execution.status === 'confirmed' ? 'ok' : 'status_not_confirmed',
+      reason: routingDecision.dispatch_ready ? 'ok' : routingDecision.reason,
     })
 
-    if (execution.status !== 'confirmed') {
-      logger.log('execution_not_confirmed', {
+    if (!routingDecision.dispatch_ready) {
+      logger.log('execution_not_runnable', {
         execution_id: executionId,
         status: execution.status,
-        reason: 'status_not_confirmed',
+        reason: routingDecision.reason,
       })
       await logger.flush(executionId)
       return {
+        routing_decision: routingDecision,
         capability_outputs: [],
-        final_answer: 'Execution not confirmed',
+        final_answer: 'Execution not runnable',
         success: false,
-        error: 'Execution not confirmed',
+        error: routingDecision.reason,
       }
     }
 
@@ -164,18 +168,15 @@ export async function executeRouter(executionId: string) {
       reason: 'router_start',
     })
 
-    const intent = execution.payload?.intent as Intent | undefined
-    if (!intent) {
-      throw new Error('No intent found in execution payload')
-    }
+    const intent = routingDecision.intent
 
     logger.log('intent_received', {
       execution_id: executionId,
       status: runtimeStatus,
       intent_type: intent.type,
-      intent_name: intent.type,
-      matched_capability_ids: extractMatchedCapabilityIds(intent, (execution.payload as any)?.slots || {}),
-      memory_refs_ref: buildCapabilityRegistryRefIds(extractMatchedCapabilityIds(intent, (execution.payload as any)?.slots || {})),
+      intent_name: routingDecision.intent_name,
+      matched_capability_ids: routingDecision.matched_capability_ids,
+      memory_refs_ref: routingDecision.memory_refs_ref,
       step_status: fsdStepStatus,
     })
 
@@ -205,7 +206,7 @@ export async function executeRouter(executionId: string) {
       memory_ref_count: memoryRefs.length,
     })
 
-    const normalizedSlots = normalizeIntentSlots(intent, (execution.payload as any)?.slots || {})
+    const normalizedSlots = normalizeIntentSlots(intent, intent.extracted_slots || {})
 
     const outputs: unknown[] = []
     let rollingMemoryRefs: unknown[] = workingMind.memory_refs
@@ -335,6 +336,14 @@ export async function executeRouter(executionId: string) {
       : 'Execution failed'
 
     const result = {
+      routing_decision: {
+        primary_capability_id: routingDecision.primary_capability_id,
+        matched_capability_ids: routingDecision.matched_capability_ids,
+        capability_chain: decomposition.capability_chain,
+        memory_query: decomposition.memory_query,
+        memory_refs_ref: rollingMemoryRuntime.ref_ids,
+        dispatch_ready: true,
+      },
       capability_outputs: outputs,
       final_answer: finalAnswer,
       success,
