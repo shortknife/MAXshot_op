@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
 import { buildAuditEvent } from '@/lib/router/audit-event';
+import { appendAuditEvent } from '@/lib/router/audit-logging';
 
 /**
  * POST /api/execution/replay
@@ -26,16 +27,7 @@ export async function POST(req: NextRequest) {
         operatorId: operator_id,
         requestPath: '/api/execution/replay',
       });
-      const { data: existing } = await supabase
-        .from('task_executions_op')
-        .select('audit_log')
-        .eq('execution_id', execution_id)
-        .maybeSingle();
-      const auditLog = existing?.audit_log || { execution_id, events: [], created_at: new Date().toISOString() };
-      await supabase
-        .from('task_executions_op')
-        .update({ audit_log: { ...auditLog, events: [...(auditLog.events || []), blocked] } })
-        .eq('execution_id', execution_id);
+      await appendAuditEvent(execution_id, blocked);
       return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 });
     }
 
@@ -53,27 +45,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Execution not found', execution_id }, { status: 404 });
     }
 
-    const auditLog = execution.audit_log || { execution_id, events: [], created_at: new Date().toISOString() };
-    const nextAudit = {
-      ...auditLog,
-      events: [
-        ...(auditLog.events || []),
-        buildAuditEvent(execution_id, {
-          event_type: 'execution_replay_requested',
-          data: {
-            status: execution.status,
-            actor_id: operator_id || null,
-            actor_role: actor_role || null,
-          },
-        }),
-      ],
-    };
+    const nextAudit = await appendAuditEvent(
+      execution_id,
+      buildAuditEvent(execution_id, {
+        event_type: 'execution_replay_requested',
+        data: {
+          status: execution.status,
+          actor_id: operator_id || null,
+          actor_role: actor_role || null,
+        },
+      })
+    );
 
     const replayedAt = new Date().toISOString();
-    await supabase
-      .from('task_executions_op')
-      .update({ audit_log: nextAudit })
-      .eq('execution_id', execution_id);
 
     return NextResponse.json({
       success: true,
@@ -88,7 +72,7 @@ export async function POST(req: NextRequest) {
         status: execution.status,
         payload: execution.payload || null,
         result: execution.result || null,
-        audit_log: execution.audit_log || null,
+        audit_log: nextAudit,
         created_at: execution.created_at,
         updated_at: execution.updated_at,
       },

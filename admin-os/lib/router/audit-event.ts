@@ -5,8 +5,17 @@ export type AuditEventInput = {
   event_type_canonical?: string
 }
 
+export function normalizeAuditEventName(eventType: string): string {
+  const normalized = String(eventType || '').trim()
+  const map: Record<string, string> = {
+    entry_created: 'execution_created',
+  }
+  return map[normalized] || normalized || 'unknown_event'
+}
+
 export function toCanonicalEventType(eventType: string): string {
   const map: Record<string, string> = {
+    execution_created: 'execution.created',
     entry_created: 'execution.created',
     execution_confirmed: 'confirmation.result',
     execution_rejected: 'confirmation.result',
@@ -36,7 +45,7 @@ export function normalizeAuditEvent(
   event: AuditEventInput & { [key: string]: unknown },
   fallbackExecutionId?: string
 ) {
-  const eventType = String(event.event_type || 'unknown_event')
+  const eventType = normalizeAuditEventName(String(event.event_type || 'unknown_event'))
   const data: Record<string, unknown> = {
     execution_id: fallbackExecutionId || null,
     ...(event.data || {}),

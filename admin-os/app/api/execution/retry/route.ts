@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
 import { randomUUID } from 'crypto';
 import { buildAuditEvent } from '@/lib/router/audit-event';
+import { appendAuditEvent } from '@/lib/router/audit-logging';
 
 /**
  * POST /api/execution/retry
@@ -27,16 +28,7 @@ export async function POST(req: NextRequest) {
         requestPath: '/api/execution/retry',
       });
       if (execution_id) {
-        const { data: existing } = await supabase
-          .from('task_executions_op')
-          .select('audit_log')
-          .eq('execution_id', execution_id)
-          .maybeSingle();
-        const auditLog = existing?.audit_log || { execution_id, events: [], created_at: new Date().toISOString() };
-        await supabase
-          .from('task_executions_op')
-          .update({ audit_log: { ...auditLog, events: [...(auditLog.events || []), blocked] } })
-          .eq('execution_id', execution_id);
+        await appendAuditEvent(execution_id, blocked);
       }
       return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 });
     }

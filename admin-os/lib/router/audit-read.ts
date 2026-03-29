@@ -1,6 +1,11 @@
 import { normalizeAuditEvent } from '@/lib/router/audit-event'
 
 export type NormalizedAuditEvent = ReturnType<typeof normalizeAuditEvent>
+export type TraceReadModel = {
+  execution_id: string | null
+  event_count: number
+  events: NormalizedAuditEvent[]
+}
 
 export function extractNormalizedAuditEvents(auditLog: unknown, executionId?: string): NormalizedAuditEvent[] {
   if (!auditLog || typeof auditLog !== 'object') return []
@@ -26,4 +31,15 @@ export function sortAuditEventsByTimestamp<T extends { timestamp?: string }>(eve
     const tb = Date.parse(b.timestamp || '') || 0
     return ta - tb
   })
+}
+
+export function buildTraceReadModel(auditLog: unknown, executionId?: string): TraceReadModel {
+  const events = sortAuditEventsByTimestamp(extractNormalizedAuditEvents(auditLog, executionId))
+  return {
+    execution_id: executionId || (typeof auditLog === 'object' && auditLog !== null && typeof (auditLog as { execution_id?: unknown }).execution_id === 'string'
+      ? (auditLog as { execution_id: string }).execution_id
+      : null),
+    event_count: events.length,
+    events,
+  }
 }

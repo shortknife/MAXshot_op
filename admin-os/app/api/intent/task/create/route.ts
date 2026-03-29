@@ -221,7 +221,7 @@ export async function POST(req: NextRequest) {
       execution_id: executionId,
       events: [
         buildAuditEvent(executionId, {
-          event_type: 'entry_created',
+          event_type: 'execution_created',
           data: {
             status: initialStatus,
             entry_type: finalEntryType,

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
-import { extractNormalizedAuditEvents } from '@/lib/router/audit-read';
+import { buildTraceReadModel } from '@/lib/router/audit-read';
 
 /**
  * GET /api/execution/[id]
@@ -32,7 +32,7 @@ export async function GET(
       return NextResponse.json({ error: 'Execution not found', execution_id }, { status: 404 });
     }
 
-    const auditEvents = extractNormalizedAuditEvents((execution as { audit_log?: unknown })?.audit_log, execution_id);
+    const trace = buildTraceReadModel((execution as { audit_log?: unknown })?.audit_log, execution_id);
 
     return NextResponse.json({
       execution: {
@@ -51,7 +51,8 @@ export async function GET(
         updated_at: execution.updated_at,
       },
       audit_log: execution.audit_log ?? null,
-      audit_steps: auditEvents,
+      audit_steps: trace.events,
+      trace,
     });
   } catch (error: unknown) {
     console.error('[Execution API] Error:', error);
