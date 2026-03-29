@@ -1,0 +1,984 @@
+{
+  "name": "13_Thread_Post_Executor_v4",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "19fad5c8-f797-4847-8db1-9c17b8654cce",
+      "name": "Execute_Workflow_Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1136,
+        272
+      ],
+      "notes": "接收来自 Router 的 thread 调度：id, post_content, thread_items, media_url"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Thread Items (全兼容增强版)\nconst threadData = $json || {};\n\n// 1. 尝试多种可能的路径获取内容\nlet rawContent = threadData.thread_items || \n                 threadData.content || \n                 threadData.payload?.text || // 适配你当前的输入路径\n                 \"\";\n\nlet threadItems = [];\n\n// 2. 智能解析逻辑\nif (Array.isArray(rawContent)) {\n  // 如果本身就是数组，直接使用\n  threadItems = rawContent;\n} else if (typeof rawContent === 'string' && rawContent.length > 0) {\n  // 如果是字符串，尝试按分割线拆分 (适配目前的 payload.text 格式)\n  if (rawContent.includes('────────────────────')) {\n    threadItems = rawContent.split(/[\\s]*────────────────────[\\s]*/).filter(t => t.trim());\n  } else {\n    // 如果没有分割线，就当做单条推文处理\n    threadItems = [rawContent];\n  }\n}\n\n// 3. 提取元数据\nconst sourceId = threadData.id || threadData.source_id || threadData.publication_id;\nconst notionId = threadData.notion_page_id || threadData.payload?.source?.page_id || null;\nconst imageUrl = threadData.image_url || threadData.payload?.image_url || null;\n\n// 4. 映射输出\nreturn threadItems.map((item, idx) => {\n  const currentIndex = idx + 1;\n  // 提取文本内容 (适配对象格式或纯字符串格式)\n  const textContent = typeof item === 'object' ? (item.text || item.content) : item;\n\n  return {\n    json: {\n      text: textContent.trim(),\n      index: currentIndex,\n      tweet_index: currentIndex,\n      is_first: idx === 0,\n      is_last: idx === threadItems.length - 1,\n      total_count: threadItems.length,\n      publication_id: sourceId,\n      source_id: sourceId,\n      notion_page_id: notionId,\n      media_url: idx === 0 ? imageUrl : null, // 确保第一条带上图片地址\n      content_type: 'thread'\n    }\n  };\n});\n"
+      },
+      "id": "3e79018d-6a7e-4384-b09e-fa908cdd2086",
+      "name": "Prepare Thread Items",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "is-first",
+              "leftValue": "={{ $json.index }}",
+              "rightValue": 1,
+              "operator": {
+                "type": "number",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e2f95e0f-637f-4fb6-9c26-d879bb167f1a",
+      "name": "IF Is First Tweet",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        192,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "has-media",
+              "leftValue": "={{ $json.media_url }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "05e67cbe-6953-4bb4-82f2-7d29cc1f9116",
+      "name": "Media Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        400,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.media_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "5f242a77-abff-4801-bf67-6745e109b154",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        624,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "media",
+              "inputDataFieldName": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0a248f63-78ce-42a2-b170-9e2875b345fe",
+      "name": "Upload Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        848,
+        0
+      ],
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": "OFrOf0rgNmrmGydv",
+          "name": "X OAuth 1.1 Maxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.post_content }}",
+        "additionalFields": {
+          "attachments": "={{ $json.media_id_string }}"
+        }
+      },
+      "id": "08a46e0c-4cc2-43ce-a7d8-e30624a7e005",
+      "name": "Post First (Media)",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        16
+      ],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "jldczf2hViAoRWvi",
+          "name": "X Oauth2.0 Maxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "id": "5700c7ad-b2e0-41ca-87bd-4c9786427cfd",
+      "name": "Post First (Text)",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        976,
+        160
+      ],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "jldczf2hViAoRWvi",
+          "name": "X Oauth2.0 Maxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "inReplyToStatusId": {
+            "__rl": true,
+            "mode": "id",
+            "value": "={{ $json.inReplyToStatusId }}"
+          }
+        }
+      },
+      "id": "a0ecdf37-ebc3-4525-835d-61c1b7f7831b",
+      "name": "Post Reply Tweet",
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        1056,
+        320
+      ],
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "jldczf2hViAoRWvi",
+          "name": "X Oauth2.0 Maxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Update Reply ID (deploy-ready)\n// 目的：把上一条 tweet id 写入 global.last_tweet_id，供下一轮 Set ReplyID 读取\n\nconst sd = $getWorkflowStaticData('global');\n\nconst tweetId = $json.tweet_id || $json.id || $json.data?.id || null;\nif (tweetId) {\n  sd.last_tweet_id = String(tweetId);\n\n  // 记录 thread 根推（可选，但强烈建议保留，后续写表用）\n  if (($json.is_first === true) || ($json.tweet_index === 1) || ($json.index === 1)) {\n    sd.thread_root_id = String(tweetId);\n  }\n}\n\nreturn $json;\n"
+      },
+      "id": "0cfaca75-e85e-409a-b0b0-6ea679f4c61c",
+      "name": "Update Reply ID",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1760,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 10,
+        "unit": "seconds"
+      },
+      "id": "0e0a59bb-2c36-4ae8-8e4e-61042e9ae33c",
+      "name": "Wait 5s",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1,
+      "position": [
+        1904,
+        352
+      ],
+      "webhookId": "75968dbe-f239-4d85-a5d6-282f4d50c305"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "publishing_timeline",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.timeline_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "published"
+            },
+            {
+              "fieldId": "published_at",
+              "fieldValue": "={{ $now }}"
+            },
+            {
+              "fieldId": "tweet_id",
+              "fieldValue": "={{ $json.thread_root_id }}"
+            }
+          ]
+        }
+      },
+      "id": "64a58c93-8025-4f37-9ddf-554213e2a6b0",
+      "name": "Update_Timeline_Success",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1392,
+        1024
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "fnZnIabVYCs4FncC",
+          "name": "SupabaseMaxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## 15_Thread_Post - Thread发布\n\n**功能**: 从thread_queue表读取已审批的Thread并发布到Twitter\n\n**触发**: 每2小时\n\n**输入**: `thread_queue` (status=approved)\n\n**输出**:\n- 发布Thread到Twitter（3-8条推文）\n- 写入 `publishing_logs`\n- 更新 `thread_queue` (status=published/partial/failed)\n\n**关键特性**:\n- Thread循环发布（SplitInBatches）\n- 推文间隔10秒\n- 错误处理（单条失败不影响后续）\n- 支持partial状态（部分成功）\n\n**数据表**: \n- `thread_queue` ← 更新\n- `publishing_logs` ← 写入",
+        "height": 968,
+        "width": 4064,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1584,
+        -48
+      ],
+      "id": "e76f7ba6-aa54-4b25-87ef-a9ff59bc0709",
+      "name": "Workflow Description"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "76a00eae-8921-4f34-bd4d-354992235aa7",
+              "name": "media_id_string",
+              "value": "={{ $json.media_id_string }}",
+              "type": "string"
+            },
+            {
+              "id": "eb2e7112-a313-4951-9e78-6c40286d150d",
+              "name": "post_content",
+              "value": "={{ $('Media Check').item.json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1056,
+        0
+      ],
+      "id": "1c145cee-a8d0-437b-9025-763ca42c7067",
+      "name": "FormatImageData"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        -384,
+        176
+      ],
+      "id": "d5964d1f-037f-4fef-b154-9131cb3fbe7b",
+      "name": "Loop Thread Items"
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "2f44e4a8-f064-80fd-ac4e-e4c15029512e",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        1888,
+        1120
+      ],
+      "id": "2a050a6b-e1e4-4cfe-ac15-e39ea5125b7a",
+      "name": "Update_Notion_Status",
+      "credentials": {
+        "notionApi": {
+          "id": "ZUCwZPTNQmebHT1w",
+          "name": "Notion dForce API for Maxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect Thread Results (用输入汇总)\nconst staticData = $getWorkflowStaticData('global');\nconst allProcessedItems = $input.all();  // <-- 关键改这里\n\nconst successfulTweets = allProcessedItems.filter(item => item.json.published === true);\nconst firstItem = allProcessedItems[0]?.json || {};\nconst threadRootId = staticData.thread_root_id || successfulTweets[0]?.json?.tweet_id || null;\n\nlet sourceTable = null;\nlet timelineId = null;\ntry {\n  const triggerData = $items(\"Execute_Workflow_Trigger\")[0].json;\n  sourceTable = triggerData.source_table;\n  timelineId = triggerData.timeline_id || triggerData.id;\n} catch (e) {}\n\nreturn [{\n  json: {\n    thread_root_id: threadRootId,\n    source_table: sourceTable,\n    source_id: firstItem.source_id || firstItem.publication_id,\n    timeline_id: timelineId || firstItem.source_id,\n    notion_page_id: firstItem.notion_page_id,\n    status: successfulTweets.length > 0\n      ? (successfulTweets.length === allProcessedItems.length ? 'published' : 'partial')\n      : 'failed',\n    successful_count: successfulTweets.length,\n    total_count: allProcessedItems.length\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        64,
+        352
+      ],
+      "id": "d690d3b5-0c24-4d41-9abf-0c2ce2385009",
+      "name": "Collect Thread Results"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Save Current Item (锁死版：写 global，供下游节点读取)\nconst currentItem = $json || {};\nconst sd = $getWorkflowStaticData('global');\n\n// 存“完整快照”，并确保 index 存在\nsd.current_item = {\n  ...currentItem,\n  index: currentItem.index || currentItem.tweet_index || 0,\n};\n\nreturn { json: currentItem };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        160
+      ],
+      "id": "bb13bc88-b4bd-4e43-b5e3-a099c1fd9331",
+      "name": "Save Current Item"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle Tweet Errors (锁死版：读 global.current_item，保证 source_id/notion_page_id 不丢)\nconst twitterResponse = $json || {};\nconst sd = $getWorkflowStaticData('global');\n\nconst originalItem = sd.current_item || {};\n\n// 兼容 Mock / 真 Twitter 输出\nconst tweetId = twitterResponse.tweet_id || twitterResponse.id || twitterResponse.data?.id || null;\n\n// 合并策略：originalItem 在前，twitterResponse 在后（不覆盖原字段就不会丢）\nconst result = {\n  ...originalItem,\n  ...twitterResponse,\n  published: !!tweetId,\n  tweet_id: tweetId,\n  id: tweetId,\n  error: tweetId ? null : (twitterResponse.error || \"Failed to get Tweet ID\"),\n};\n\nreturn { json: result };\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1504,
+        224
+      ],
+      "id": "338cd9e3-c0ff-4d28-8b43-aa260088ddb6",
+      "name": "Handle Tweet Errors",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://uzbbumqbyfssijmcwwwy.supabase.co/rest/v1/rpc/update_content_after_publish",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6YmJ1bXFieWZzc2lqbWN3d3d5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTkxMzU1MCwiZXhwIjoyMDc1NDg5NTUwfQ.Kqkj_QUO-qVeKwMXLfobWRfuMwnFQaWsg0GDQrmHYSg"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_table_name\": \"{{ $json.source_table }}\",\n  \"p_row_id_text\": \"{{ $json.source_id }}\",\n  \"p_status\": \"{{ $json.status }}\",\n  \"p_tweet_id\": \"{{ $json.tweet_id }}\"\n}\n",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        1120
+      ],
+      "id": "9c93f9f3-b16f-4c36-bbd4-0b6f7ee26a3a",
+      "name": "BacktoContent",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wWbCVZX4UE3wAQ1z",
+          "name": "MaxshotSupabase"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Set Reply To ID dynamically in the loop (deploy-ready)\n// 目的：给非首推注入 inReplyToStatusId（从 global staticData.last_tweet_id 读取）\n// 说明：这是旧版稳定方案，避免 Set 节点 Expression 读 staticData 的时序问题\n\nconst currentItem = $json || {};\nconst staticData = $getWorkflowStaticData('global');\n\nconst idx = currentItem.tweet_index ?? currentItem.index ?? 0;\n\n// 首推保护：不设置 inReplyToStatusId\nif (idx === 1 || currentItem.is_first === true) {\n  const outputItem = { ...currentItem };\n  delete outputItem.inReplyToStatusId;\n  return { json: outputItem };\n}\n\n// 读取上一条 tweet id\nlet lastTweetId = staticData.last_tweet_id || null;\n\n// fallback1：从 published_tweets 取最后一个\nif (!lastTweetId && Array.isArray(staticData.published_tweets) && staticData.published_tweets.length > 0) {\n  const last = staticData.published_tweets[staticData.published_tweets.length - 1];\n  lastTweetId = last?.tweet_id || null;\n}\n\n// fallback2：至少回复 thread_root_id\nif (!lastTweetId && staticData.thread_root_id) {\n  lastTweetId = staticData.thread_root_id;\n}\n\nif (!lastTweetId) {\n  throw new Error(\n    `No last_tweet_id found for tweet_index=${idx}. ` +\n    `thread_root_id=${staticData.thread_root_id || 'null'}, ` +\n    `published_tweets=${Array.isArray(staticData.published_tweets) ? staticData.published_tweets.length : 0}`\n  );\n}\n\nreturn {\n  json: {\n    ...currentItem,\n    inReplyToStatusId: String(lastTweetId),\n  },\n};\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        320
+      ],
+      "id": "d9c53b7e-06ef-46ff-a269-f09ae54166e7",
+      "name": "Set ReplyID"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5cf7811-a1d9-471d-9786-c1394f17b762",
+              "name": "=id",
+              "value": "=mock_{{ $json.index }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1584,
+        880
+      ],
+      "id": "c5e54e3d-7a67-414a-9b35-d78701c79562",
+      "name": "MockFirst"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d5cf7811-a1d9-471d-9786-c1394f17b762",
+              "name": "=id",
+              "value": "=mock_{{ $json.index }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1376,
+        896
+      ],
+      "id": "3bd6b6fe-cc20-4636-85d0-817fb763b114",
+      "name": "MockReply"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "publishing_timeline",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $json.timeline_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "published"
+            },
+            {
+              "fieldId": "published_at",
+              "fieldValue": "={{ $now }}"
+            },
+            {
+              "fieldId": "tweet_id",
+              "fieldValue": "={{ $json.thread_root_id }}"
+            }
+          ]
+        }
+      },
+      "id": "45c0ca8c-8a89-4c87-814e-5a31f118dfaa",
+      "name": "Update_Timeline_Success1",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        656,
+        640
+      ],
+      "credentials": {
+        "supabaseApi": {
+          "id": "fnZnIabVYCs4FncC",
+          "name": "SupabaseMaxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $json.source_id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status",
+              "statusValue": "Published"
+            },
+            {
+              "key": "Tweetlink|url",
+              "urlValue": "=https://x.com/MaxshotAI/status/{{ $json.tweet_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.2,
+      "position": [
+        912,
+        768
+      ],
+      "id": "230f8886-bfec-4f27-850c-1a67b3fdc6a5",
+      "name": "Update_Notion_Status1",
+      "credentials": {
+        "notionApi": {
+          "id": "ZUCwZPTNQmebHT1w",
+          "name": "Notion dForce API for Maxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://uzbbumqbyfssijmcwwwy.supabase.co/rest/v1/rpc/update_content_after_publish",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6YmJ1bXFieWZzc2lqbWN3d3d5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTkxMzU1MCwiZXhwIjoyMDc1NDg5NTUwfQ.Kqkj_QUO-qVeKwMXLfobWRfuMwnFQaWsg0GDQrmHYSg"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_table_name\": \"{{ $json.source_table }}\",\n  \"p_row_id_text\": \"{{ $json.source_id }}\",\n  \"p_status\": \"{{ $json.status }}\",\n  \"p_tweet_id\": \"{{ $json.tweet_id }}\"\n}\n",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        912,
+        544
+      ],
+      "id": "734d76ad-deb4-400c-a558-72b3e3e53ad6",
+      "name": "BacktoContent1",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wWbCVZX4UE3wAQ1z",
+          "name": "MaxshotSupabase"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Execute_Workflow_Trigger": [
+      {
+        "json": {
+          "id": "a85f3e22-68b2-43ad-a484-8d1e5a0b59ba",
+          "content_id": "2f64e4a8-f064-80fa-b2e8-e8fbf32bda55",
+          "content_source": "notion",
+          "post_type": "thread",
+          "scheduled_at": "2026-02-02T10:00:00+00:00",
+          "status": "scheduled",
+          "payload": {
+            "meta": {
+              "batch": {
+                "index": 1,
+                "total": 1
+              },
+              "topic_name": "6"
+            },
+            "text": "1/ Plasma chain: Bitcoin L2 powerhouse ⚙️ Native BTC bridge + fee-free USDT transfers = seamless BTC liquidity ramps to DeFi. Maxshot AI deploys here to tap global flows. 🧠 Why? Thread 🧵\n\n────────────────────\n\n2/ Plasma tech: Trust-minimized BTC bridging maps secp256k1 to EVM ops. Gasless USDT moves = friction-free agent execs. Maxshot's AI Agent Factory scans cross-chain yields. 🎯\n\n────────────────────\n\n3/ Users: Drop stables or BTC-wrapped into Plasma Omni Vaults. Yield Optimizer Agents hunt risk-adjusted returns cross-chain—low fees keep more in your pocket. Strategies adapt to vol. 💡\n\n────────────────────\n\n4/ Multi-agent collab: Vault Curator Agents craft Plasma strategies, sync with Omni-Chain Executors for atomic swaps. Kills fragmentation, unlocks global optimization. 🚀\n\n────────────────────\n\n5/ Maxshot on Plasma: AI-native BTC DeFi at scale. Join Agent Factory—build, deploy, earn shared infra. Deposits open soon. Thoughts? 👇 #DeFAI #MaxshotAI",
+            "source": {
+              "type": "notion",
+              "page_id": "2f64e4a8-f064-80fa-b2e8-e8fbf32bda55",
+              "topic_no": "6"
+            },
+            "image_url": "https://uzbbumqbyfssijmcwwwy.supabase.co/storage/v1/object/public/TwitterImage/CampingArticle/20260202_173009_2f64e4a8-f064-80fa-b2e8-e8fbf32bda55.jpg"
+          },
+          "error_log": null,
+          "created_at": "2026-02-02T09:34:11.572+00:00",
+          "updated_at": "2026-02-02T09:34:11.748049+00:00",
+          "published_at": null,
+          "source_table": "notion_sync_tweets",
+          "tweet_id": null,
+          "media_url": null,
+          "post_content": null,
+          "notion_page_id": "2f64e4a8-f064-80fa-b2e8-e8fbf32bda55",
+          "source_id": "2f64e4a8-f064-80fa-b2e8-e8fbf32bda55"
+        },
+        "binary": {},
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Execute_Workflow_Trigger": {
+      "main": [
+        [
+          {
+            "node": "Prepare Thread Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Thread Items": {
+      "main": [
+        [
+          {
+            "node": "Loop Thread Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Is First Tweet": {
+      "main": [
+        [
+          {
+            "node": "Media Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set ReplyID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Media Check": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Post First (Text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Upload Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload Image": {
+      "main": [
+        [
+          {
+            "node": "FormatImageData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post First (Media)": {
+      "main": [
+        [
+          {
+            "node": "Handle Tweet Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post First (Text)": {
+      "main": [
+        [
+          {
+            "node": "Handle Tweet Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Reply Tweet": {
+      "main": [
+        [
+          {
+            "node": "Handle Tweet Errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Reply ID": {
+      "main": [
+        [
+          {
+            "node": "Wait 5s",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait 5s": {
+      "main": [
+        [
+          {
+            "node": "Loop Thread Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FormatImageData": {
+      "main": [
+        [
+          {
+            "node": "Post First (Media)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Thread Items": {
+      "main": [
+        [
+          {
+            "node": "Collect Thread Results",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Save Current Item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update_Timeline_Success": {
+      "main": [
+        [
+          {
+            "node": "BacktoContent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Collect Thread Results": {
+      "main": [
+        [
+          {
+            "node": "Update_Timeline_Success1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update_Notion_Status": {
+      "main": [
+        []
+      ]
+    },
+    "Save Current Item": {
+      "main": [
+        [
+          {
+            "node": "IF Is First Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Tweet Errors": {
+      "main": [
+        [
+          {
+            "node": "Update Reply ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BacktoContent": {
+      "main": [
+        [
+          {
+            "node": "Update_Notion_Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set ReplyID": {
+      "main": [
+        [
+          {
+            "node": "Post Reply Tweet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MockFirst": {
+      "main": [
+        []
+      ]
+    },
+    "MockReply": {
+      "main": [
+        []
+      ]
+    },
+    "Update_Timeline_Success1": {
+      "main": [
+        [
+          {
+            "node": "BacktoContent1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Update_Notion_Status1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "CZGxQTYDBiI18mM6"
+  },
+  "versionId": "10771e04-66d0-42c5-bf1b-feac7fdae621",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "54f5eed0abf5db738d967158eb80fe995d44657bb9b1121776714569845a3f71"
+  },
+  "id": "BY782klGZ09pxJGjJ3VzO",
+  "tags": []
+}

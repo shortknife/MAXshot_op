@@ -1,0 +1,335 @@
+{
+  "name": "22_Master_Publisher_Router",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -1056,
+        112
+      ],
+      "id": "e46ac970-bbe6-4270-9009-4859595d0fc1",
+      "name": "Step0_ScheduleTrigger",
+      "notesInFlow": true,
+      "notes": "实际行为: 每 10 分钟自动唤醒，检查到期任务。"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "publishing_timeline",
+        "limit": 5,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "status",
+              "condition": "eq",
+              "keyValue": "scheduled"
+            },
+            {
+              "keyName": "scheduled_at",
+              "condition": "lte",
+              "keyValue": "={{ $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -800,
+        112
+      ],
+      "id": "71ab621a-474d-4fe0-a15b-29e4ebcf6e3d",
+      "name": "Step1_Fetch_Pending_Tasks",
+      "notesInFlow": true,
+      "credentials": {
+        "supabaseApi": {
+          "id": "fnZnIabVYCs4FncC",
+          "name": "SupabaseMaxshot"
+        }
+      },
+      "notes": "实际行为: 资产 NC-001。从 timeline 表获取待发布任务。"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.post_type || $json.tweet_type }}",
+                    "rightValue": "single",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "3fe6256d-e1a5-491a-897d-759788614424"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Single Post Path"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.post_type || $json.tweet_type }}",
+                    "rightValue": "thread",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8098eee2-418e-430d-8925-1b0979608798"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Thread Post Path"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -48,
+        96
+      ],
+      "id": "cf38c41d-64a8-46db-a7d8-9a02ace7af43",
+      "name": "Step3_Router_Logic",
+      "notesInFlow": true,
+      "notes": "实际行为: 根据 post_type 字段进行业务路由分发。"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "m-Rl3QSE3dOrQtR2SD0z0",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/m-Rl3QSE3dOrQtR2SD0z0",
+          "cachedResultName": "06_Single_Post_Executor_v3"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        -32
+      ],
+      "id": "59433656-3e20-49a9-a881-ca9db54f3141",
+      "name": "Subnode_Execute_SIngle_Post"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "BY782klGZ09pxJGjJ3VzO",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/BY782klGZ09pxJGjJ3VzO",
+          "cachedResultName": "13_Thread_Post_Executor_v4"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        272
+      ],
+      "id": "73dd8b34-7477-499f-91eb-37a43144e994",
+      "name": "Subnode_Execute_Thread_Post"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -336,
+        96
+      ],
+      "id": "03c6b7e2-ed55-41da-8d86-c6820b7d50a1",
+      "name": "Step3_MergeContent"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://uzbbumqbyfssijmcwwwy.supabase.co/rest/v1/rpc/get_content_by_pointer",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6YmJ1bXFieWZzc2lqbWN3d3d5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTkxMzU1MCwiZXhwIjoyMDc1NDg5NTUwfQ.Kqkj_QUO-qVeKwMXLfobWRfuMwnFQaWsg0GDQrmHYSg"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"p_table_name\": \"{{ $json.source_table }}\",\n  \"p_row_id_text\": \"{{ $json.source_id }}\"\n}\n",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -528,
+        -32
+      ],
+      "id": "65f794ab-9b92-4f9b-83b0-030be5412780",
+      "name": "step2_QueryContent",
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wWbCVZX4UE3wAQ1z",
+          "name": "MaxshotSupabase"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Step0_ScheduleTrigger": {
+      "main": [
+        [
+          {
+            "node": "Step1_Fetch_Pending_Tasks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step1_Fetch_Pending_Tasks": {
+      "main": [
+        [
+          {
+            "node": "step2_QueryContent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Step3_MergeContent",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Step3_Router_Logic": {
+      "main": [
+        [
+          {
+            "node": "Subnode_Execute_SIngle_Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Subnode_Execute_Thread_Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step3_MergeContent": {
+      "main": [
+        [
+          {
+            "node": "Step3_Router_Logic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step2_QueryContent": {
+      "main": [
+        [
+          {
+            "node": "Step3_MergeContent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "CZGxQTYDBiI18mM6"
+  },
+  "versionId": "7ad90982-77c9-4da0-ae27-6cbe2d3f9af5",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "54f5eed0abf5db738d967158eb80fe995d44657bb9b1121776714569845a3f71"
+  },
+  "id": "C6WhEsjO0sWhXmB3pXMYO",
+  "tags": []
+}

@@ -1,0 +1,14 @@
+.DS_Store
+**/.DS_Store
+node_modules/
+coverage/
+Archive/
+Backups/
+Knowledgebase
+admin-os/node_modules/
+admin-os/.next/
+admin-os/.turbo/
+admin-os/.vercel/
+admin-os/*.log
+admin-os/.env
+admin-os/.env.*

@@ -1,0 +1,38 @@
+{
+  "id": "business_yield_window_average",
+  "name": "Business Yield Window Average",
+  "description": "Return average APY by market over a time window, plus latest snapshot TVL.",
+  "category": "other",
+  "version": "1.0",
+  "allowed_tables": [
+    "market_metrics",
+    "allocation_snapshots"
+  ],
+  "output_schema": {
+    "chain": "string",
+    "protocol": "string",
+    "market_name": "string",
+    "avg_apy_pct": "number",
+    "max_apy_pct": "number",
+    "min_apy_pct": "number",
+    "tvl": "number",
+    "created_at": "string",
+    "sample_count": "number"
+  },
+  "slots": {
+    "days": {
+      "type": "number",
+      "required": true
+    },
+    "vault_keyword": {
+      "type": "string",
+      "required": false
+    }
+  },
+  "examples": [
+    {
+      "days": 7,
+      "vault_keyword": null
+    }
+  ]
+}

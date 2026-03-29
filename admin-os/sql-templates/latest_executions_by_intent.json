@@ -1,0 +1,33 @@
+{
+  "id": "latest_executions_by_intent",
+  "name": "Latest Executions By Intent",
+  "description": "Fetch latest executions filtered by intent_name.",
+  "category": "ops",
+  "version": "1.0",
+  "allowed_tables": [
+    "task_executions_op"
+  ],
+  "output_schema": {
+    "execution_id": "text",
+    "status": "text",
+    "intent_name": "text",
+    "requester_id": "text",
+    "created_at": "timestamptz"
+  },
+  "slots": {
+    "intent_name": {
+      "type": "string",
+      "required": true
+    },
+    "limit": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "examples": [
+    {
+      "intent_name": "ops_query",
+      "limit": 5
+    }
+  ]
+}

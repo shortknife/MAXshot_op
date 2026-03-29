@@ -1,0 +1,315 @@
+{
+  "name": "06_Single_Post_Executor_v3",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "execute-workflow-trigger",
+      "name": "Execute_Workflow_Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        200,
+        500
+      ],
+      "notesInFlow": true,
+      "notes": "接收来自 22 号 Router 的调度指令"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.media_url }}",
+              "operation": "notEmpty"
+            }
+          ]
+        }
+      },
+      "id": "media-check-06",
+      "name": "Media_Check",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        450,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $node[\"Execute_Workflow_Trigger\"].json.media_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        650,
+        400
+      ],
+      "id": "download-image-06",
+      "name": "Download Image"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth1Api",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "media",
+              "inputDataFieldName": "data"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        850,
+        400
+      ],
+      "id": "upload-image-06",
+      "name": "Upload Image to Twitter",
+      "credentials": {
+        "twitterOAuth1Api": {
+          "id": "yXQTf8jz7W66QzCY",
+          "name": "X OAuth1.1-Alex"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $node[\"Execute_Workflow_Trigger\"].json.post_content }}",
+        "additionalFields": {
+          "attachments": "={{ $json.media_id_string }}"
+        }
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        400
+      ],
+      "id": "create-tweet-06",
+      "name": "Create Tweet",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "3kvqwazwXcyQnLWj",
+          "name": "X account Alex"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $node[\"Execute_Workflow_Trigger\"].json.post_content }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        600
+      ],
+      "id": "create-tweet-no-media-06",
+      "name": "Create Tweet (No Media)",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "3kvqwazwXcyQnLWj",
+          "name": "X account Alex"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "tableId": "publishing_timeline",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "eq",
+              "keyValue": "={{ $node[\"Execute_Workflow_Trigger\"].json.id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "status",
+              "fieldValue": "published"
+            },
+            {
+              "fieldId": "published_at",
+              "fieldValue": "={{ $now }}"
+            },
+            {
+              "fieldId": "platform_post_id",
+              "fieldValue": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1350,
+        500
+      ],
+      "id": "update-timeline-success-06",
+      "name": "Update_Timeline_Success",
+      "credentials": {
+        "supabaseApi": {
+          "id": "fnZnIabVYCs4FncC",
+          "name": "SupabaseMaxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 动态构建原始业务表回写 SQL\nconst input = $node[\"Execute_Workflow_Trigger\"].json;\nconst table = input.source_table;\nconst source_id = input.source_id;\nconst tweet_id = $node[\"Update_Timeline_Success\"].json.platform_post_id || $json.id;\n\nif (!table || !source_id) return []; \n\nreturn [{\n  json: {\n    query: `UPDATE \"${table}\" SET status = 'published', published_at = NOW(), tweet_id = '${tweet_id}' WHERE id = '${source_id}'`\n  }\n}];"
+      },
+      "id": "build-back-write-sql-06",
+      "name": "Build_Back_Write_SQL",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1550,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "={{ $json.query }}"
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        1750,
+        500
+      ],
+      "id": "execute-back-write-06",
+      "name": "Execute_Back_Write",
+      "credentials": {
+        "supabaseApi": {
+          "id": "fnZnIabVYCs4FncC",
+          "name": "SupabaseMaxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $node[\"Execute_Workflow_Trigger\"].json.notion_page_id }}",
+              "operation": "notEmpty"
+            }
+          ]
+        }
+      },
+      "id": "check-notion-06",
+      "name": "Check Notion ID",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1950,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "pageId": {
+          "__rl": true,
+          "value": "={{ $node[\"Execute_Workflow_Trigger\"].json.notion_page_id }}",
+          "mode": "id"
+        },
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Status|status",
+              "statusValue": "Published"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2.1,
+      "position": [
+        2150,
+        400
+      ],
+      "id": "update-notion-06",
+      "name": "Update Notion Status",
+      "credentials": {
+        "notionApi": {
+          "id": "2pZooFZJz6rV8zcf",
+          "name": "Notion account-Alex"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "publishing_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            { "fieldId": "platform", "fieldValue": "twitter" },
+            { "fieldId": "platform_post_id", "fieldValue": "={{ $node[\"Update_Timeline_Success\"].json.platform_post_id }}" },
+            { "fieldId": "post_type", "fieldValue": "single" },
+            { "fieldId": "status", "fieldValue": "success" },
+            { "fieldId": "published_at", "fieldValue": "={{ $now }}" },
+            { "fieldId": "content_type", "fieldValue": "={{ $node[\"Execute_Workflow_Trigger\"].json.source_table || 'Router-Executor' }}" },
+            { "fieldId": "publication_id", "fieldValue": "={{ $node[\"Execute_Workflow_Trigger\"].json.id }}" }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        500
+      ],
+      "id": "create-logs-06",
+      "name": "CreatPublishinglogs",
+      "credentials": {
+        "supabaseApi": {
+          "id": "fnZnIabVYCs4FncC",
+          "name": "SupabaseMaxshot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Execute_Workflow_Trigger": { "main": [[{ "node": "Media_Check", "type": "main", "index": 0 }]] },
+    "Media_Check": { "main": [[{ "node": "Download Image", "type": "main", "index": 0 }], [{ "node": "Create Tweet (No Media)", "type": "main", "index": 0 }]] },
+    "Download Image": { "main": [[{ "node": "Upload Image to Twitter", "type": "main", "index": 0 }]] },
+    "Upload Image to Twitter": { "main": [[{ "node": "Create Tweet", "type": "main", "index": 0 }]] },
+    "Create Tweet": { "main": [[{ "node": "Update_Timeline_Success", "type": "main", "index": 0 }]] },
+    "Create Tweet (No Media)": { "main": [[{ "node": "Update_Timeline_Success", "type": "main", "index": 0 }]] },
+    "Update_Timeline_Success": { "main": [[{ "node": "Build_Back_Write_SQL", "type": "main", "index": 0 }]] },
+    "Build_Back_Write_SQL": { "main": [[{ "node": "Execute_Back_Write", "type": "main", "index": 0 }]] },
+    "Execute_Back_Write": { "main": [[{ "node": "Check Notion ID", "type": "main", "index": 0 }]] },
+    "Check Notion ID": { "main": [[{ "node": "Update Notion Status", "type": "main", "index": 0 }], [{ "node": "CreatPublishinglogs", "type": "main", "index": 0 }]] },
+    "Update Notion Status": { "main": [[{ "node": "CreatPublishinglogs", "type": "main", "index": 0 }]] }
+  },
+  "meta": {
+    "instanceId": "maxshot-alex-v3-executor-only",
+    "used_node_combos": [
+      "NC-001_Subworkflow_Trigger",
+      "NC-006_Twitter_Media_Upload",
+      "NC-007_Dual_Writeback_SQL_Dynamic"
+    ]
+  }
+}

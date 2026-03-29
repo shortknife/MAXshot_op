@@ -1,0 +1,39 @@
+{
+  "id": "business_yield_daily_trend",
+  "name": "Business Yield Daily Trend",
+  "description": "Daily APY trend (avg/max/min) for recent N days in product timezone, optionally filtered by vault keyword.",
+  "category": "business",
+  "version": "1.0",
+  "allowed_tables": [
+    "market_metrics",
+    "allocation_snapshots"
+  ],
+  "output_schema": {
+    "day_local": "date",
+    "avg_apy_pct": "numeric",
+    "max_apy_pct": "numeric",
+    "min_apy_pct": "numeric",
+    "sample_count": "integer"
+  },
+  "slots": {
+    "days": {
+      "type": "number",
+      "required": true
+    },
+    "timezone": {
+      "type": "text",
+      "required": true
+    },
+    "vault_keyword": {
+      "type": "text",
+      "required": false
+    }
+  },
+  "examples": [
+    {
+      "days": 7,
+      "timezone": "Asia/Shanghai",
+      "vault_keyword": null
+    }
+  ]
+}

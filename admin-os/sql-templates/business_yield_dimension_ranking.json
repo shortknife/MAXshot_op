@@ -1,0 +1,46 @@
+{
+  "id": "business_yield_dimension_ranking",
+  "name": "Business Yield Dimension Ranking",
+  "description": "Rank APY by chain or protocol within a recent time window.",
+  "category": "business",
+  "version": "1.0",
+  "allowed_tables": [
+    "market_metrics"
+  ],
+  "output_schema": {
+    "dimension_value": "text",
+    "avg_apy_pct": "numeric",
+    "max_apy_pct": "numeric",
+    "sample_count": "integer"
+  },
+  "slots": {
+    "days": {
+      "type": "number",
+      "required": true
+    },
+    "dimension": {
+      "type": "text",
+      "required": true,
+      "enum": [
+        "chain",
+        "protocol"
+      ]
+    },
+    "limit": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "examples": [
+    {
+      "days": 7,
+      "dimension": "chain",
+      "limit": 5
+    },
+    {
+      "days": 7,
+      "dimension": "protocol",
+      "limit": 3
+    }
+  ]
+}

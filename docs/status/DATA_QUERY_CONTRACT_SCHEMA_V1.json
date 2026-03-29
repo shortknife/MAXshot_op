@@ -1,0 +1,395 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "maxshot.data_query.contract.v1",
+  "title": "Data Query Capability Contract v1",
+  "type": "object",
+  "required": [
+    "version",
+    "input_schema",
+    "output_schema"
+  ],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "v1.0"
+    },
+    "input_schema": {
+      "type": "object",
+      "required": [
+        "capability_id",
+        "request_id",
+        "session_id",
+        "query",
+        "policy",
+        "context"
+      ],
+      "properties": {
+        "capability_id": {
+          "type": "string",
+          "const": "data_query"
+        },
+        "request_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "session_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "query": {
+          "type": "object",
+          "required": [
+            "raw_text",
+            "language",
+            "intent_type",
+            "scope"
+          ],
+          "properties": {
+            "raw_text": {
+              "type": "string",
+              "minLength": 1
+            },
+            "language": {
+              "type": "string",
+              "enum": [
+                "zh",
+                "en",
+                "auto"
+              ]
+            },
+            "intent_type": {
+              "type": "string",
+              "const": "business_query"
+            },
+            "scope": {
+              "type": "string",
+              "enum": [
+                "yield",
+                "vault",
+                "execution",
+                "rebalance",
+                "allocation",
+                "unknown"
+              ]
+            },
+            "time_window_days": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 1,
+              "maximum": 365
+            },
+            "filters": {
+              "type": "object",
+              "properties": {
+                "chain": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "protocol": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "entity_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "policy": {
+          "type": "object",
+          "required": [
+            "read_only",
+            "max_rows"
+          ],
+          "properties": {
+            "read_only": {
+              "type": "boolean",
+              "const": true
+            },
+            "allow_tables": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "max_rows": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "require_time_window": {
+              "type": "boolean"
+            },
+            "require_limit": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "context": {
+          "type": "object",
+          "required": [
+            "timezone"
+          ],
+          "properties": {
+            "timezone": {
+              "type": "string"
+            },
+            "prompt_profile": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "entry_type": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": true
+    },
+    "output_schema": {
+      "type": "object",
+      "required": [
+        "status",
+        "provider",
+        "result",
+        "sql",
+        "evidence",
+        "quality",
+        "error",
+        "audit_events"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "success",
+            "failed"
+          ]
+        },
+        "provider": {
+          "type": "object",
+          "required": [
+            "name",
+            "version"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        },
+        "result": {
+          "type": "object",
+          "required": [
+            "rows",
+            "row_count",
+            "summary"
+          ],
+          "properties": {
+            "rows": {
+              "type": "array"
+            },
+            "row_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "summary": {
+              "type": "string"
+            },
+            "result_type": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "single_value",
+                "multi_row",
+                "table",
+                "clarification",
+                "rejection",
+                null
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "sql": {
+          "type": "object",
+          "required": [
+            "text",
+            "params",
+            "dialect",
+            "readonly_verified"
+          ],
+          "properties": {
+            "text": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "params": {
+              "type": "array"
+            },
+            "dialect": {
+              "type": "string",
+              "const": "postgres"
+            },
+            "readonly_verified": {
+              "type": "boolean"
+            },
+            "sql_tier_used": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "enum": [
+                "tier1",
+                "tier2",
+                null
+              ]
+            }
+          },
+          "additionalProperties": true
+        },
+        "evidence": {
+          "type": "object",
+          "required": [
+            "sources",
+            "evidence_chain"
+          ],
+          "properties": {
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "source_type",
+                  "source_id"
+                ],
+                "properties": {
+                  "source_type": {
+                    "type": "string"
+                  },
+                  "source_id": {
+                    "type": "string"
+                  },
+                  "row_count": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  }
+                },
+                "additionalProperties": true
+              }
+            },
+            "evidence_chain": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        },
+        "quality": {
+          "type": "object",
+          "required": [
+            "confidence",
+            "contract_passed",
+            "checks"
+          ],
+          "properties": {
+            "confidence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "contract_passed": {
+              "type": "boolean"
+            },
+            "checks": {
+              "type": "object",
+              "required": [
+                "input_complete",
+                "sql_safe",
+                "result_usable"
+              ],
+              "properties": {
+                "input_complete": {
+                  "type": "boolean"
+                },
+                "sql_safe": {
+                  "type": "boolean"
+                },
+                "result_usable": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": true
+            }
+          },
+          "additionalProperties": true
+        },
+        "error": {
+          "type": "object",
+          "required": [
+            "code",
+            "message",
+            "retryable"
+          ],
+          "properties": {
+            "code": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "message": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "retryable": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": true
+        },
+        "audit_events": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}

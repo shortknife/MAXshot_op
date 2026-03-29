@@ -1,0 +1,2915 @@
+{
+  "workflow_id": "kGnTkFinvVyHSlibrrKiE",
+  "workflow_name": "15_Telegram_Data_Query_Assistant_deploy",
+  "workflow_file_path": "/Users/alexzheng/Documents/JOB/AI_Project/MAXshot/Alex_n8nExpert/4.Working/deploy/15_Telegram_Data_Query_Assistant_deploy_v0113.json",
+  "workflow_maturity": "stable",
+  "nodes": [
+    {
+      "node_id": "d927d13c-41e8-4fc5-98be-c7e8e383a637",
+      "node_name": "Workflow Description",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -3088,
+        96
+      ],
+      "parameters": {
+        "content": "## 15_Telegram_Data_Query_Assistant - Telegram数据查询助手\n\n**功能**: 基于结构化表和RAG向量库的Telegram数据查询助手\n\n**触发**: Telegram消息（实时）\n\n**策略**: A（偏稳健）- 默认先走Metrics（给概览数字），再用RAG补解释\n\n**输入**: Telegram消息\n\n**输出**: Telegram回复（数据驱动的回答）\n\n**关键步骤**:\n1. 文本清洗（去除@mention、标点）\n2. 问题分类（Metrics / Investigate / Lookup / Ambiguous）\n3. Metrics分支：解析时间范围 → RPC函数调用（get_metrics_summary_v1） → RAG检索 → 合并上下文 ✅ v6 优化：1个RPC调用替代3-4个并行查询\n4. Investigate分支：准备RAG查询 → RAG检索（TopK=5-8） → 可选结构化查询 → 合并上下文 ✅ v6.2 优化：合并RAG Retrieve节点，复用Vector Store\n5. Lookup分支：解析精确查询条件 → 查询execution_id → 调用RPC函数get_execution_details_v1 → 格式化数据 → 合并上下文 ✅ v6.1 优化：1个RPC调用替代4个查询\n\n**v6.2优化效果**:\n- 合并Vector Store节点：3个节点 → 复用同一套（减少3个节点）\n- 合并RAG Retrieve节点：2个节点 → 1个节点（根据question_type动态调整prompt）\n- 总减少节点：4个节点\n6. Ambiguous分支：默认概览 + 引导追问\n7. LLM生成回答（基于SQL结果 + RAG context）\n8. 格式化输出\n9. 发送Telegram回复\n10. 记录查询日志\n\n**数据表**: \n- `executions` ← 查询（执行统计）✅ v4 修复：execution_logs → executions\n- `rebalance_decisions` ← 查询（再平衡统计）✅ v4 新增字段：is_blocked, rebalance_needed, threshold_details\n- `market_metrics` ← 查询（市场数据）✅ v4 修复：market_snapshots → market_metrics\n- `allocation_snapshots` ← 查询（资产分配）\n- `execution_logs_rag` ← RAG检索（向量库）\n- `data_query_logs` ← 写入（查询日志）\n- `prompt_library` ← 查询（telegram_classifier, telegram_answer）\n\n**v4 优化记录**: 2025-01-30 - 修复表名和字段名，集成新字段（is_blocked, rebalance_needed），更新聚合统计逻辑\n",
+        "height": 2088,
+        "width": 9520,
+        "color": 6
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "a33419dc-738f-4a66-b0e8-e4f43cdb15ca",
+      "node_name": "Entry Layer Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2320,
+        192
+      ],
+      "parameters": {
+        "content": "## Entry Layer（入口层）\n\n**功能**: 接收Telegram消息并清洗文本\n\n**节点**: \n- Telegram Trigger: 接收Telegram消息\n- Clean Text: 去除@mention和标点符号，清洗用户输入\n\n**数据流**: Telegram消息 → 文本清洗 → 输出清洗后的查询文本和用户信息",
+        "height": 1528,
+        "width": 600
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "5a893ba6-a479-4b80-b273-99bb52e8c07c",
+      "node_name": "Session Layer Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1712,
+        176
+      ],
+      "parameters": {
+        "content": "## Session Layer（会话层）\n\n**功能**: 管理多轮对话和澄清流程\n\n**节点**: \n- Check Session: 查询telegram_sessions表，检查是否有pending\n- Check Session Result: 处理Session查询结果\n- IF Has Pending: 判断是否需要合并上下文\n- Merge Pending Context: 合并session上下文和当前用户输入\n- Save Session: 保存pending状态（需要澄清时）\n- Update Session Clear: 清除pending状态（回答完成后）\n\n**数据流**: 检查Session → 判断pending → 合并上下文（如有）→ 保存/清除Session状态",
+        "height": 1548,
+        "width": 1056,
+        "color": 2
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "07eecb8a-ed80-4f81-9fbf-2b9fb25e6235",
+      "node_name": "Routing Layer Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -656,
+        176
+      ],
+      "parameters": {
+        "content": "## Routing Layer（路由层）\n\n**功能**: LLM分类器进行问题分类和澄清判断\n\n**节点**: \n- Get Classifier Prompt: 从prompt_library获取telegram_classifier\n- Merge Prompt and Input: 合并Prompt和用户输入\n- Build Classifier Prompt Input: 构建LLM输入\n- Classify Question: LLM Agent分类问题（使用Structured Output Parser）\n- IF Needs Clarify: 判断是否需要澄清\n- Prepare Session Data: 准备Session数据\n- Save Session: 保存澄清状态\n- Send Clarify Question: 发送澄清问题\n- Switch Question Type: 路由到Metrics/Ambiguous分支\n\n**数据流**: 获取Prompt → 构建输入 → LLM分类 → 判断澄清 → 路由到相应分支",
+        "height": 1568,
+        "width": 888,
+        "color": 3
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "d8614a30-b9dc-4534-b476-f0bee018bed4",
+      "node_name": "Data Query Layer Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        256,
+        112
+      ],
+      "parameters": {
+        "content": "## Data Query Layer（数据查询层）\n\n**功能**: 查询结构化数据并聚合统计\n\n**节点**: \n- Parse Time Range: 从Classify Question提取时间范围\n- Query Metrics Summary: 调用RPC函数 get_metrics_summary_v1 ✅ v6 优化：1个RPC调用替代3-4个并行查询\n- Prepare RAG Query: 准备RAG查询文本（处理RPC返回格式）\n- Generate Default Overview: 生成默认概览（Ambiguous分支）\n\n**数据流**: 解析时间范围 → RPC函数调用（数据库端完成所有聚合） → 输出聚合统计结果\n\n**v6优化效果**: \n- 查询数量: 3-4个 → 1个（减少75%）\n- 工作流节点: 7个 → 2个（减少71%）\n- 性能提升: 10-100倍（数据库端聚合）\n- 自动应用11条测试环境过滤规则",
+        "height": 1988,
+        "width": 2672,
+        "color": 4
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "0b468f82-00a8-4418-ac85-0457e18b5153",
+      "node_name": "RAG Layer Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2688,
+        112
+      ],
+      "parameters": {
+        "content": "## RAG Layer（RAG检索层）\n\n**功能**: 从向量库检索相关执行日志上下文\n\n**节点**: \n- Prepare RAG Query: 准备RAG查询文本\n- Vector Store Retriever: 向量检索器\n- Vector Store Supabase: Supabase向量存储\n- Embeddings: Google Gemini Embeddings\n- RAG Retrieve: Chain Retrieval QA检索相关上下文\n\n**数据流**: 准备查询 → 向量检索 → RAG检索 → 输出相关上下文",
+        "height": 1996,
+        "width": 1344,
+        "color": 5
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "f877fcb8-40ac-4042-acdd-1497fa485409",
+      "node_name": "Output Layer Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4016,
+        112
+      ],
+      "parameters": {
+        "content": "## Output Layer（输出层）\n\n**功能**: 格式化答案并发送Telegram回复\n\n**节点**: \n- Format Response: 格式化LLM输出（长度控制）\n- Update Session Clear: 清除Session pending状态\n- Send Telegram Reply: 发送Telegram回复\n- Log Query: 记录查询日志到data_query_logs表\n\n**数据流**: 格式化答案 → 清除Session → 发送回复 → 记录日志",
+        "height": 2042,
+        "width": 2400
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "e965fe82-db0f-4a6f-8a6c-698c1afd4564",
+      "node_name": "step1_TelegramTrigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "position": [
+        -2176,
+        944
+      ],
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "9f338425-bffa-4908-9eef-b938ee61dd1c",
+      "node_name": "step3_CheckSession",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        -1728,
+        944
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "telegram_sessions",
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "={{ 'chat_id=eq.' + $json.chat_id + '&expires_at=gt.' + new Date().toISOString() }}"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": {
+        "alwaysOutputData": true
+      },
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "9d7c21ad-be00-4f37-aad5-b7488ecdce32",
+      "node_name": "step4_CheckSessionResult",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -1504,
+        944
+      ],
+      "parameters": {
+        "jsCode": "// Check Session Result: Determine if there's a pending session\n// Reference: Architecture Design - Check Session Result node\n// Fixed: Use correct node names and use original_text for user_input\n\ntry {\n  // Get session data from current input (step3_CheckSession output)\n  const sessionData = $input.first()?.json || null;\n  \n  // Get cleaned text data from step2_CleanText (use correct node name)\n  const cleanTextItems = $items('step2_CleanText');\n  const cleanTextData = (cleanTextItems && Array.isArray(cleanTextItems) && cleanTextItems.length > 0) \n    ? cleanTextItems[0].json \n    : null;\n  \n  // Validate required data\n  if (!cleanTextData) {\n    console.error('Step4_CheckSessionResult: Cannot get data from step2_CleanText');\n    // Fallback: Try to get from session data if available\n    if (sessionData && sessionData.chat_id) {\n      return [{\n        json: {\n          has_pending: sessionData.pending_slot !== null && \n                      sessionData.pending_slot !== undefined && \n                      sessionData.pending_slot !== 'null',\n          session_data: sessionData,\n          user_input: '',\n          chat_id: sessionData.chat_id,\n          user_name: sessionData.user_name || 'User',\n          original_text: '',\n          message_id: null\n        }\n      }];\n    }\n    return [];\n  }\n  \n  // Check if session has pending (also check for string \"null\")\n  const hasPending = sessionData && \n    sessionData.pending_slot !== null && \n    sessionData.pending_slot !== undefined &&\n    sessionData.pending_slot !== 'null';\n  \n  // Use original_text for user_input (not clean_query)\n  return [{\n    json: {\n      has_pending: hasPending,\n      session_data: sessionData || {},\n      user_input: cleanTextData.original_text || '',  // ✅ 使用 original_text\n      chat_id: cleanTextData.chat_id,\n      user_name: cleanTextData.user_name || 'User',\n      original_text: cleanTextData.original_text || '',  // ✅ 保持 original_text\n      message_id: cleanTextData.message_id\n    }\n  }];\n} catch (error) {\n  console.error('Step4_CheckSessionResult Error:', error);\n  return [];\n}"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "f9691997-0ced-4770-a892-a7095f9da1a5",
+      "node_name": "step5_IfHasPending",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        -1280,
+        848
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-pending-check",
+              "leftValue": "={{ $json.has_pending }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": {
+        "node_type": "n8n-nodes-base.if",
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "has-pending-check",
+                "leftValue": "={{ $json.has_pending }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      }
+    },
+    {
+      "node_id": "7c39e965-14a0-49cb-b538-151bf9c45a83",
+      "node_name": "step6_MergePendingContext",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -1056,
+        784
+      ],
+      "parameters": {
+        "jsCode": "// Merge Pending Context: Merge session context with current user input\n// Reference: Architecture Design - Merge Pending Context node\n\nconst sessionData = $json.session_data || {};\nconst contextJson = sessionData.context_json || {};\nconst currentInput = $json.user_input || '';\nconst originalQuestion = contextJson.original_question || '';\n\n// Merge input: original_question + current_reply\nconst mergedInput = originalQuestion && currentInput \n  ? `${originalQuestion} ${currentInput}`.trim()\n  : currentInput || originalQuestion;\n\n// Merge context\nconst mergedContext = {\n  original_question: originalQuestion || currentInput,\n  current_reply: currentInput,\n  pending_slot: sessionData.pending_slot,\n  collected_context: contextJson\n};\n\nreturn [{\n  json: {\n    merged_input: mergedInput,  // ✅ \"查询执行情况 最近7天\"\n    merged_context: JSON.stringify(mergedContext),\n    session_data: sessionData,\n    chat_id: $json.chat_id,\n    user_name: $json.user_name,\n    original_text: $json.original_text,\n    message_id: $json.message_id\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "74322e82-a69a-4f5b-aac8-d3fef23b1186",
+      "node_name": "step7_GetClassifierPrompt",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        -832,
+        1072
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "prompt_library",
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "slug=eq.telegram_classifier&is_active=eq.true"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": {
+        "alwaysOutputData": true
+      },
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "a1cc0f75-6c44-441c-ae3e-4b27c3b04474",
+      "node_name": "step9_BuildClassifierPromptInput",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -384,
+        944
+      ],
+      "parameters": {
+        "jsCode": "// Build Classifier Prompt Input: Construct LLM input for classification\n// Reference: Architecture Design - Build Classifier Prompt Input node\n// Modified: Fix null value handling in sessionContext\n// ✅ v6.2 修复：添加 current_date 变量注入\n\nconst allItems = $input.all() || [];\nlet promptData = {};\nlet inputData = {};\n\nfor (const item of allItems) {\n  const json = item.json || {};\n  if (json.system_prompt || json.user_prompt_template || json.slug === 'telegram_classifier') {\n    promptData = json;\n  }\n  if (json.merged_input || json.user_input || json.clean_query || json.chat_id) {\n    inputData = json;\n  }\n}\n\nconst userInput = inputData.merged_input || inputData.user_input || inputData.clean_query || '';\nconst sessionData = inputData.session_data || {};\n\n// Fix: Properly handle null values (not string \"null\")\nconst pendingSlot = sessionData.pending_slot;\nconst hasPending = pendingSlot !== null && pendingSlot !== undefined && pendingSlot !== 'null' && pendingSlot !== '';\n\nconst sessionContext = hasPending ? {\n  has_pending: true,\n  pending_slot: pendingSlot,\n  pending_question: sessionData.pending_question || null,\n  context_json: sessionData.context_json || {}\n} : {\n  has_pending: false,\n  pending_slot: null,\n  pending_question: null,\n  context_json: sessionData.context_json || {}\n};\n\n// ✅ v6.2 修复：获取当前日期（UTC时间，ISO8601格式）\nconst currentDate = new Date().toISOString().split('T')[0]; // 格式：2026-01-08\nconst currentDateTime = new Date().toISOString(); // 格式：2026-01-08T12:34:56.789Z\n\nconst systemPrompt = promptData.system_prompt || '';\nconst userPromptTemplate = promptData.user_prompt_template || '';\n\nlet userPrompt = userPromptTemplate || `User input: ${userInput}\\n\\nSession context: ${JSON.stringify(sessionContext)}`;\n\nif (userPromptTemplate) {\n  userPrompt = userPrompt\n    .replace(/{user_input}/g, userInput)\n    .replace(/{session_context}/g, JSON.stringify(sessionContext, null, 2))\n    // ✅ v6.2 修复：注入 current_date 变量\n    .replace(/{current_date}/g, currentDate)  // 替换 {current_date} 为当前日期（YYYY-MM-DD）\n    .replace(/{current_datetime}/g, currentDateTime);  // 可选：如果需要完整时间戳\n}\n\n// ✅ v6.2 修复：同时替换 systemPrompt 中的 {current_date}\nlet finalSystemPrompt = systemPrompt\n  .replace(/{current_date}/g, currentDate)\n  .replace(/{current_datetime}/g, currentDateTime);\n\nreturn [{\n  json: {\n    system_prompt: finalSystemPrompt,\n    user_prompt: userPrompt,\n    chat_id: inputData.chat_id,\n    user_name: inputData.user_name,\n    session_data: sessionData,\n    original_input: userInput\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "2bc6343f-802e-49a9-a7f7-cea71f1bdf2a",
+      "node_name": "step10_ClassifyQuestion",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        -160,
+        944
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_prompt }}",
+        "options": {
+          "systemMessage": "={{ $json.system_prompt }}"
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "ad3342c5-e28c-4293-8588-3391c39df127",
+      "node_name": "step11_IfNeedsClarify",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        416,
+        944
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "needs-clarify-check",
+              "leftValue": "={{ $json.needs_clarify }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": {
+        "node_type": "n8n-nodes-base.if",
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 2
+            },
+            "conditions": [
+              {
+                "id": "needs-clarify-check",
+                "leftValue": "={{ $json.needs_clarify }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      }
+    },
+    {
+      "node_id": "fc3bea40-9e47-452d-816c-9729998afcd2",
+      "node_name": "step12_PrepareSessionData",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        640,
+        576
+      ],
+      "parameters": {
+        "jsCode": "// Prepare Session Data: Prepare data for Save Session node\n// Reference: Architecture Design - Save Session node\n\nconst classifyOutput = $json;\nconst inputData = $items('step9_BuildClassifierPromptInput')?.[0]?.json || {};\n\nconst contextJson = {\n  original_question: inputData.original_input || '',\n  type: classifyOutput.type || 'ambiguous',\n  filters: classifyOutput.filters || {},\n  time_range: classifyOutput.time_range || {}\n};\n\nreturn [{\n  json: {\n    chat_id: inputData.chat_id,\n    user_name: inputData.user_name,\n    pending_slot: classifyOutput.pending_slot || null,\n    clarify_question: classifyOutput.clarify_question || null,\n    context_json: contextJson,\n    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "8b339478-ae7e-4e2b-92f8-ab8be026bda4",
+      "node_name": "step13_SaveSession",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        1312,
+        768
+      ],
+      "parameters": {
+        "operation": "update",
+        "tableId": "telegram_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "user_name",
+              "fieldValue": "={{ $json.user_name }}"
+            },
+            {
+              "fieldId": "pending_slot",
+              "fieldValue": "={{ $json.pending_slot }}"
+            },
+            {
+              "fieldId": "pending_question",
+              "fieldValue": "={{ $json.clarify_question }}"
+            },
+            {
+              "fieldId": "context_json",
+              "fieldValue": "={{ $json.context_json }}"
+            },
+            {
+              "fieldId": "expires_at",
+              "fieldValue": "={{ $json.expires_at }}"
+            }
+          ]
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "8932da9c-6447-446d-8690-e178bb63a9d9",
+      "node_name": "step14_SendClarifyQuestion",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        1536,
+        576
+      ],
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.pending_question }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "Markdown"
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "60f6d9de-df13-4a46-845c-5777d600262d",
+      "node_name": "step15_SwitchQuestionType",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        640,
+        1088
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "type-metrics",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "metrics",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "metrics"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "type-investigate",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "investigate",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "investigate"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "type-lookup",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "lookup",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "lookup"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 1
+                },
+                "conditions": [
+                  {
+                    "id": "type-ambiguous",
+                    "leftValue": "={{ $json.type }}",
+                    "rightValue": "ambiguous",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "ambiguous"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "default"
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": {
+        "node_type": "n8n-nodes-base.switch",
+        "parameters": {
+          "rules": {
+            "values": [
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 1
+                  },
+                  "conditions": [
+                    {
+                      "id": "type-metrics",
+                      "leftValue": "={{ $json.type }}",
+                      "rightValue": "metrics",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "metrics"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 1
+                  },
+                  "conditions": [
+                    {
+                      "id": "type-investigate",
+                      "leftValue": "={{ $json.type }}",
+                      "rightValue": "investigate",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "investigate"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 1
+                  },
+                  "conditions": [
+                    {
+                      "id": "type-lookup",
+                      "leftValue": "={{ $json.type }}",
+                      "rightValue": "lookup",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "lookup"
+              },
+              {
+                "conditions": {
+                  "options": {
+                    "caseSensitive": true,
+                    "leftValue": "",
+                    "typeValidation": "strict",
+                    "version": 1
+                  },
+                  "conditions": [
+                    {
+                      "id": "type-ambiguous",
+                      "leftValue": "={{ $json.type }}",
+                      "rightValue": "ambiguous",
+                      "operator": {
+                        "type": "string",
+                        "operation": "equals"
+                      }
+                    }
+                  ],
+                  "combinator": "and"
+                },
+                "renameOutput": true,
+                "outputKey": "ambiguous"
+              }
+            ]
+          },
+          "options": {
+            "fallbackOutput": "default"
+          }
+        }
+      }
+    },
+    {
+      "node_id": "199f6eec-e281-414d-a391-34780e18fd15",
+      "node_name": "step16_ParseTimeRange",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1728,
+        864
+      ],
+      "parameters": {
+        "jsCode": "// Parse Time Range: Extract time range from Classify Question output\n// ✅ v6 优化：同时准备 RPC 函数参数\n// Reference: Architecture Design - Parse Time Range node\n// Added: Time range validation and RPC parameter preparation\n\nconst classifyOutput = $json;\nconst inputData = $items('step9_BuildClassifierPromptInput')?.[0]?.json || {};\n\nconst timeRange = classifyOutput.time_range || {};\nconst now = new Date();\n\n// Default: last 7 days if not provided\nconst defaultEndTime = new Date(now);\nconst defaultStartTime = new Date(now);\ndefaultStartTime.setDate(now.getDate() - 7);\ndefaultStartTime.setHours(0, 0, 0, 0);\ndefaultEndTime.setHours(23, 59, 59, 999);\n\nlet startTime = timeRange.start ? new Date(timeRange.start) : defaultStartTime;\nlet endTime = timeRange.end ? new Date(timeRange.end) : defaultEndTime;\nlet isDefault = timeRange.is_default !== undefined ? timeRange.is_default : true;\n\n// Data availability range (based on actual database records)\n// Earliest: 2025-11-13, Latest: 2025-12-18\nconst dataEarliest = new Date('2025-11-13T00:00:00.000Z');\nconst dataLatest = new Date('2025-12-18T23:59:59.999Z');\n\n// Validate and adjust time range to ensure data availability\nlet warningMessage = null;\nlet adjusted = false;\n\n// ... (时间范围验证逻辑保持不变) ...\n// ===== 准备 RPC 函数参数 (优化版) =====\nconst filters = classifyOutput.filters || {};\n\n// 始终保持结构完整，避免 HTTP 节点引用出错\nconst rpcBody = {\n  p_start_time: startTime.toISOString(),\n  p_end_time: endTime.toISOString(),\n  // 统一取值逻辑：优先取 vault_keyword，没有则给 null\n  p_vault_name: filters.vault_keyword || filters.vault || null \n};\n\nreturn [{\n  json: {\n    start_time: startTime.toISOString(),\n    end_time: endTime.toISOString(),\n    is_default: isDefault,\n    warning_message: warningMessage || (isDefault ? '使用默认时间范围（最近7天）' : null),\n    clean_query: inputData.original_input || classifyOutput.original_input || '',\n    chat_id: inputData.chat_id || classifyOutput.chat_id,\n    user_name: inputData.user_name || classifyOutput.user_name,\n    question_type: classifyOutput.type || 'metrics',\n    filters: filters,\n    time_range_adjusted: adjusted,\n    // ✅ 这里的 rpc_body 现在包含了确定存在的 p_vault_name\n    rpc_body: rpcBody  \n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "e498e7ef-73ea-4c8c-ae2c-33ab4c1a5ac7",
+      "node_name": "step17_QueryMetricsSummary",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1936,
+        720
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://uzbbumqbyfssijmcwwwy.supabase.co/rest/v1/rpc/get_metrics_summary_v3",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6YmJ1bXFieWZzc2lqbWN3d3d5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTkxMzU1MCwiZXhwIjoyMDc1NDg5NTUwfQ.Kqkj_QUO-qVeKwMXLfobWRfuMwnFQaWsg0GDQrmHYSg"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.rpc_body }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 300000
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": {
+        "alwaysOutputData": true
+      },
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "4e3e2ccf-a45d-4f45-aebf-3ed211eea9ec",
+      "node_name": "step30_PrepareRAGQuery_Metrics",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2928,
+        736
+      ],
+      "parameters": {
+        "jsCode": "// Prepare RAG Query - Metrics Branch: Prepare RAG query for Metrics questions\n// ✅ v7.0 优化：拆分 Metrics 和 Investigate 分支，逻辑更清晰\n// ✅ v7.1 修复：正确处理占位符 {enhancedQuery} 和 {clean_query}，传递 system_prompt\n// ✅ v7.3 修复：从 MergeData 获取 promptData，从 step17 获取 rpcResponse\n// Reference: Architecture Design - Prepare RAG Query node (Metrics branch)\n\nconst allItems = $input.all() || [];\n\n// ===== 从多个输入项中提取数据（Metrics 分支） =====\nlet promptData = null;\nlet rpcResponse = null;\nlet timeRangeData = null;\n\n// ✅ v7.3 修复：MergeData 输出包含 step23a 的数据（Prompt + TimeRange）\n// 遍历所有输入项，识别不同类型的数据\nfor (const item of allItems) {\n  const json = item.json || {};\n  \n  // 识别 step23_GetRAGRetrievePrompt 的输出（有 slug 或 user_prompt_template）\n  // ✅ v7.3 修复：MergeData 输出包含这些字段\n  if (json.slug || json.user_prompt_template || (json.system_prompt && !json.body && !json.start_time)) {\n    promptData = json;\n  }\n  \n  // 识别时间范围数据（有 start_time 和 end_time）\n  // ✅ v7.3 修复：MergeData 输出包含 timeRangeData\n  if (json.start_time && json.end_time) {\n    timeRangeData = json;\n  }\n}\n\n// ✅ v7.3 修复：从 step17_QueryMetricsSummary 获取 SQL 统计结果（通过 $items）\n// RPC 响应不包含在 MergeData 输出中，需要从 step17 获取\ntry {\n  const step17Data = $items('step17_QueryMetricsSummary')?.[0]?.json || {};\n  if (step17Data.body || step17Data.execution_summary || step17Data.statusCode) {\n    rpcResponse = step17Data.body || step17Data;\n  }\n} catch (e) {\n  // 如果无法获取 step17 的数据，继续处理（rpcResponse 保持为 null）\n  console.log('step30: Cannot get data from step17_QueryMetricsSummary, continuing...');\n}\n\n// ===== Metrics分支：处理RPC函数返回格式 =====\nconst questionType = 'metrics';\n\n// 使用 timeRangeData（从 step16）\nconst timeRangeFromStep16 = timeRangeData || {};\n\nconst sqlStatistics = {\n  execution_summary: rpcResponse?.execution_summary || {},\n  rebalance_summary: rpcResponse?.rebalance_summary || {},\n  market_summary: rpcResponse?.market_summary || {},\n  allocation_summary: rpcResponse?.allocation_summary || {},\n  time_range: {\n    start_time: timeRangeFromStep16.start_time,\n    end_time: timeRangeFromStep16.end_time,\n    is_default: timeRangeFromStep16.is_default || false\n  },\n  clean_query: timeRangeFromStep16.clean_query || '',\n  chat_id: timeRangeFromStep16.chat_id,\n  user_name: timeRangeFromStep16.user_name\n};\n\nconst cleanQuery = sqlStatistics.clean_query || '';\nconst timeRange = sqlStatistics.time_range || {};\nconst chatId = sqlStatistics.chat_id;\nconst userName = sqlStatistics.user_name;\nconst filters = timeRangeFromStep16.filters || {};\n\n// ===== 构建增强查询文本（Metrics 分支：使用关键词映射） =====\n// 基础关键词映射\nconst baseKeywords = {\n  'metrics': {\n    'default': 'autonomous agent routine management task vault protocol APY total capital allocated'\n  }\n};\n\n// 从用户查询中提取意图关键词\nconst extractIntent = (userQuery, questionType) => {\n  const query = userQuery.toLowerCase();\n  \n  // 性能相关（未来扩展）\n  if (/性能|performance|速度|speed|延迟|latency/i.test(query)) {\n    return 'performance';\n  }\n  \n  // 资本相关（未来扩展）\n  if (/资本|capital|资金|funds|分配|allocation/i.test(query)) {\n    return 'capital';\n  }\n  \n  // 默认\n  return 'default';\n};\n\nlet enhancedQuery = cleanQuery;\n\n// 添加时间范围上下文\nif (timeRange.start_time && timeRange.end_time) {\n  const startDate = new Date(timeRange.start_time).toISOString().split('T')[0];\n  const endDate = new Date(timeRange.end_time).toISOString().split('T')[0];\n  enhancedQuery += ` (time range: ${startDate} to ${endDate})`;\n} else if (timeRange.start && timeRange.end) {\n  const startDate = new Date(timeRange.start).toISOString().split('T')[0];\n  const endDate = new Date(timeRange.end).toISOString().split('T')[0];\n  enhancedQuery += ` (time range: ${startDate} to ${endDate})`;\n}\n\n// 使用执行日志实际短语（而不是抽象关键词）\nconst intent = extractIntent(cleanQuery, questionType);\nconst keywords = baseKeywords[questionType]?.[intent] || baseKeywords[questionType]?.['default'] || '';\n\nif (keywords) {\n  enhancedQuery += ` ${keywords}`;\n}\n\n// ===== 获取并构建 RAG Prompt =====\nlet ragPrompt = '';\nlet ragSystemPrompt = '';\n\n// ✅ v7.1 修复：只从 prompt_library 获取，不提供默认值\nif (promptData) {\n  // ✅ 获取 system_prompt（没有占位符，直接传递）\n  ragSystemPrompt = promptData.system_prompt || '';\n  \n  // ✅ 获取 user_prompt_template，替换所有占位符\n  const userPromptTemplate = promptData.user_prompt_template || '';\n  if (userPromptTemplate) {\n    ragPrompt = userPromptTemplate\n      .replace(/{enhancedQuery}/g, enhancedQuery)  // 替换 {enhancedQuery}\n      .replace(/{clean_query}/g, enhancedQuery);   // ✅ 修复：也替换 {clean_query}（使用 enhancedQuery 的值）\n    // ✅ 注意：{context} 占位符保留，由 RAG Retrieve 节点自动注入\n  }\n}\n\n// ===== 构建输出 =====\nconst output = {\n  clean_query: cleanQuery,\n  enhanced_query: enhancedQuery,\n  chat_id: chatId,\n  user_name: userName,\n  question_type: questionType,\n  time_range: timeRange,\n  rag_prompt: ragPrompt,\n  rag_system_prompt: ragSystemPrompt,  // ✅ v7.1 新增：传递 system_prompt\n  sql_statistics: sqlStatistics,\n  filters: filters\n};\n\n// ✅ 准备 Metadata Filter 用于 Vector Store Supabase\nconst metadataFilter = {};\n\n// 提取时间范围（支持多种字段名格式）\nconst startTime = timeRange.start_time || timeRange.start;\nconst endTime = timeRange.end_time || timeRange.end;\n\nif (startTime) {\n  metadataFilter.start_time = startTime;\n}\nif (endTime) {\n  metadataFilter.end_time = endTime;\n}\n\n// 提取金库名称（如果有）\nif (filters && filters.vault) {\n  metadataFilter.vault_name = filters.vault;\n}\n\n// ✅ 添加查询文本，用于内容过滤\nif (enhancedQuery) {\n  metadataFilter.query_text = enhancedQuery;\n}\n\n// ✅ 关键：将 metadataFilter 添加到输出中\noutput.metadata_filter = metadataFilter;\n\nreturn [{\n  json: output\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "6d637b7e-da20-4ef9-a786-6b0aaa5a8c3d",
+      "node_name": "step31_PrepareRAGQuery_Investigate",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2640,
+        1088
+      ],
+      "parameters": {
+        "jsCode": "// Prepare RAG Query - Investigate Branch: Prepare RAG query for Investigate questions\n// ✅ v7.0 优化：拆分 Metrics 和 Investigate 分支，逻辑更清晰\n// ✅ v7.1 修复：正确处理占位符 {enhancedQuery} 和 {clean_query}，传递 system_prompt，移除默认 prompt\n// Reference: Architecture Design - Prepare RAG Query node (Investigate branch)\n\nconst allItems = $input.all() || [];\n\n// ===== 从多个输入项中提取数据（Investigate 分支） =====\nlet promptData = null;\nlet translationResult = null;\n\n// 遍历所有输入项，识别不同类型的数据\nfor (const item of allItems) {\n  const json = item.json || {};\n  \n  // 识别 RAG Retrieve Prompt（有 slug 或 user_prompt_template）\n  if (json.slug || json.user_prompt_template || (json.system_prompt && !json.body && !json.start_time)) {\n    promptData = json;\n  }\n  \n  // 识别 step29_MergeTranslationResult 的输出（Investigate 分支）\n  // 优先识别：有 enhanced_query 或 translated_query 的数据\n  if (json.enhanced_query || json.translated_query || json.was_translated !== undefined) {\n    translationResult = json;\n  }\n}\n\n// ===== 从 translationResult 获取数据 =====\nconst inputData = translationResult || allItems[0]?.json || {};\n\nconst questionType = inputData.question_type || inputData.type || 'investigate';\n\n// ✅ 修复：正确获取 clean_query（优先使用 original_input）\nlet cleanQuery = inputData.original_input || inputData.clean_query || '';\n\n// ✅ 如果 cleanQuery 仍然为空，尝试从更上游获取\nif (!cleanQuery || cleanQuery.trim() === '') {\n  try {\n    const step10Data = $items('step10_ClassifyQuestion')?.[0]?.json || {};\n    const step9Data = $items('step9_BuildClassifierPromptInput')?.[0]?.json || {};\n    cleanQuery = step10Data.original_input || step9Data.original_input || '';\n  } catch (e) {\n    // 忽略错误（节点可能未执行）\n  }\n}\n\n// ✅ 修复：正确获取 time_range（字段名可能是 start/end 或 start_time/end_time）\nlet timeRange = {};\nif (inputData.time_range) {\n  timeRange = {\n    start: inputData.time_range.start || inputData.time_range.start_time || null,\n    end: inputData.time_range.end || inputData.time_range.end_time || null,\n    start_time: inputData.time_range.start_time || inputData.time_range.start || null,\n    end_time: inputData.time_range.end_time || inputData.time_range.end || null,\n    is_default: inputData.time_range.is_default || false\n  };\n}\n\n// ✅ 修复：正确获取 filters\nconst filters = inputData.filters || {};\n\n// ✅ 修复：正确获取 chat_id 和 user_name\nconst chatId = inputData.chat_id || null;\nconst userName = inputData.user_name || null;\n\n// ===== 构建增强查询文本（Investigate 分支：使用 LLM 翻译结果） =====\nlet enhancedQuery = '';\n\nif (translationResult && translationResult.enhanced_query) {\n  // Investigate分支：使用 LLM 翻译结果\n  enhancedQuery = translationResult.enhanced_query;\n} else {\n  // Fallback：使用原始查询\n  enhancedQuery = cleanQuery;\n}\n\n// ===== 获取并构建 RAG Prompt =====\nlet ragPrompt = '';\nlet ragSystemPrompt = '';\n\n// ✅ v7.1 修复：只从 prompt_library 获取，不提供默认值\nif (promptData) {\n  // ✅ 获取 system_prompt（没有占位符，直接传递）\n  ragSystemPrompt = promptData.system_prompt || '';\n  \n  // ✅ 获取 user_prompt_template，替换所有占位符\n  const userPromptTemplate = promptData.user_prompt_template || '';\n  if (userPromptTemplate) {\n    ragPrompt = userPromptTemplate\n      .replace(/{enhancedQuery}/g, enhancedQuery)  // 替换 {enhancedQuery}\n      .replace(/{clean_query}/g, enhancedQuery);   // ✅ 修复：也替换 {clean_query}（使用 enhancedQuery 的值）\n    // ✅ 注意：{context} 占位符保留，由 RAG Retrieve 节点自动注入\n  }\n}\n\n// ===== 构建输出 =====\nconst output = {\n  clean_query: cleanQuery,\n  enhanced_query: enhancedQuery,\n  chat_id: chatId,\n  user_name: userName,\n  question_type: questionType,\n  time_range: timeRange,\n  rag_prompt: ragPrompt,\n  rag_system_prompt: ragSystemPrompt,  // ✅ v7.1 新增：传递 system_prompt\n  filters: filters\n};\n\n// ✅ 准备 Metadata Filter 用于 Vector Store Supabase\nconst metadataFilter = {};\n\n// 提取时间范围（支持多种字段名格式）\nconst startTime = timeRange.start_time || timeRange.start;\nconst endTime = timeRange.end_time || timeRange.end;\n\nif (startTime) {\n  metadataFilter.start_time = startTime;\n}\nif (endTime) {\n  metadataFilter.end_time = endTime;\n}\n\n// 提取金库名称（如果有）\nif (filters && filters.vault) {\n  metadataFilter.vault_name = filters.vault;\n}\n\n// ✅ 添加查询文本，用于内容过滤\nif (enhancedQuery) {\n  metadataFilter.query_text = enhancedQuery;\n}\n\n// ✅ 关键：将 metadataFilter 添加到输出中\noutput.metadata_filter = metadataFilter;\n\nreturn [{\n  json: output\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "62b4d134-7aef-4b1e-86b2-e7e7d1e78be3",
+      "node_name": "Vector Store Supabase",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "position": [
+        2912,
+        1392
+      ],
+      "parameters": {
+        "tableName": {
+          "__rl": true,
+          "value": "execution_logs_rag",
+          "mode": "list",
+          "cachedResultName": "execution_logs_rag"
+        },
+        "options": {
+          "queryName": "match_execution_logs",
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "start_time",
+                "value": "={{ $json.metadata_filter.start_time }}"
+              },
+              {
+                "name": "end_time",
+                "value": "={{ $json.metadata_filter.end_time }}"
+              },
+              {
+                "name": "query_text",
+                "value": "={{ $json.metadata_filter.query_text }}"
+              }
+            ]
+          }
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "ba216ec0-3aa3-4c49-ba97-fad47831aaed",
+      "node_name": "RAG Retrieve",
+      "type": "@n8n/n8n-nodes-langchain.chainRetrievalQa",
+      "position": [
+        2976,
+        912
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.rag_prompt }}",
+        "options": {
+          "systemPromptTemplate": "=Context: {context} {{ $json.rag_system_prompt }}"
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "34c9ccd6-e743-4117-bdcd-6a2f1118ed0e",
+      "node_name": "step27_GetAnswerPrompt",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        4192,
+        1440
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "prompt_library",
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "slug=eq.telegram_answer&is_active=eq.true"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": {
+        "alwaysOutputData": true
+      },
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "4c1efdb8-27a0-4697-9a8d-48eaf79d3219",
+      "node_name": "step28_MergePromptContext",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        4384,
+        1232
+      ],
+      "parameters": {},
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "4529a7bf-10fc-48ec-a9ff-9270bb6f6244",
+      "node_name": "step29_BuildPromptInput",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        4608,
+        1232
+      ],
+      "parameters": {
+        "jsCode": "// Build Prompt Input: Construct LLM input with user question + SQL results + RAG context\n// ✅ v6.2 优化：修复 chat_id 和 user_name 丢失问题，确保正确识别 contextData\n// Reference: Architecture Design - Build Prompt Input node\n\nconst allItems = $input.all() || [];\nlet promptData = {};\nlet contextData = {};\n\n// Process all input items\nfor (const item of allItems) {\n  const json = item.json || {};\n  \n  // ✅ 修复：优先识别 promptData（更明确的标识）\n  // Identify prompt data (from step27_GetAnswerPrompt)\n  if (json.system_prompt || json.user_prompt_template || json.slug === 'telegram_answer') {\n    promptData = json;\n    continue; // 跳过后续处理，避免误识别\n  }\n  \n  // ✅ 修复：更准确的 contextData 识别逻辑\n  // Identify context data (from step34_MergeContext)\n  // 检查多个可能的标识字段，确保能识别到 contextData\n  if (json.sql_statistics || json.rag_context || json.rag_count !== undefined || \n      json.clean_query || json.question_type) {\n    // ✅ 修复：合并 contextData，保留所有字段（包括 chat_id 和 user_name）\n    contextData = {\n      ...contextData,  // 保留之前已识别的字段\n      ...json          // 合并当前项的字段\n    };\n  }\n}\n\nconst systemPrompt = promptData.system_prompt || '';\nconst userPromptTemplate = promptData.user_prompt_template || '';\n\n// Extract data from contextData\nconst sqlStatistics = contextData.sql_statistics || {};\nconst ragContext = contextData.rag_context || [];\nconst cleanQuery = contextData.clean_query || '';\nconst timeRange = contextData.time_range || {};\nconst filters = contextData.filters || {};\n\n// ✅ 修复：确保 chat_id 和 user_name 正确提取\n// 优先从 contextData 获取，如果没有则尝试从 promptData 获取（备用）\nconst chatId = contextData.chat_id || promptData.chat_id || null;\nconst userName = contextData.user_name || promptData.user_name || null;\n\n// ✅ v6.2 优化：格式化时间范围显示\nlet timeRangeDisplay = '';\nif (timeRange.start_time && timeRange.end_time) {\n  const startDate = new Date(timeRange.start_time).toISOString().split('T')[0];\n  const endDate = new Date(timeRange.end_time).toISOString().split('T')[0];\n  timeRangeDisplay = `${startDate} to ${endDate}`;\n} else if (timeRange.start && timeRange.end) {\n  const startDate = new Date(timeRange.start).toISOString().split('T')[0];\n  const endDate = new Date(timeRange.end).toISOString().split('T')[0];\n  timeRangeDisplay = `${startDate} to ${endDate}`;\n}\n\n// Build user prompt\nlet userPrompt = userPromptTemplate || `User question: ${cleanQuery}\\n\\nSQL Statistics:\\n${JSON.stringify(sqlStatistics, null, 2)}\\n\\nRAG Context:\\n${JSON.stringify(ragContext, null, 2)}`;\n\nif (userPromptTemplate) {\n  userPrompt = userPrompt\n    .replace(/{user_question}/g, cleanQuery)\n    .replace(/{sql_statistics}/g, JSON.stringify(sqlStatistics, null, 2))\n    .replace(/{rag_context}/g, JSON.stringify(ragContext, null, 2))\n    .replace(/{time_range}/g, timeRangeDisplay || JSON.stringify(timeRange, null, 2))\n    .replace(/{filters}/g, JSON.stringify(filters, null, 2));\n}\n\n// ✅ 修复：确保 chat_id 和 user_name 正确输出\nreturn [{\n  json: {\n    system_prompt: systemPrompt,\n    user_prompt: userPrompt,\n    chat_id: chatId,      // ✅ 修复：确保 chat_id 不丢失\n    user_name: userName   // ✅ 修复：确保 user_name 不丢失\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "cb49ab1f-2361-4846-93dd-0b0505cbff0d",
+      "node_name": "step30_GenerateAnswer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        4832,
+        1232
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_prompt }}",
+        "options": {
+          "systemMessage": "={{ $json.system_prompt }}"
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "a0ecc636-62bb-4c17-b9c9-f4b3c0c7d749",
+      "node_name": "DeepSeek Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "position": [
+        -2176,
+        2048
+      ],
+      "parameters": {
+        "options": {
+          "maxTokens": 1000,
+          "temperature": 0.3
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "88ba2a63-51a8-4570-92c8-7d9c9c5b3680",
+      "node_name": "step31_FormatResponse",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        5184,
+        1472
+      ],
+      "parameters": {
+        "jsCode": "// Step 31_Format Response (移除字数限制版)\nconst inputData = $json || {};\n\n// 1. 提取 LLM 生成的回复文本\nlet answerText = (inputData.output || inputData.response || inputData.text || '').trim();\n\n// 2. 获取最全的上下文数据源\nconst dataSource = $items('step28_MergePromptContext')?.[0]?.json || {}; \n\n// 3. 清理 Markdown 代码块 (防止 Telegram 渲染异常)\nanswerText = answerText.replace(/```[\\s\\S]*?```/g, '').trim();\n\n// 4. ✅ 取消截断逻辑\n// 不再执行 substring(0, 1000)，让内容完整输出\n// 仅保留一个极大的上限（如 4000）防止超出 Telegram 物理极限，但对于你的数据量来说基本不会触发\n\n// 5. ✅ Markdown 语法自愈保护 (保留此项以防万一)\n// 确保 * 号是成对出现的，防止由于原始 AI 输出不规范导致的报错\nconst starCount = (answerText.match(/\\*/g) || []).length;\nif (starCount % 2 !== 0) {\n    answerText += '*';\n}\n\n// 确保引用块 > 后面有换行\nif (answerText.includes('>') && !answerText.endsWith('\\n')) {\n    answerText += '\\n';\n}\n\n// 6. 组装最终给 Telegram 节点的输出\nreturn [{\n    json: {\n        response_text: answerText,\n        response_length: answerText.length,\n        chat_id: dataSource.chat_id || inputData.chat_id,\n        user_name: dataSource.user_name || inputData.user_name,\n        clean_query: dataSource.user_question || inputData.clean_query || '',\n        time_range: dataSource.time_range || {},\n        question_type: 'lookup'\n    }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "f1d9913d-9305-44b7-80b1-a6d55af67b87",
+      "node_name": "step32_UpdateSessionClear",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        5408,
+        1376
+      ],
+      "parameters": {
+        "operation": "update",
+        "tableId": "telegram_sessions",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "chat_id",
+              "condition": "eq",
+              "keyValue": "={{ $json.chat_id }}"
+            }
+          ]
+        },
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "pending_slot",
+              "fieldValue": "={{ null }}"
+            },
+            {
+              "fieldId": "pending_question",
+              "fieldValue": "={{ null }}"
+            },
+            {
+              "fieldId": "context_json",
+              "fieldValue": "={{ null }}"
+            }
+          ]
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": {
+        "alwaysOutputData": true
+      },
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "82847c70-628a-4ac8-aa77-5a2d3e78cccd",
+      "node_name": "step33_SendTelegramReply",
+      "type": "n8n-nodes-base.telegram",
+      "position": [
+        5408,
+        1568
+      ],
+      "parameters": {
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.response_text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true,
+          "parse_mode": "Markdown"
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "f70dc191-108d-4c24-b958-0d777dfbcd25",
+      "node_name": "step34_LogQuery",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        5408,
+        1760
+      ],
+      "parameters": {
+        "tableId": "data_query_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "user_id",
+              "fieldValue": "={{ $json.chat_id }}"
+            },
+            {
+              "fieldId": "question_text",
+              "fieldValue": "={{ $json.clean_query }}"
+            },
+            {
+              "fieldId": "question_type",
+              "fieldValue": "={{ $json.question_type }}"
+            },
+            {
+              "fieldId": "time_range",
+              "fieldValue": "={{ JSON.stringify($json.time_range || {}) }}"
+            },
+            {
+              "fieldId": "data_sources",
+              "fieldValue": "={{ JSON.stringify({sql: true, rag: $json.rag_count > 0}) }}"
+            },
+            {
+              "fieldId": "response_text",
+              "fieldValue": "={{ $json.response_text }}"
+            }
+          ]
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "21d3c6c2-9d6e-4270-af90-dfae68bbadbc",
+      "node_name": "Embeddings",
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "position": [
+        2992,
+        1600
+      ],
+      "parameters": {},
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "b499f69b-6326-4e6f-be12-c3d2d77bc447",
+      "node_name": "Vector Store Retriever",
+      "type": "@n8n/n8n-nodes-langchain.retrieverVectorStore",
+      "position": [
+        2912,
+        1184
+      ],
+      "parameters": {
+        "topK": 10
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "4e39bcd6-ff50-4cf5-b448-efda20ef9acd",
+      "node_name": "step8_MergePromptInput",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        -608,
+        944
+      ],
+      "parameters": {},
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "0315ea6a-36e5-4da8-bf44-399d521e7f25",
+      "node_name": "Step10a: Format Classify Resulta",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        192,
+        944
+      ],
+      "parameters": {
+        "jsCode": "// Format Classify Result: Parse JSON string from LLM output and format to standard object\n// Reference: Architecture Design - Format Data node\n// ✅ v6.2 修复：保留源数据（original_input, chat_id, user_name, session_data）\n\nconst allInputItems = $input.all() || [];\nconst inputData = allInputItems[0]?.json || {};\n\n// LLM output format: [{ \"output\": \"{...}\" }]\n// Need to parse the JSON string in the \"output\" field\nconst rawOutput = inputData.output || inputData || {};\n\nlet classifyResult;\n\n// Check if output is a JSON string that needs parsing\nif (typeof rawOutput === 'string') {\n  try {\n    classifyResult = JSON.parse(rawOutput);\n  } catch (error) {\n    // If parsing fails, try to extract from nested structure\n    classifyResult = rawOutput;\n  }\n} else if (rawOutput.output && typeof rawOutput.output === 'string') {\n  // Handle case where output is nested in an \"output\" field\n  try {\n    classifyResult = JSON.parse(rawOutput.output);\n  } catch (error) {\n    classifyResult = rawOutput;\n  }\n} else {\n  // Already an object, use directly\n  classifyResult = rawOutput;\n}\n\n// Ensure all required fields exist with defaults\nconst formattedResult = {\n  type: classifyResult.type || 'ambiguous',\n  time_range: classifyResult.time_range || {\n    start: null,\n    end: null,\n    is_default: false\n  },\n  filters: classifyResult.filters || {\n    vault: null,\n    chain: null,\n    protocol: null,\n    execution_id: null\n  },\n  confidence: classifyResult.confidence || 0,\n  needs_clarify: classifyResult.needs_clarify || false,\n  clarify_question: classifyResult.clarify_question || null,\n  pending_slot: classifyResult.pending_slot || null\n};\n\n// ✅ v6.2 修复：从上游节点获取源数据\n// step10_ClassifyQuestion 的输入来自 step9_BuildClassifierPromptInput\n// 需要从 step9 获取 original_input, chat_id, user_name, session_data\nconst step9Data = $items('step9_BuildClassifierPromptInput')?.[0]?.json || {};\n\n// ✅ 保留源数据\nformattedResult.original_input = step9Data.original_input || inputData.original_input || null;\nformattedResult.chat_id = step9Data.chat_id || inputData.chat_id || null;\nformattedResult.user_name = step9Data.user_name || inputData.user_name || null;\nformattedResult.session_data = step9Data.session_data || inputData.session_data || null;\n\n// ✅ 如果 original_input 仍然为空，尝试从更上游获取\nif (!formattedResult.original_input) {\n  // 尝试从 step6_MergePendingContext 获取\n  const step6Data = $items('step6_MergePendingContext')?.[0]?.json || {};\n  formattedResult.original_input = step6Data.merged_input || step6Data.original_text || null;\n  \n  // 如果还是没有，尝试从 step4_ParseTelegramMessage 获取\n  if (!formattedResult.original_input) {\n    const step4Data = $items('step4_ParseTelegramMessage')?.[0]?.json || {};\n    formattedResult.original_input = step4Data.text || step4Data.message_text || null;\n  }\n}\n\n// ✅ 如果 chat_id 和 user_name 仍然为空，尝试从更上游获取\nif (!formattedResult.chat_id || !formattedResult.user_name) {\n  const step4Data = $items('step4_ParseTelegramMessage')?.[0]?.json || {};\n  if (!formattedResult.chat_id) formattedResult.chat_id = step4Data.chat_id || step4Data.chat?.id || null;\n  if (!formattedResult.user_name) formattedResult.user_name = step4Data.user_name || step4Data.user?.first_name || null;\n}\n\nreturn [{\n  json: formattedResult\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "7e6869c2-50f7-4d55-bdfd-e294711b4635",
+      "node_name": "DeepSeek Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "position": [
+        2784,
+        1184
+      ],
+      "parameters": {
+        "options": {}
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "81649403-a8d2-4bb1-a70c-8e465a4c6326",
+      "node_name": "DeepSeek Chat Model2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatDeepSeek",
+      "position": [
+        4704,
+        1440
+      ],
+      "parameters": {
+        "options": {
+          "maxTokens": 1000,
+          "temperature": 0.5
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "6f0bcdc9-cacb-4db9-b304-472ff32e4ff1",
+      "node_name": "step8a_FormatPromptInput",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -832,
+        848
+      ],
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nfor (const item of $input.all()) {\n  item.json.myNewField = 1;\n}\n\nreturn $input.all();"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "d4208109-e5cd-434d-b15b-48af344bf086",
+      "node_name": "step34_MergeContext",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3936,
+        1232
+      ],
+      "parameters": {
+        "jsCode": "// Merge Context: v7.4 兼容性增强版\nconst allItems = $input.all() || [];\n\nlet sqlStatistics = {};\nlet ragContext = [];\nlet questionType = 'metrics';\nlet cleanQuery = '';\nlet chatId = null;\nlet userName = null;\nlet timeRange = {};\nlet filters = {};\n\nfor (const item of allItems) {\n  const json = item.json || {};\n  \n  // 1. 识别 SQL 统计数据 (无论是在顶级还是在 body 内部)\n  const dataSource = json.body ? json.body : json;\n  if (dataSource.execution_summary || dataSource.rebalance_summary || dataSource.market_summary) {\n    sqlStatistics = dataSource;\n    if (json.question_type) questionType = json.question_type;\n    // 提取元数据\n    cleanQuery = json.clean_query || cleanQuery;\n    chatId = json.chat_id || chatId;\n    userName = json.user_name || userName;\n    timeRange = json.time_range || timeRange;\n    filters = json.filters || filters;\n    continue; // 匹配到统计数据，跳过当前 item 的其他判断\n  }\n  \n  // 2. 识别 RAG 深度分析结果\n  // 逻辑：只要有 response/text 且内容较长，且不是单纯的统计结构，就作为背景\n  if (json.response || json.text || json.output || json.rag_results) {\n    const rawContent = json.rag_results || json.response || json.text || json.output;\n    const contentStr = String(rawContent).trim();\n    \n    if (contentStr.length > 10) {\n      // 检查是否包含实质性内容（指标数字或 Markdown 标记）\n      const isSubstantial = contentStr.includes('**') || contentStr.includes('\\n') || contentStr.length > 50;\n      \n      if (isSubstantial) {\n        ragContext.push({\n          content: contentStr,\n          source: json.is_fast_track ? 'fast_track' : 'rag_deep_dive'\n        });\n      }\n    }\n  }\n\n  // 3. 识别元数据节点 (Input 3)\n  if (json.start_time && json.end_time) {\n    timeRange = { start_time: json.start_time, end_time: json.end_time, is_default: json.is_default };\n    cleanQuery = json.clean_query || cleanQuery;\n    chatId = json.chat_id || chatId;\n    userName = json.user_name || userName;\n    filters = json.filters || filters;\n  }\n}\n\n// 兜底补全元数据 (引用 Step 16)\nif (!chatId || !cleanQuery) {\n  const s16 = $items('step16_ParseTimeRange')?.[0]?.json || {};\n  chatId = chatId || s16.chat_id;\n  userName = userName || s16.user_name;\n  cleanQuery = cleanQuery || s16.clean_query;\n  if (!timeRange.start_time) timeRange = { start_time: s16.start_time, end_time: s16.end_time };\n}\n\nreturn [{\n  json: {\n    sql_statistics: sqlStatistics,\n    rag_context: ragContext,\n    rag_count: ragContext.length,\n    clean_query: cleanQuery,\n    chat_id: chatId,\n    user_name: userName,\n    time_range: timeRange,\n    filters: filters,\n    question_type: questionType\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "9e1ab394-3f29-4e5b-9f27-86c5ea5055d1",
+      "node_name": "step33_MergeContext_Metrics",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        3776,
+        736
+      ],
+      "parameters": {
+        "numberInputs": 3
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "bba04874-148f-4a41-999c-4dba6d572d7a",
+      "node_name": "step25_GenerateSimpleReply",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        4256,
+        1856
+      ],
+      "parameters": {
+        "jsCode": "// Generate Simple Reply: Unified simple reply generation for Ambiguous and Empty Lookup branches\n// ✅ v6.1 优化：合并step25和step39c，根据question_type和has_data动态生成回复\n// Reference: Architecture Design - Simple reply handling\n// ✅ 修复1：使用try-catch安全访问未执行的节点\n// ✅ 修复2：从$json（step15_SwitchQuestionType的输出）获取time_range，而不是从$items获取\n\nconst inputData = $json || {};  // ✅ step15_SwitchQuestionType的输出，包含time_range\n\n// ===== 判断回复类型 =====\n// 1. Ambiguous分支：question_type === 'ambiguous'（从step15_SwitchQuestionType输入）\n// 2. Empty Lookup分支：question_type === 'lookup' && has_data === false（从step39a输入）\n\n// 对于Empty Lookup分支，需要从step39a获取has_data，从step38获取其他信息\n// ✅ 修复：使用try-catch安全访问未执行的节点\nlet step39aOutput = {};\nlet hasData = true; // 默认值\ntry {\n  const step39aItems = $items('step42_CheckLookupResults');\n  if (step39aItems && Array.isArray(step39aItems) && step39aItems.length > 0) {\n    step39aOutput = step39aItems[0]?.json || {};\n    hasData = step39aOutput.has_data !== undefined ? step39aOutput.has_data : true;\n  }\n} catch (error) {\n  // 节点未执行，使用默认值\n  step39aOutput = {};\n  hasData = true;\n}\n\n// ✅ 修复：优先使用inputData中的question_type（来自step15_SwitchQuestionType）\nconst questionType = inputData.type || inputData.question_type || (hasData === false ? 'lookup' : 'ambiguous');\n\nlet responseText = '';\n\nif (questionType === 'ambiguous') {\n  // Ambiguous分支：生成引导性消息\n  // ✅ 修复：从$json（step15_SwitchQuestionType的输出）获取数据，而不是从$items\n  // step15_SwitchQuestionType的输出就是Step10a的输出，包含time_range\n  let classifyOutput = inputData;  // ✅ 直接使用inputData，它包含time_range\n  let inputDataFromStep9 = {};\n  \n  // 如果需要其他信息，才从step9获取\n  try {\n    const step9Items = $items('step9_BuildClassifierPromptInput');\n    if (step9Items && Array.isArray(step9Items) && step9Items.length > 0) {\n      inputDataFromStep9 = step9Items[0]?.json || {};\n    }\n  } catch (error) {\n    inputDataFromStep9 = {};\n  }\n  \n  // ✅ 修复：从classifyOutput（即inputData）获取time_range\n  const timeRange = classifyOutput.time_range || {};\n  \n  responseText = `👋 你好！我是Max，DeFAI的自动策略助手。\n\n我理解你的问题，但需要更明确的信息才能为你提供准确的答案。\n\n💡 **你可以这样提问：**\n\n📊 **查询统计数据**：\n• \"最近7天的执行情况怎么样？\"\n• \"查询Base链上dForce USDC金库的执行统计\"\n• \"最近3天的再平衡次数\"\n\n🔍 **查询具体信息**：\n• \"execution_id=123456的执行结果\"\n• \"查询某个vault的配置信息\"\n\n请告诉我你想查询什么，我会为你提供详细的数据分析！`;\n  \n  return [{\n    json: {\n      response_text: responseText,\n      response_length: responseText.length,\n      chat_id: inputDataFromStep9.chat_id || classifyOutput.chat_id || inputData.chat_id,\n      user_name: inputDataFromStep9.user_name || classifyOutput.user_name || inputData.user_name || 'User',\n      clean_query: inputDataFromStep9.original_input || classifyOutput.original_input || inputData.clean_query || '',\n      question_type: 'ambiguous',\n      time_range: timeRange,  // ✅ 修复：使用从inputData获取的time_range\n      rag_count: 0\n    }\n  }];\n} else if (questionType === 'lookup' && !hasData) {\n  // Empty Lookup分支：生成空结果提示\n  // ✅ 修复：同样使用try-catch安全访问节点\n  let queryData = {};\n  let inputDataFromStep9 = {};\n  \n  try {\n    const step38Items = $items('step38_ParseLookupFilters');\n    if (step38Items && Array.isArray(step38Items) && step38Items.length > 0) {\n      queryData = step38Items[0]?.json || {};\n    }\n  } catch (error) {\n    queryData = {};\n  }\n  \n  try {\n    const step9Items = $items('step9_BuildClassifierPromptInput');\n    if (step9Items && Array.isArray(step9Items) && step9Items.length > 0) {\n      inputDataFromStep9 = step9Items[0]?.json || {};\n    }\n  } catch (error) {\n    inputDataFromStep9 = {};\n  }\n  \n  // Extract query conditions for user-friendly message\n  const vault = queryData.vault || null;\n  const timeRange = queryData.time_range || {};\n  const executionId = queryData.execution_id || null;\n  \n  // Build time range description\n  let timeDesc = '';\n  if (timeRange.start && timeRange.end) {\n    const startDate = new Date(timeRange.start).toISOString().split('T')[0];\n    const endDate = new Date(timeRange.end).toISOString().split('T')[0];\n    if (startDate === endDate) {\n      timeDesc = startDate;\n    } else {\n      timeDesc = `${startDate} 至 ${endDate}`;\n    }\n  }\n  \n  // Build friendly message\n  responseText = `🔍 **查询结果**\\n\\n`;\n  responseText += `抱歉，根据您提供的查询条件，未找到匹配的执行记录。\\n\\n`;\n  \n  if (executionId) {\n    responseText += `查询条件：execution_id = ${executionId}\\n`;\n  }\n  if (vault) {\n    responseText += `金库：${vault}\\n`;\n  }\n  if (timeDesc) {\n    responseText += `时间范围：${timeDesc}\\n`;\n  }\n  \n  responseText += `\\n💡 **建议**：\\n`;\n  responseText += `• 检查查询条件是否正确\\n`;\n  responseText += `• 尝试扩大时间范围\\n`;\n  responseText += `• 确认execution_id或vault名称是否正确`;\n  \n  return [{\n    json: {\n      response_text: responseText,\n      response_length: responseText.length,\n      chat_id: inputDataFromStep9.chat_id || queryData.chat_id || inputData.chat_id,\n      user_name: inputDataFromStep9.user_name || queryData.user_name || inputData.user_name || 'User',\n      clean_query: inputDataFromStep9.original_input || queryData.clean_query || inputData.clean_query || '',\n      question_type: 'lookup',\n      time_range: timeRange,  // ✅ 已经有time_range，保持不变\n      rag_count: 0\n    }\n  }];\n}\n\n// Fallback: 如果不符合任何条件，返回默认消息\nreturn [{\n  json: {\n    response_text: '抱歉，无法处理您的请求。请重新提问。',\n    response_length: 20,\n    chat_id: inputData.chat_id || null,\n    user_name: inputData.user_name || 'User',\n    clean_query: inputData.clean_query || '',\n    question_type: questionType,\n    time_range: inputData.time_range || {},  // ✅ 使用inputData中的time_range\n    rag_count: 0\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "1941d058-74c1-45dd-966a-a6aadb78943d",
+      "node_name": "step37_QueryInvestigateStructured",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3504,
+        1232
+      ],
+      "parameters": {
+        "jsCode": "// Query Investigate Structured Tables: Optional - Extract execution_id from RAG results and query structured tables\n// ✅ v7.2 修复：只访问 Investigate 分支的节点，避免访问未执行的 Metrics 分支节点\n// Reference: Architecture Design - Query Investigate Structured Tables node\n\n// Fix: Check both 'text' and 'response' fields from RAG Retrieve output\n// step32_RouteRAGOutput 路由了 RAG Retrieve 的输出，但数据内容相同\nconst ragRetrieveOutput = $items('RAG Retrieve')?.[0]?.json || $json || {};\nconst ragResults = ragRetrieveOutput.text || ragRetrieveOutput.response || '';\n\n// ✅ v7.2 修复：只从 step31（Investigate 分支）获取数据，不访问 step30（Metrics 分支）\nconst step31Output = $items('step31_PrepareRAGQuery_Investigate')?.[0]?.json || {};\nconst step10Output = $items('step10_ClassifyQuestion')?.[0]?.json || {};\nconst inputData = $items('step9_BuildClassifierPromptInput')?.[0]?.json || {};\n\n// ✅ 优先使用 step31 的输出（Investigate 分支），然后回退到 step10\nconst timeRange = step31Output.time_range || step10Output.time_range || {};\nconst filters = step31Output.filters || step10Output.filters || {};\n\n// Extract execution_id from RAG results\nconst executionIdMatch = ragResults.match(/execution[_\\\\s]?id[:\\\\s=]+(\\\\d+)/i);\nconst executionId = executionIdMatch ? executionIdMatch[1] : null;\n\n// If execution_id found, prepare for structured query\nif (executionId) {\n  return [{\n    json: {\n      needs_structured_query: true,\n      execution_id: executionId,\n      rag_results: ragResults,\n      filters: filters,\n      time_range: timeRange,\n      clean_query: step31Output.clean_query || step10Output.original_input || inputData.original_input || '',\n      chat_id: step31Output.chat_id || step10Output.chat_id || inputData.chat_id,\n      user_name: step31Output.user_name || step10Output.user_name || inputData.user_name,\n      question_type: 'investigate'\n    }\n  }];\n}\n\n// If no execution_id, return RAG results only\nreturn [{\n  json: {\n    needs_structured_query: false,\n    execution_id: null,\n    rag_results: ragResults,\n    filters: filters,\n    time_range: timeRange,\n    clean_query: step31Output.clean_query || step10Output.original_input || inputData.original_input || '',\n    chat_id: step31Output.chat_id || step10Output.chat_id || inputData.chat_id,\n    user_name: step31Output.user_name || step10Output.user_name || inputData.user_name,\n    question_type: 'investigate'\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "cfa6a44d-7717-45b5-a3dd-96a6542ce6c6",
+      "node_name": "step32_RouteRAGOutput",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        3472,
+        944
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "question-type-metrics",
+              "leftValue": "={{ $json.question_type }}",
+              "rightValue": "metrics",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": {
+        "node_type": "n8n-nodes-base.if",
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 1
+            },
+            "conditions": [
+              {
+                "id": "question-type-metrics",
+                "leftValue": "={{ $json.question_type }}",
+                "rightValue": "metrics",
+                "operator": {
+                  "type": "string",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      }
+    },
+    {
+      "node_id": "0f555c5c-5246-4495-a420-4b7a7a2bc8d6",
+      "node_name": "step38_ParseLookupFilters",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1760,
+        1824
+      ],
+      "parameters": {
+        "jsCode": "const input = items[0].json;\nconst filters = input.filters || {};\nconst timeRange = input.time_range || {};\n\n// 计算时间跨度：如果大于 2 小时，自动降级为 summary 模式\nconst startTime = new Date(timeRange.start);\nconst endTime = new Date(timeRange.end);\nconst hoursDiff = (endTime - startTime) / (1000 * 60 * 60);\n\nlet queryMode = input.detail_level || \"detail\";\nif (hoursDiff > 2 && !filters.execution_id) {\n  queryMode = \"summary\";\n}\n\nreturn {\n  ...input,\n  rpc_params: {\n    p_execution_id: filters.execution_id || null,\n    p_vault_name_keyword: filters.vault_keyword || null,\n    p_start_time: timeRange.start,\n    p_end_time: timeRange.end,\n    p_query_mode: queryMode // 传递给 RPC 的新参数\n  }\n};"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "f52b0327-3dab-4403-a15b-e05b7e587ca1",
+      "node_name": "step39_QueryExecutionId",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        2048,
+        1824
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "executions",
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "={{ $json.supabase_filter }}"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": {
+        "alwaysOutputData": true
+      },
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "b51f9fb9-06fe-4911-a524-d8132c107eb3",
+      "node_name": "step39_ExtractExecutionId",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2544,
+        1792
+      ],
+      "parameters": {
+        "jsCode": "// Extract Execution ID: Extract execution_id from query result\n// ✅ v6.1 优化：为RPC函数准备execution_id\n\nconst inputData = $json || {};\nconst step38Data = $items('step38_ParseLookupFilters')?.[0]?.json || {};\n\n// 提取execution_id（从查询结果或step38输入）\nconst executionId = inputData.id || inputData.execution_id || step38Data.execution_id || null;\n\nif (!executionId) {\n  // 没有找到execution_id，返回空结果\n  return [{\n    json: {\n      execution_id: null,\n      error: 'No execution found',\n      clean_query: step38Data.clean_query || '',\n      chat_id: step38Data.chat_id,\n      user_name: step38Data.user_name,\n      question_type: 'lookup',\n      filters: step38Data.filters || {},\n      time_range: step38Data.time_range || {}\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    execution_id: executionId,\n    clean_query: step38Data.clean_query || '',\n    chat_id: step38Data.chat_id,\n    user_name: step38Data.user_name,\n    question_type: 'lookup',\n    filters: step38Data.filters || {},\n    time_range: step38Data.time_range || {}\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "032117e2-8bc0-4a63-a78d-e82e0e5e7d54",
+      "node_name": "step40_QueryExecutionDetails",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2800,
+        1792
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://uzbbumqbyfssijmcwwwy.supabase.co/rest/v1/rpc/get_execution_details_v1",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6YmJ1bXFieWZzc2lqbWN3d3d5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTkxMzU1MCwiZXhwIjoyMDc1NDg5NTUwfQ.Kqkj_QUO-qVeKwMXLfobWRfuMwnFQaWsg0GDQrmHYSg"
+            },
+            {
+              "name": "Prefer",
+              "value": "return=representation"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_execution_id",
+              "value": "={{ $json.execution_id }}"
+            },
+            {
+              "name": "p_query_mode",
+              "value": "={{ (new Date($json.time_range.end) - new Date($json.time_range.start) > 7200000) ? 'summary' : 'detail' }}"
+            },
+            {
+              "name": "p_vault_name_keyword",
+              "value": "={{ $json.filters.vault_keyword }}"
+            },
+            {
+              "name": "p_start_time",
+              "value": "={{ $json.time_range.start }}"
+            },
+            {
+              "name": "p_end_time",
+              "value": "={{ $json.time_range.end }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": {
+        "alwaysOutputData": true
+      },
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "de2fe4db-d389-4235-ab7c-298a44c4059a",
+      "node_name": "step2_CleanText",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -1952,
+        944
+      ],
+      "parameters": {
+        "jsCode": "// Clean Text: Remove @mentions and punctuation\n// Reference: 11_Telegram_Chatbot_deploy.json - Step2_CleanText\n// Fixed: Use $input instead of $items() to get data from previous node\n\nconst inputData = $input.first();\nif (!inputData || !inputData.json) {\n  return [];\n}\n\nconst telegramData = inputData.json;\nconst message = telegramData.message || {};\n\nconst rawText = message.text || '';\nconst chatId = message.chat?.id;\n\n// Clean text\nlet cleanText = rawText\n  .replace(/@\\w+/g, '')  // Remove @mention\n  .replace(/[^\\w\\s\\?]/g, ' ')  // Remove punctuation (keep question mark)\n  .replace(/\\s+/g, ' ')  // Merge multiple spaces\n  .trim();\n\nreturn [{\n  json: {\n    original_text: rawText,\n    clean_query: cleanText,\n    chat_id: chatId,\n    user_name: message.chat?.first_name || message.from?.first_name || 'User',\n    message_id: message.message_id,\n    message_date: message.date\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "4855dc63-e5e6-4bf0-9217-57c20c091065",
+      "node_name": "step13a_CheckSessionExists",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        864,
+        576
+      ],
+      "parameters": {
+        "jsCode": "// Check Session Exists: Check if session exists for this chat_id\n// Reference: Use step3_CheckSession result if available\n\nconst sessionData = $json;\nconst chatId = sessionData.chat_id;\n\n// Check if session exists (reuse step3_CheckSession result if available)\nconst existingSession = $items('step3_CheckSession')?.[0]?.json || null;\n\n// If step3 didn't find it, check if it exists (not expired)\n// Note: step3 checks expires_at, but for SaveSession we just need to know if record exists\nconst sessionExists = existingSession && existingSession.chat_id === chatId;\n\nreturn [{\n  json: {\n    ...sessionData,\n    session_exists: sessionExists,\n    existing_session_id: existingSession?.id || null\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "c67c8c35-ce4c-4903-809f-7373c9656487",
+      "node_name": "step13b_IfSessionExists",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        1088,
+        576
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "45f6f3ad-0510-47b9-b06d-c52c1599f244",
+              "leftValue": "={{ $json.session_exists }}",
+              "rightValue": false,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": {
+        "node_type": "n8n-nodes-base.if",
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "45f6f3ad-0510-47b9-b06d-c52c1599f244",
+                "leftValue": "={{ $json.session_exists }}",
+                "rightValue": false,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "equals"
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      }
+    },
+    {
+      "node_id": "51052715-fe87-416c-8656-a742ffb42105",
+      "node_name": "step13_SaveSession1",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        1312,
+        576
+      ],
+      "parameters": {
+        "tableId": "telegram_sessions",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "chat_id",
+              "fieldValue": "={{ $json.chat_id }}"
+            },
+            {
+              "fieldId": "user_name",
+              "fieldValue": "={{ $json.user_name }}"
+            },
+            {
+              "fieldId": "pending_slot",
+              "fieldValue": "={{ $json.pending_slot }}"
+            },
+            {
+              "fieldId": "pending_question",
+              "fieldValue": "={{ $json.clarify_question }}"
+            },
+            {
+              "fieldId": "context_json",
+              "fieldValue": "={{ $json.context_json }}"
+            },
+            {
+              "fieldId": "expires_at",
+              "fieldValue": "={{ $json.expires_at }}"
+            }
+          ]
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "39e763e1-d047-4daa-8355-69067fc41d49",
+      "node_name": "step42_CheckLookupResults",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3488,
+        1824
+      ],
+      "parameters": {
+        "jsCode": "// Step 42_CheckLookupResults 最终对齐版\nconst inputData = $json || {};\n\n// 1. 判断是否有数据\nconst hasData = (inputData.mode === 'summary' && inputData.total_count > 0) || (inputData.execution && inputData.execution.id);\n\n// 2. 构造 sql_statistics (针对 Part 1)\nconst sqlStatistics = {\n  execution_summary: {\n    total_executions: inputData.total_count || (inputData.execution ? 1 : 0),\n    success_rate: inputData.total_count > 0 ? ((inputData.success_count / inputData.total_count) * 100).toFixed(2) + '%' : \"100%\",\n    failed_count: inputData.failed_count || 0\n  },\n  rebalance_summary: {\n    total_rebalances: inputData.rebalance_count || 0\n  },\n  latest_status: inputData.latest_execution?.status || inputData.execution?.status\n};\n\n// 3. 构造 rag_context (针对 Part 2)\n// 如果是摘要模式，把最后一次执行详情喂给 RAG 区做深度解释\nconst ragContext = [\n  {\n    source: \"database_execution_log\",\n    timestamp: inputData.latest_execution?.start_time || inputData.execution?.start_time,\n    details: inputData.latest_execution || inputData.execution,\n    rebalance_details: inputData.rebalance_decision || \"No specific rebalance details for this snapshot.\"\n  }\n];\n\nreturn [{\n  json: {\n    // 基础控制字段\n    has_data: hasData,\n    \n    // 完美匹配 Prompt 的占位符字段\n    user_question: inputData.clean_query || \"查询金库执行详情\",\n    time_range: `${inputData.time_range?.start || ''} 至 ${inputData.time_range?.end || ''}`,\n    sql_statistics: JSON.stringify(sqlStatistics, null, 2),\n    rag_context: JSON.stringify(ragContext, null, 2),\n    \n    // 保留原始字段备用\n    chat_id: inputData.chat_id,\n    user_name: inputData.user_name\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "3176830c-e92f-4e0d-b997-824c66e92a1e",
+      "node_name": "step43_IfHasData",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        3712,
+        1824
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "191c3139-aada-4814-be15-c09d3e164556",
+              "leftValue": "={{ $json.has_data }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": {
+        "node_type": "n8n-nodes-base.if",
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "191c3139-aada-4814-be15-c09d3e164556",
+                "leftValue": "={{ $json.has_data }}",
+                "rightValue": "",
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      }
+    },
+    {
+      "node_id": "da9efd05-21c1-456c-9379-3c26b9c0109b",
+      "node_name": "step23_GetRAGRetrievePrompt",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        2448,
+        928
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "prompt_library",
+        "filterType": "string",
+        "filterString": "={{ $json.question_type === 'investigate' ? 'slug=eq.rag_retrieve_investigate&is_active=eq.true' : 'slug=eq.rag_retrieve_metrics&is_active=eq.TRUE' }}"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "b42056b0-e932-4ea8-a5b6-8fd53408a08d",
+      "node_name": "step24_GetTranslationPrompt",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        1344,
+        992
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "prompt_library",
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "slug=eq.rag_query_translation&is_active=eq.true"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": {
+        "alwaysOutputData": true
+      },
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "d743730e-5c0d-4824-964e-0b7cd5cac827",
+      "node_name": "step25_BuildTranslationInput",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        1744,
+        1152
+      ],
+      "parameters": {
+        "jsCode": "// Build Translation Input: Construct LLM input for query translation\n// ✅ v6.3 新增：方案 C 阶段 2 - 构建 LLM 翻译输入\n// Reference: Architecture Design - Query Translation node\n\nconst allItems = $input.all() || [];\nlet promptData = {};\nlet queryData = {};\n\n// Process all input items\nfor (const item of allItems) {\n  const json = item.json || {};\n  \n  // Identify prompt data (from step24_GetTranslationPrompt)\n  if (json.slug === 'rag_query_translation' || (json.system_prompt && json.slug)) {\n    promptData = json;\n    continue;\n  }\n  \n  // Identify query data (from step27_CheckComplexQuery)\n  // step27_CheckComplexQuery 传递原始数据并添加 needs_llm_translation 字段\n  if (json.original_input || json.clean_query || json.type || json.question_type || json.needs_llm_translation !== undefined) {\n    queryData = {\n      ...queryData,\n      ...json\n    };\n  }\n}\n\nconst systemPrompt = promptData.system_prompt || '';\nconst userPromptTemplate = promptData.user_prompt_template || '';\n\n// Extract query data\nconst userQuery = queryData.original_input || queryData.clean_query || '';\nconst questionType = queryData.question_type || queryData.type || 'metrics';\nconst timeRange = queryData.time_range || {\n  start_time: queryData.start_time || null,\n  end_time: queryData.end_time || null,\n  is_default: queryData.is_default || false\n};\n\n// Build user prompt\nlet userPrompt = userPromptTemplate || `User query: ${userQuery}\\n\\nQuestion type: ${questionType}\\n\\nTime range: ${JSON.stringify(timeRange, null, 2)}`;\n\nif (userPromptTemplate) {\n  userPrompt = userPrompt\n    .replace(/{user_query}/g, userQuery)\n    .replace(/{question_type}/g, questionType)\n    .replace(/{time_range}/g, JSON.stringify(timeRange, null, 2));\n}\n\nreturn [{\n  json: {\n    system_prompt: systemPrompt,\n    user_prompt: userPrompt,\n    original_query: userQuery,\n    question_type: questionType,\n    time_range: timeRange,\n    chat_id: queryData.chat_id || null,\n    user_name: queryData.user_name || null\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "4891bbfe-1b04-4bb9-85a1-a7d788fb6045",
+      "node_name": "step26_TranslateQuery",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        1936,
+        1184
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_prompt }}",
+        "options": {
+          "systemMessage": "={{ $json.system_prompt }}"
+        }
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "3f2d4750-5eb4-442e-87f3-5c54898aa55b",
+      "node_name": "step28_MergeTranslationInput",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        1552,
+        1136
+      ],
+      "parameters": {},
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "fdc74abc-af5c-433a-88b7-c12129dd4449",
+      "node_name": "step29_MergeTranslationResult",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2288,
+        1296
+      ],
+      "parameters": {
+        "jsCode": "// Merge Translation Result: Merge LLM translation result with original query data\n// ✅ v6.3 简化：统一使用 LLM 翻译，修复数据传递问题\n// LLM Agent 节点输出格式：{ output: \"{\\\"translated_query\\\": \\\"...\\\", ...}\" }（JSON 字符串）\n\nconst allItems = $input.all() || [];\nlet translationResult = null;\n\n// ✅ 修复：尝试从 step25_BuildTranslationInput 获取原始数据（通过 $items 访问）\nlet originalData = {};\ntry {\n  const buildTranslationInputData = $items('step25_BuildTranslationInput')?.[0]?.json || {};\n  if (buildTranslationInputData.original_input || buildTranslationInputData.chat_id) {\n    originalData = buildTranslationInputData;\n  }\n} catch (e) {\n  // 如果无法访问，继续处理\n}\n\n// Process all input items (from step26_TranslateQuery)\nfor (const item of allItems) {\n  const json = item.json || {};\n  \n  // ✅ 修复：识别 LLM translation result (from step26_TranslateQuery)\n  // LLM Agent 节点返回格式：{ output: \"{\\\"translated_query\\\": \\\"...\\\", \\\"confidence\\\": 0.95, ...}\" }\n  if (json.output) {\n    try {\n      // 尝试解析 output 字段（可能是 JSON 字符串或已经是对象）\n      const parsedOutput = typeof json.output === 'string' ? JSON.parse(json.output) : json.output;\n      \n      // 检查是否包含翻译结果字段\n      if (parsedOutput.translated_query || parsedOutput.confidence !== undefined) {\n        translationResult = parsedOutput;\n        continue;\n      }\n    } catch (e) {\n      // 如果解析失败，检查是否是直接的对象格式\n      if (json.translated_query || json.confidence !== undefined) {\n        translationResult = json;\n        continue;\n      }\n    }\n  }\n  \n  // ✅ 修复：检查是否是已解析的翻译结果（直接有 translated_query 字段）\n  if (json.translated_query || json.confidence !== undefined) {\n    translationResult = json;\n    continue;\n  }\n  \n  // ✅ 修复：如果输入项包含原始数据字段，也合并进来（备用）\n  if (json.original_input || json.chat_id || json.user_name || json.time_range) {\n    originalData = {\n      ...originalData,\n      ...json\n    };\n  }\n}\n\n// ✅ 统一使用 LLM 翻译结果\n// 如果 LLM 翻译存在，使用它；如果不存在（不应该发生），使用原始查询作为 fallback\nconst enhancedQuery = translationResult?.translated_query || originalData.original_input || originalData.clean_query || '';\n\n// ✅ 修复：确保所有原始数据字段正确传递\nconst chatId = originalData.chat_id || null;\nconst userName = originalData.user_name || null;\nconst timeRange = originalData.time_range || {\n  start_time: originalData.start_time || null,\n  end_time: originalData.end_time || null,\n  start: originalData.start || null,\n  end: originalData.end || null,\n  is_default: originalData.is_default || false\n};\nconst filters = originalData.filters || {};\nconst questionType = originalData.question_type || originalData.type || 'investigate';\nconst cleanQuery = originalData.original_input || originalData.clean_query || '';\n\nreturn [{\n  json: {\n    // ✅ 修复：保留所有必要的原始数据字段\n    original_input: cleanQuery,\n    clean_query: cleanQuery,\n    chat_id: chatId,\n    user_name: userName,\n    question_type: questionType,\n    type: questionType,\n    time_range: timeRange,\n    filters: filters,\n    \n    // ✅ 翻译结果字段\n    enhanced_query: enhancedQuery,\n    translated_query: translationResult?.translated_query || null,\n    translation_confidence: translationResult?.confidence || null,\n    translation_keywords: translationResult?.keywords_extracted || null,\n    was_translated: translationResult !== null\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "bb5d860d-449c-44bb-a806-44adde67a96a",
+      "node_name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "position": [
+        1744,
+        1424
+      ],
+      "parameters": {
+        "model": "x-ai/grok-4.1-fast",
+        "options": {}
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "f3e269d6-55b7-4d9f-8ff1-bc2c8d55be67",
+      "node_name": "step24_GetRAGRetrievePrompt_Investigate",
+      "type": "n8n-nodes-base.supabase",
+      "position": [
+        2224,
+        1040
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "prompt_library",
+        "limit": 1,
+        "filterType": "string",
+        "filterString": "slug=eq.rag_retrieve_investigate&is_active=eq.true"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": {
+        "alwaysOutputData": true
+      },
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "0df95e79-7a5e-428b-9339-d65f1e31c182",
+      "node_name": "MergePrompt",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        2464,
+        1120
+      ],
+      "parameters": {},
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "21a26dd9-e67f-48f6-9ce0-b3e148a04032",
+      "node_name": "step32a_AddQuestionType",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3296,
+        960
+      ],
+      "parameters": {
+        "jsCode": "// Add Question Type: Add question_type to RAG Retrieve output for routing\n// ✅ v7.2 修复：安全地获取 question_type，避免访问未执行的节点\n\nconst ragOutput = $json || {};\n\n// ✅ 安全地获取 question_type（从上游节点）\nlet questionType = 'metrics'; // 默认值\n\n// 尝试从 step30 获取（Metrics 分支）\ntry {\n  const step30Data = $items('step30_PrepareRAGQuery_Metrics');\n  if (step30Data && step30Data.length > 0 && step30Data[0]?.json?.question_type) {\n    questionType = step30Data[0].json.question_type;\n  }\n} catch (e) {\n  // step30 未执行，继续尝试 step31\n}\n\n// 如果 step30 没有，尝试从 step31 获取（Investigate 分支）\nif (questionType === 'metrics') {\n  try {\n    const step31Data = $items('step31_PrepareRAGQuery_Investigate');\n    if (step31Data && step31Data.length > 0 && step31Data[0]?.json?.question_type) {\n      questionType = step31Data[0].json.question_type;\n    }\n  } catch (e) {\n    // step31 也未执行，使用默认值\n  }\n}\n\n// 合并 RAG 输出和 question_type\nreturn [{\n  json: {\n    ...ragOutput,\n    question_type: questionType\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "376065a6-270b-4871-8769-53301040d0a0",
+      "node_name": "step41_FormatExecutionDetails",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        3136,
+        1824
+      ],
+      "parameters": {
+        "jsCode": "// Step 41_FormatExecutionDetails\nconst rpcResponse = $json.body || $json;\nconst inputData = $items('step38_ParseLookupFilters')?.[0]?.json || {}; // 建议对齐到 step38\n\nconst mode = rpcResponse.mode || 'detail';\nconst execution = rpcResponse.execution || rpcResponse.latest_execution || null;\nconst totalCount = rpcResponse.total_count || (execution ? 1 : 0);\n\nreturn [{\n  json: {\n    ...rpcResponse, // 保留 mode, total_count, failed_count 等\n    execution: execution,\n    execution_id: execution?.id || null,\n    clean_query: inputData.original_input || '',\n    chat_id: inputData.chat_id,\n    user_name: inputData.user_name,\n    question_type: 'lookup',\n    filters: inputData.filters || {},\n    time_range: inputData.time_range || {}\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "5b45d4d3-605b-486d-adc0-ab97041f6ccb",
+      "node_name": "step17b_CheckDataSufficiency",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2144,
+        720
+      ],
+      "parameters": {
+        "jsCode": "// Check Data Sufficiency: Determine if SQL results are sufficient to answer the question\n// ✅ v7.3 修复：优化数据获取逻辑，修复 fast_track 判断\n// Reference: Architecture Design - Fast Track Gate\n\nconst inputData = $json || {};\nconst sqlBody = inputData.body || inputData || {};\n\n// ✅ 修复：从上游节点获取 clean_query\nlet cleanQuery = inputData.clean_query || '';\nif (!cleanQuery) {\n  try {\n    const step16Data = $items('step16_ParseTimeRange')?.[0]?.json || {};\n    cleanQuery = step16Data.clean_query || '';\n  } catch (e) {\n    // 如果无法获取，使用空字符串\n  }\n}\n\nconst query = cleanQuery.toLowerCase();\n\n// ✅ 判断 SQL 统计是否有数据\nconst hasStats = sqlBody.execution_summary && \n                 sqlBody.execution_summary.total_executions > 0;\n\n// ✅ 判断用户是否询问\"为什么\"、\"原因\"、\"详情\"等需要深度分析的问题\nconst needsWhy = /\\b(why|reason|detail|explain|peak|insight|原因|为什么|详情|解释)\\b/.test(query);\n\n// ✅ 判断是否为简单统计查询（最高/最低/平均等）\nconst isSimpleStats = /\\b(highest|lowest|average|max|min|最多|最少|最高|最低|平均)\\b/.test(query);\n\n// ✅ fast_track 逻辑：\n// - 有统计数据 AND\n// - 不需要\"为什么\"分析 AND\n// - (是简单统计查询 OR 查询不涉及具体执行详情)\nconst fastTrack = hasStats && !needsWhy && (isSimpleStats || !needsWhy);\n\nreturn [{\n  json: {\n    ...inputData,\n    fast_track: fastTrack,\n    has_stats: hasStats,\n    needs_why: needsWhy,\n    is_simple_stats: isSimpleStats\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "a2265988-cbc4-4eb6-a760-e30c9154138e",
+      "node_name": "IfFastTrackGate",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2480,
+        624
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "01c1a7f6-ba55-4578-9f30-f501ee2445a8",
+              "leftValue": "={{ $json.fast_track }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": {
+        "node_type": "n8n-nodes-base.if",
+        "parameters": {
+          "conditions": {
+            "options": {
+              "caseSensitive": true,
+              "leftValue": "",
+              "typeValidation": "strict",
+              "version": 3
+            },
+            "conditions": [
+              {
+                "id": "01c1a7f6-ba55-4578-9f30-f501ee2445a8",
+                "leftValue": "={{ $json.fast_track }}",
+                "rightValue": true,
+                "operator": {
+                  "type": "boolean",
+                  "operation": "true",
+                  "singleValue": true
+                }
+              }
+            ],
+            "combinator": "and"
+          },
+          "options": {}
+        }
+      }
+    },
+    {
+      "node_id": "96dff8a5-1a2e-4be0-b538-68ed3f192de4",
+      "node_name": "step34b_FakeRAGResponse",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        2928,
+        560
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6c8b3095-b4cb-4e30-86f1-70078c4391f2",
+              "name": "text",
+              "value": "Global summary provided via statistical analysis. (Detailed logs skipped for performance)",
+              "type": "string"
+            },
+            {
+              "id": "aa1adb44-3de8-46a7-8b8c-caa210254745",
+              "name": "response",
+              "value": "Global summary provided via statistical analysis. (Detailed logs skipped for performance)",
+              "type": "string"
+            },
+            {
+              "id": "response_output",
+              "name": "output",
+              "value": "Global summary provided via statistical analysis. (Detailed logs skipped for performance)",
+              "type": "string"
+            },
+            {
+              "id": "is_fast_track",
+              "name": "is_fast_track",
+              "value": "true",
+              "type": "boolean"
+            },
+            {
+              "id": "question_type",
+              "name": "question_type",
+              "value": "metrics",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    },
+    {
+      "node_id": "5167ab64-f634-41bc-af15-5594a5087eed",
+      "node_name": "step23a_MergeRAGPromptData",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        2656,
+        912
+      ],
+      "parameters": {
+        "jsCode": "// Merge RAG Prompt Data: Merge RAG Prompt with time range data for RAG query preparation\n// ✅ v7.3 新增：合并 RAG Prompt 和时间范围数据，用于准备 RAG 查询\n// Reference: Architecture Design - RAG Query Preparation\n\nconst allItems = $input.all() || [];\nlet promptData = null;\nlet timeRangeData = null;\n\n// 遍历所有输入项，识别不同类型的数据\nfor (const item of allItems) {\n  const json = item.json || {};\n  \n  // 识别 step23_GetRAGRetrievePrompt 的输出（有 slug 或 user_prompt_template）\n  if (json.slug || json.user_prompt_template || (json.system_prompt && !json.body && !json.start_time)) {\n    promptData = json;\n  }\n  \n  // 识别时间范围数据（有 start_time 和 end_time）\n  if (json.start_time && json.end_time) {\n    timeRangeData = json;\n  }\n}\n\n// ✅ 如果时间范围数据不在输入中，从 step16 获取\nif (!timeRangeData) {\n  try {\n    const step16Data = $items('step16_ParseTimeRange')?.[0]?.json || {};\n    if (step16Data.start_time && step16Data.end_time) {\n      timeRangeData = step16Data;\n    }\n  } catch (e) {\n    // 如果无法获取，继续处理\n  }\n}\n\n// 合并数据并输出\nreturn [{\n  json: {\n    ...promptData,\n    ...timeRangeData,\n    clean_query: timeRangeData?.clean_query || promptData?.clean_query || '',\n    chat_id: timeRangeData?.chat_id || promptData?.chat_id || null,\n    user_name: timeRangeData?.user_name || promptData?.user_name || null,\n    filters: timeRangeData?.filters || {}\n  }\n}];"
+      },
+      "input_connections": [],
+      "output_connections": [],
+      "error_handling": null,
+      "retry_config": null,
+      "condition_branch": null
+    }
+  ],
+  "connections": {
+    "step1_TelegramTrigger": {
+      "main": [
+        [
+          {
+            "node": "step2_CleanText",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step3_CheckSession": {
+      "main": [
+        [
+          {
+            "node": "step4_CheckSessionResult",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step4_CheckSessionResult": {
+      "main": [
+        [
+          {
+            "node": "step5_IfHasPending",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "step7_GetClassifierPrompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step5_IfHasPending": {
+      "main": [
+        [
+          {
+            "node": "step6_MergePendingContext",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "step8a_FormatPromptInput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step6_MergePendingContext": {
+      "main": [
+        [
+          {
+            "node": "step8a_FormatPromptInput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step7_GetClassifierPrompt": {
+      "main": [
+        [
+          {
+            "node": "step8_MergePromptInput",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "step9_BuildClassifierPromptInput": {
+      "main": [
+        [
+          {
+            "node": "step10_ClassifyQuestion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step10_ClassifyQuestion": {
+      "main": [
+        [
+          {
+            "node": "Step10a: Format Classify Resulta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step11_IfNeedsClarify": {
+      "main": [
+        [
+          {
+            "node": "step12_PrepareSessionData",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "step15_SwitchQuestionType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step12_PrepareSessionData": {
+      "main": [
+        [
+          {
+            "node": "step13a_CheckSessionExists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step13_SaveSession": {
+      "main": [
+        [
+          {
+            "node": "step14_SendClarifyQuestion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step15_SwitchQuestionType": {
+      "main": [
+        [
+          {
+            "node": "step16_ParseTimeRange",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "step24_GetTranslationPrompt",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "step28_MergeTranslationInput",
+            "type": "main",
+            "index": 1
+          },
+          {
+            "node": "step24_GetRAGRetrievePrompt_Investigate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "step38_ParseLookupFilters",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "step25_GenerateSimpleReply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step16_ParseTimeRange": {
+      "main": [
+        [
+          {
+            "node": "step17_QueryMetricsSummary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "step33_MergeContext_Metrics",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "step17_QueryMetricsSummary": {
+      "main": [
+        [
+          {
+            "node": "step17b_CheckDataSufficiency",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "step33_MergeContext_Metrics",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "step27_GetAnswerPrompt": {
+      "main": [
+        [
+          {
+            "node": "step28_MergePromptContext",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "step28_MergePromptContext": {
+      "main": [
+        [
+          {
+            "node": "step29_BuildPromptInput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step29_BuildPromptInput": {
+      "main": [
+        [
+          {
+            "node": "step30_GenerateAnswer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step30_GenerateAnswer": {
+      "main": [
+        [
+          {
+            "node": "step31_FormatResponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step31_FormatResponse": {
+      "main": [
+        [
+          {
+            "node": "step32_UpdateSessionClear",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "step33_SendTelegramReply",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "step34_LogQuery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Vector Store Supabase",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Retriever": {
+      "ai_retriever": [
+        [
+          {
+            "node": "RAG Retrieve",
+            "type": "ai_retriever",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Vector Store Supabase": {
+      "ai_vectorStore": [
+        [
+          {
+            "node": "Vector Store Retriever",
+            "type": "ai_vectorStore",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG Retrieve": {
+      "main": [
+        [
+          {
+            "node": "step32a_AddQuestionType",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step32_RouteRAGOutput": {
+      "main": [
+        [
+          {
+            "node": "step33_MergeContext_Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "step37_QueryInvestigateStructured",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step8_MergePromptInput": {
+      "main": [
+        [
+          {
+            "node": "step9_BuildClassifierPromptInput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step10a: Format Classify Resulta": {
+      "main": [
+        [
+          {
+            "node": "step11_IfNeedsClarify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "RAG Retrieve",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DeepSeek Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "step30_GenerateAnswer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step8a_FormatPromptInput": {
+      "main": [
+        [
+          {
+            "node": "step8_MergePromptInput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step34_MergeContext": {
+      "main": [
+        [
+          {
+            "node": "step28_MergePromptContext",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "step27_GetAnswerPrompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step33_MergeContext_Metrics": {
+      "main": [
+        [
+          {
+            "node": "step34_MergeContext",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step25_GenerateSimpleReply": {
+      "main": [
+        [
+          {
+            "node": "step31_FormatResponse",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step24_GetTranslationPrompt": {
+      "main": [
+        [
+          {
+            "node": "step28_MergeTranslationInput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step28_MergeTranslationInput": {
+      "main": [
+        [
+          {
+            "node": "step25_BuildTranslationInput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step25_BuildTranslationInput": {
+      "main": [
+        [
+          {
+            "node": "step26_TranslateQuery",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step26_TranslateQuery": {
+      "main": [
+        [
+          {
+            "node": "step29_MergeTranslationResult",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step29_MergeTranslationResult": {
+      "main": [
+        [
+          {
+            "node": "MergePrompt",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "step30_PrepareRAGQuery_Metrics": {
+      "main": [
+        [
+          {
+            "node": "RAG Retrieve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step31_PrepareRAGQuery_Investigate": {
+      "main": [
+        [
+          {
+            "node": "RAG Retrieve",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step37_QueryInvestigateStructured": {
+      "main": [
+        [
+          {
+            "node": "step34_MergeContext",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step38_ParseLookupFilters": {
+      "main": [
+        [
+          {
+            "node": "step39_QueryExecutionId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step39_QueryExecutionId": {
+      "main": [
+        [
+          {
+            "node": "step39_ExtractExecutionId",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step39_ExtractExecutionId": {
+      "main": [
+        [
+          {
+            "node": "step40_QueryExecutionDetails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step40_QueryExecutionDetails": {
+      "main": [
+        [
+          {
+            "node": "step41_FormatExecutionDetails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step2_CleanText": {
+      "main": [
+        [
+          {
+            "node": "step3_CheckSession",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step13a_CheckSessionExists": {
+      "main": [
+        [
+          {
+            "node": "step13b_IfSessionExists",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step13b_IfSessionExists": {
+      "main": [
+        [
+          {
+            "node": "step13_SaveSession1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "step13_SaveSession",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step13_SaveSession1": {
+      "main": [
+        [
+          {
+            "node": "step14_SendClarifyQuestion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step42_CheckLookupResults": {
+      "main": [
+        [
+          {
+            "node": "step43_IfHasData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step43_IfHasData": {
+      "main": [
+        [
+          {
+            "node": "step28_MergePromptContext",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "step27_GetAnswerPrompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "step25_GenerateSimpleReply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "step10_ClassifyQuestion",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "step26_TranslateQuery",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step24_GetRAGRetrievePrompt_Investigate": {
+      "main": [
+        [
+          {
+            "node": "MergePrompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MergePrompt": {
+      "main": [
+        [
+          {
+            "node": "step31_PrepareRAGQuery_Investigate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step32a_AddQuestionType": {
+      "main": [
+        [
+          {
+            "node": "step32_RouteRAGOutput",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step41_FormatExecutionDetails": {
+      "main": [
+        [
+          {
+            "node": "step42_CheckLookupResults",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step17b_CheckDataSufficiency": {
+      "main": [
+        [
+          {
+            "node": "IfFastTrackGate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IfFastTrackGate": {
+      "main": [
+        [
+          {
+            "node": "step34b_FakeRAGResponse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "step23_GetRAGRetrievePrompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step34b_FakeRAGResponse": {
+      "main": [
+        [
+          {
+            "node": "step33_MergeContext_Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step23_GetRAGRetrievePrompt": {
+      "main": [
+        [
+          {
+            "node": "step23a_MergeRAGPromptData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "step23a_MergeRAGPromptData": {
+      "main": [
+        [
+          {
+            "node": "step30_PrepareRAGQuery_Metrics",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "execution_order": [
+    "a0ecc636-62bb-4c17-b9c9-f4b3c0c7d749",
+    "60f6d9de-df13-4a46-845c-5777d600262d",
+    "f1d9913d-9305-44b7-80b1-a6d55af67b87",
+    "fc3bea40-9e47-452d-816c-9729998afcd2",
+    "d8614a30-b9dc-4534-b476-f0bee018bed4",
+    "4529a7bf-10fc-48ec-a9ff-9270bb6f6244",
+    "e498e7ef-73ea-4c8c-ae2c-33ab4c1a5ac7",
+    "9e1ab394-3f29-4e5b-9f27-86c5ea5055d1",
+    "5167ab64-f634-41bc-af15-5594a5087eed",
+    "4e39bcd6-ff50-4cf5-b448-efda20ef9acd",
+    "b42056b0-e932-4ea8-a5b6-8fd53408a08d",
+    "4891bbfe-1b04-4bb9-85a1-a7d788fb6045",
+    "9f338425-bffa-4908-9eef-b938ee61dd1c",
+    "d4208109-e5cd-434d-b15b-48af344bf086",
+    "0b468f82-00a8-4418-ac85-0457e18b5153",
+    "de2fe4db-d389-4235-ab7c-298a44c4059a",
+    "81649403-a8d2-4bb1-a70c-8e465a4c6326",
+    "34c9ccd6-e743-4117-bdcd-6a2f1118ed0e",
+    "8b339478-ae7e-4e2b-92f8-ab8be026bda4",
+    "cb49ab1f-2361-4846-93dd-0b0505cbff0d",
+    "cfa6a44d-7717-45b5-a3dd-96a6542ce6c6",
+    "6f0bcdc9-cacb-4db9-b304-472ff32e4ff1",
+    "8932da9c-6447-446d-8690-e178bb63a9d9",
+    "7e6869c2-50f7-4d55-bdfd-e294711b4635",
+    "62b4d134-7aef-4b1e-86b2-e7e7d1e78be3",
+    "21a26dd9-e67f-48f6-9ce0-b3e148a04032",
+    "4e3e2ccf-a45d-4f45-aebf-3ed211eea9ec",
+    "5b45d4d3-605b-486d-adc0-ab97041f6ccb",
+    "b499f69b-6326-4e6f-be12-c3d2d77bc447",
+    "51052715-fe87-416c-8656-a742ffb42105",
+    "f9691997-0ced-4770-a892-a7095f9da1a5",
+    "da9efd05-21c1-456c-9379-3c26b9c0109b",
+    "a2265988-cbc4-4eb6-a760-e30c9154138e",
+    "2bc6343f-802e-49a9-a7f7-cea71f1bdf2a",
+    "bb5d860d-449c-44bb-a806-44adde67a96a",
+    "f877fcb8-40ac-4042-acdd-1497fa485409",
+    "3176830c-e92f-4e0d-b997-824c66e92a1e",
+    "9d7c21ad-be00-4f37-aad5-b7488ecdce32",
+    "376065a6-270b-4871-8769-53301040d0a0",
+    "5a893ba6-a479-4b80-b273-99bb52e8c07c",
+    "3f2d4750-5eb4-442e-87f3-5c54898aa55b",
+    "c67c8c35-ce4c-4903-809f-7373c9656487",
+    "a33419dc-738f-4a66-b0e8-e4f43cdb15ca",
+    "ba216ec0-3aa3-4c49-ba97-fad47831aaed",
+    "ad3342c5-e28c-4293-8588-3391c39df127",
+    "e965fe82-db0f-4a6f-8a6c-698c1afd4564",
+    "88ba2a63-51a8-4570-92c8-7d9c9c5b3680",
+    "b51f9fb9-06fe-4911-a524-d8132c107eb3",
+    "a1cc0f75-6c44-441c-ae3e-4b27c3b04474",
+    "6d637b7e-da20-4ef9-a786-6b0aaa5a8c3d",
+    "d743730e-5c0d-4824-964e-0b7cd5cac827",
+    "fdc74abc-af5c-433a-88b7-c12129dd4449",
+    "96dff8a5-1a2e-4be0-b538-68ed3f192de4",
+    "032117e2-8bc0-4a63-a78d-e82e0e5e7d54",
+    "f3e269d6-55b7-4d9f-8ff1-bc2c8d55be67",
+    "1941d058-74c1-45dd-966a-a6aadb78943d",
+    "21d3c6c2-9d6e-4270-af90-dfae68bbadbc",
+    "bba04874-148f-4a41-999c-4dba6d572d7a",
+    "f52b0327-3dab-4403-a15b-e05b7e587ca1",
+    "f70dc191-108d-4c24-b958-0d777dfbcd25",
+    "39e763e1-d047-4daa-8355-69067fc41d49",
+    "199f6eec-e281-414d-a391-34780e18fd15",
+    "0315ea6a-36e5-4da8-bf44-399d521e7f25",
+    "4855dc63-e5e6-4bf0-9217-57c20c091065",
+    "0f555c5c-5246-4495-a420-4b7a7a2bc8d6",
+    "07eecb8a-ed80-4f81-9fbf-2b9fb25e6235",
+    "d927d13c-41e8-4fc5-98be-c7e8e383a637",
+    "0df95e79-7a5e-428b-9339-d65f1e31c182",
+    "74322e82-a69a-4f5b-aac8-d3fef23b1186",
+    "7c39e965-14a0-49cb-b538-151bf9c45a83",
+    "4c1efdb8-27a0-4697-9a8d-48eaf79d3219",
+    "82847c70-628a-4ac8-aa77-5a2d3e78cccd"
+  ]
+}

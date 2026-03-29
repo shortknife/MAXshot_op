@@ -1,0 +1,41 @@
+{
+  "id": "business_yield_extremes_with_reason",
+  "name": "Business Yield Extremes With Reason",
+  "description": "Find highest and lowest APY day within a window and attach top rebalance reason per day.",
+  "category": "business",
+  "version": "1.0",
+  "allowed_tables": [
+    "market_metrics",
+    "allocation_snapshots",
+    "rebalance_decisions"
+  ],
+  "output_schema": {
+    "highest_day": "date",
+    "highest_avg_apy_pct": "numeric",
+    "highest_top_reason": "text",
+    "lowest_day": "date",
+    "lowest_avg_apy_pct": "numeric",
+    "lowest_top_reason": "text"
+  },
+  "slots": {
+    "days": {
+      "type": "number",
+      "required": true
+    },
+    "timezone": {
+      "type": "text",
+      "required": true
+    },
+    "vault_keyword": {
+      "type": "text",
+      "required": false
+    }
+  },
+  "examples": [
+    {
+      "days": 7,
+      "timezone": "Asia/Shanghai",
+      "vault_keyword": null
+    }
+  ]
+}

@@ -1,0 +1,1587 @@
+[
+  {
+    "isSuccess": true,
+    "status": 200,
+    "timestamp": 1767612961837,
+    "data": {
+      "id": "381232",
+      "workflowId": "BRahRVNKNTsx1p8R",
+      "status": "success",
+      "createdAt": "2026-01-05T11:35:43.004Z",
+      "startedAt": "2026-01-05T11:35:43.012Z",
+      "stoppedAt": "2026-01-05T11:35:52.630Z",
+      "finished": true,
+      "data": {
+        "resultData": {
+          "runData": {
+            "Schedule Trigger": [
+              {
+                "startTime": 1767612943014,
+                "executionIndex": 0,
+                "source": [],
+                "hints": [],
+                "executionTime": 0,
+                "executionStatus": "success",
+                "data": {
+                  "main": [
+                    [
+                      {
+                        "json": {
+                          "timestamp": "2026-01-05T19:35:43.004+08:00",
+                          "Timezone": "Asia/Shanghai (UTC+08:00)"
+                        },
+                        "pairedItem": {
+                          "item": 0
+                        }
+                      }
+                    ]
+                  ]
+                }
+              }
+            ],
+            "Config": [
+              {
+                "executionTime": 0,
+                "executionStatus": "success",
+                "data": {
+                  "main": [
+                    [
+                      {
+                        "json": {
+                          "vaults": [
+                            {
+                              "name": "dForce USDC",
+                              "description": "Morpho",
+                              "asset": {
+                                "symbol": "USDC",
+                                "decimals": 6
+                              },
+                              "account": "morpho-agent",
+                              "chains": [
+                                "ethereum"
+                              ],
+                              "chain": "ethereum",
+                              "chainId": 1,
+                              "contractAddresses": {
+                                "vault": "0xDCD35020c5bB97016358578131f012Baa9F53cf3",
+                                "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                              },
+                              "workflowParams": {
+                                "gasCost": 0.7,
+                                "rebalanceAPYAbsoluteChange": 1,
+                                "rebalanceAllocationPercentageChange": 10,
+                                "rebalanceThreshold": 2
+                              }
+                            },
+                            {
+                              "name": "dForce USDT",
+                              "description": "Morpho",
+                              "asset": {
+                                "symbol": "USDT",
+                                "decimals": 6
+                              },
+                              "account": "morpho-agent",
+                              "chains": [
+                                "ethereum"
+                              ],
+                              "chain": "ethereum",
+                              "chainId": 1,
+                              "contractAddresses": {
+                                "vault": "0xc2007A9c48Eecb36868Cf9D1da5D8566e90bf042",
+                                "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                              },
+                              "workflowParams": {
+                                "gasCost": 0.7,
+                                "rebalanceAPYAbsoluteChange": 1,
+                                "rebalanceAllocationPercentageChange": 10,
+                                "rebalanceThreshold": 2
+                              }
+                            },
+                            {
+                              "name": "dForce USDC",
+                              "description": "Morpho",
+                              "asset": {
+                                "symbol": "USDC",
+                                "decimals": 6
+                              },
+                              "account": "morpho-agent",
+                              "chains": [
+                                "arbitrum"
+                              ],
+                              "chain": "arbitrum",
+                              "chainId": 42161,
+                              "contractAddresses": {
+                                "vault": "0x5579e27129110bBC9c0eC1388aCBf7ad04771b76",
+                                "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                              },
+                              "workflowParams": {
+                                "gasCost": 0.02,
+                                "rebalanceAPYAbsoluteChange": 1,
+                                "rebalanceAllocationPercentageChange": 10,
+                                "rebalanceThreshold": 2
+                              }
+                            },
+                            {
+                              "name": "dForce USDC",
+                              "description": "Morpho",
+                              "asset": {
+                                "symbol": "USDC",
+                                "decimals": 6
+                              },
+                              "account": "morpho-agent",
+                              "chains": [
+                                "base"
+                              ],
+                              "chain": "base",
+                              "chainId": 8453,
+                              "contractAddresses": {
+                                "vault": "0xfc8a325A2403CD940649B48ffcDfC250e084A27C",
+                                "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                              },
+                              "workflowParams": {
+                                "gasCost": 0.02,
+                                "rebalanceAPYAbsoluteChange": 1,
+                                "rebalanceAllocationPercentageChange": 10,
+                                "rebalanceThreshold": 2
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  ]
+                }
+              }
+            ],
+            "Split Out": [
+              {
+                "executionTime": 0,
+                "executionStatus": "success",
+                "data": {
+                  "main": [
+                    [
+                      {
+                        "json": {
+                          "name": "dForce USDC",
+                          "description": "Morpho",
+                          "asset": {
+                            "symbol": "USDC",
+                            "decimals": 6
+                          },
+                          "account": "morpho-agent",
+                          "chains": [
+                            "ethereum"
+                          ],
+                          "chain": "ethereum",
+                          "chainId": 1,
+                          "contractAddresses": {
+                            "vault": "0xDCD35020c5bB97016358578131f012Baa9F53cf3",
+                            "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                          },
+                          "workflowParams": {
+                            "gasCost": 0.7,
+                            "rebalanceAPYAbsoluteChange": 1,
+                            "rebalanceAllocationPercentageChange": 10,
+                            "rebalanceThreshold": 2
+                          }
+                        }
+                      },
+                      {
+                        "json": {
+                          "name": "dForce USDT",
+                          "description": "Morpho",
+                          "asset": {
+                            "symbol": "USDT",
+                            "decimals": 6
+                          },
+                          "account": "morpho-agent",
+                          "chains": [
+                            "ethereum"
+                          ],
+                          "chain": "ethereum",
+                          "chainId": 1,
+                          "contractAddresses": {
+                            "vault": "0xc2007A9c48Eecb36868Cf9D1da5D8566e90bf042",
+                            "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                          },
+                          "workflowParams": {
+                            "gasCost": 0.7,
+                            "rebalanceAPYAbsoluteChange": 1,
+                            "rebalanceAllocationPercentageChange": 10,
+                            "rebalanceThreshold": 2
+                          }
+                        }
+                      },
+                      {
+                        "json": {
+                          "name": "dForce USDC",
+                          "description": "Morpho",
+                          "asset": {
+                            "symbol": "USDC",
+                            "decimals": 6
+                          },
+                          "account": "morpho-agent",
+                          "chains": [
+                            "arbitrum"
+                          ],
+                          "chain": "arbitrum",
+                          "chainId": 42161,
+                          "contractAddresses": {
+                            "vault": "0x5579e27129110bBC9c0eC1388aCBf7ad04771b76",
+                            "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                          },
+                          "workflowParams": {
+                            "gasCost": 0.02,
+                            "rebalanceAPYAbsoluteChange": 1,
+                            "rebalanceAllocationPercentageChange": 10,
+                            "rebalanceThreshold": 2
+                          }
+                        }
+                      },
+                      {
+                        "json": {
+                          "name": "dForce USDC",
+                          "description": "Morpho",
+                          "asset": {
+                            "symbol": "USDC",
+                            "decimals": 6
+                          },
+                          "account": "morpho-agent",
+                          "chains": [
+                            "base"
+                          ],
+                          "chain": "base",
+                          "chainId": 8453,
+                          "contractAddresses": {
+                            "vault": "0xfc8a325A2403CD940649B48ffcDfC250e084A27C",
+                            "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                          },
+                          "workflowParams": {
+                            "gasCost": 0.02,
+                            "rebalanceAPYAbsoluteChange": 1,
+                            "rebalanceAllocationPercentageChange": 10,
+                            "rebalanceThreshold": 2
+                          }
+                        }
+                      }
+                    ]
+                  ]
+                }
+              }
+            ],
+            "Execute Workflow": [
+              {
+                "executionTime": 9401,
+                "executionStatus": "success",
+                "data": {
+                  "main": [
+                    [
+                      {
+                        "json": {
+                          "name": "dForce USDC - Morpho - ethereum",
+                          "RebalanceSuccess": false,
+                          "rebalanceReason": "{\"rebalanceNeeded\":false,\"reasons\":[],\"recommendations\":[],\"apyChanges\":[],\"allocationChanges\":[]} ",
+                          "rebalanceResult": "None"
+                        }
+                      },
+                      {
+                        "json": {
+                          "name": "dForce USDT - Morpho - ethereum",
+                          "RebalanceSuccess": false,
+                          "rebalanceReason": "{\"rebalanceNeeded\":false,\"reasons\":[],\"recommendations\":[],\"apyChanges\":[],\"allocationChanges\":[]} ",
+                          "rebalanceResult": "None"
+                        }
+                      },
+                      {
+                        "json": {
+                          "name": "dForce USDC - Morpho - arbitrum",
+                          "RebalanceSuccess": false,
+                          "rebalanceReason": "{\"rebalanceNeeded\":false,\"reasons\":[],\"recommendations\":[],\"apyChanges\":[],\"allocationChanges\":[]} ",
+                          "rebalanceResult": "None"
+                        }
+                      },
+                      {
+                        "json": {
+                          "name": "dForce USDC - Morpho - base",
+                          "RebalanceSuccess": false,
+                          "rebalanceReason": "{\"rebalanceNeeded\":false,\"reasons\":[],\"recommendations\":[],\"apyChanges\":[],\"allocationChanges\":[]} ",
+                          "rebalanceResult": "None"
+                        }
+                      }
+                    ]
+                  ]
+                }
+              }
+            ],
+            "Trigger Agent Log": [
+              {
+                "executionTime": 214,
+                "executionStatus": "success",
+                "data": {
+                  "main": [
+                    [
+                      {
+                        "json": {
+                          "isSuccess": true,
+                          "status": 200,
+                          "timestamp": 1767612952604
+                        }
+                      }
+                    ]
+                  ]
+                }
+              }
+            ]
+          }
+        }
+      },
+      "subExecutionLogs": [
+        {
+          "id": "381233",
+          "workflowId": "u70vbVpBmmtrEg1D",
+          "status": "success",
+          "createdAt": "2026-01-05T11:35:43.019Z",
+          "startedAt": "2026-01-05T11:35:43.026Z",
+          "stoppedAt": "2026-01-05T11:35:46.104Z",
+          "data": {
+            "resultData": {
+              "runData": {
+                "Current Info": [
+                  {
+                    "executionTime": 14,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "workflowId": "u70vbVpBmmtrEg1D",
+                              "executionId": "381233",
+                              "ledgerAddress": "0xDCD35020c5bB97016358578131f012Baa9F53cf3",
+                              "chainName": "ethereum",
+                              "allocationAndMarket": [
+                                {
+                                  "allocationData": [
+                                    {
+                                      "chain": "ethereum",
+                                      "protocolName": "Morpho",
+                                      "market": "cbBTC/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "ethereum",
+                                      "protocolName": "",
+                                      "market": "Idle Liquidity",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "ethereum",
+                                      "protocolName": "Morpho",
+                                      "market": "wstETH/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 12.817301,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    }
+                                  ],
+                                  "marketData": [
+                                    {
+                                      "chain": "ethereum",
+                                      "protocolName": "Morpho",
+                                      "market": "cbBTC/USDC",
+                                      "asset": "USDC",
+                                      "cap": 20000000,
+                                      "supplyApy": 4.385956388404327,
+                                      "borrowApy": 0,
+                                      "ur": 91.01018717447505,
+                                      "totalSupplied": 460622739.555718,
+                                      "totalBorrowed": 419213617.4378537,
+                                      "liquidity": 39375660.468693
+                                    },
+                                    {
+                                      "chain": "ethereum",
+                                      "protocolName": "Morpho",
+                                      "market": "wstETH/USDC",
+                                      "asset": "USDC",
+                                      "cap": 20000000,
+                                      "supplyApy": 4.410768960510219,
+                                      "borrowApy": 0,
+                                      "ur": 90.58975917470806,
+                                      "totalSupplied": 138055040.267439,
+                                      "totalBorrowed": 125063728.50681925,
+                                      "liquidity": 7485370.098885
+                                    }
+                                  ]
+                                }
+                              ],
+                              "strategies": [
+                                {
+                                  "name": "dForce USDC",
+                                  "description": "Morpho",
+                                  "asset": {
+                                    "symbol": "USDC",
+                                    "decimals": 6
+                                  },
+                                  "account": "morpho-agent",
+                                  "chains": [
+                                    "ethereum"
+                                  ],
+                                  "chain": "ethereum",
+                                  "chainId": 1,
+                                  "contractAddresses": {
+                                    "vault": "0xDCD35020c5bB97016358578131f012Baa9F53cf3",
+                                    "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                                  },
+                                  "workflowParams": {
+                                    "gasCost": 0.7,
+                                    "rebalanceAPYAbsoluteChange": 1,
+                                    "rebalanceAllocationPercentageChange": 10,
+                                    "rebalanceThreshold": 2
+                                  }
+                                }
+                              ],
+                              "triggerRebalancer": false
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "lastRebalancerInfo": [
+                  {
+                    "executionTime": 7,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "allocationAndMarket": [
+                                {
+                                  "marketData": [
+                                    {
+                                      "ur": 89.47329740255428,
+                                      "cap": 20000000,
+                                      "asset": "USDC",
+                                      "chain": "ethereum",
+                                      "market": "cbBTC/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 46893199.346208,
+                                      "supplyApy": 4.659377708399764,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 428004650.4321837,
+                                      "totalSupplied": 478360206.740257
+                                    },
+                                    {
+                                      "ur": 89.24806598837833,
+                                      "cap": 20000000,
+                                      "asset": "USDC",
+                                      "chain": "ethereum",
+                                      "market": "wstETH/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 8678267.366175,
+                                      "supplyApy": 4.784851827378705,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 125929285.5815587,
+                                      "totalSupplied": 141100296.333544
+                                    }
+                                  ],
+                                  "allocationData": [
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "ethereum",
+                                      "market": "cbBTC/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "ethereum",
+                                      "market": "Idle Liquidity",
+                                      "decimals": 6,
+                                      "protocolName": "",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "ethereum",
+                                      "market": "wstETH/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 12.816802,
+                                      "pendingWithdrawal": 0
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        []
+                      ]
+                    }
+                  }
+                ],
+                "Rebalance Check": [
+                  {
+                    "executionTime": 15,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "rebalanceNeeded": false,
+                              "reason": "No rebalancing needed",
+                              "analysis": {
+                                "rebalanceNeeded": false,
+                                "reasons": [],
+                                "recommendations": [],
+                                "apyChanges": [],
+                                "allocationChanges": []
+                              },
+                              "vaultName": "Morpho Vault"
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "Summary": [
+                  {
+                    "executionTime": 3,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "name": "dForce USDC - Morpho - ethereum",
+                              "RebalanceSuccess": false,
+                              "rebalanceReason": "{\"rebalanceNeeded\":false,\"reasons\":[],\"recommendations\":[],\"apyChanges\":[],\"allocationChanges\":[]} ",
+                              "rebalanceResult": "None"
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "381234",
+          "workflowId": "u70vbVpBmmtrEg1D",
+          "status": "success",
+          "createdAt": "2026-01-05T11:35:46.121Z",
+          "startedAt": "2026-01-05T11:35:46.127Z",
+          "stoppedAt": "2026-01-05T11:35:48.628Z",
+          "data": {
+            "resultData": {
+              "runData": {
+                "Current Info": [
+                  {
+                    "executionTime": 8,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "workflowId": "u70vbVpBmmtrEg1D",
+                              "executionId": "381234",
+                              "ledgerAddress": "0xc2007A9c48Eecb36868Cf9D1da5D8566e90bf042",
+                              "chainName": "ethereum",
+                              "allocationAndMarket": [
+                                {
+                                  "allocationData": [
+                                    {
+                                      "chain": "ethereum",
+                                      "protocolName": "Morpho",
+                                      "market": "WBTC/USDT",
+                                      "asset": "USDT",
+                                      "decimals": 6,
+                                      "totalAllocated": 13.411881,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "ethereum",
+                                      "protocolName": "Morpho",
+                                      "market": "wstETH/USDT",
+                                      "asset": "USDT",
+                                      "decimals": 6,
+                                      "totalAllocated": 5413.997335,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "ethereum",
+                                      "protocolName": "",
+                                      "market": "Idle Liquidity",
+                                      "asset": "USDT",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    }
+                                  ],
+                                  "marketData": [
+                                    {
+                                      "chain": "ethereum",
+                                      "protocolName": "Morpho",
+                                      "market": "WBTC/USDT",
+                                      "asset": "USDT",
+                                      "cap": 20000000,
+                                      "supplyApy": 2.7300509974917486,
+                                      "borrowApy": 0,
+                                      "ur": 86.59332306595381,
+                                      "totalSupplied": 93803570.257109,
+                                      "totalBorrowed": 81227628.64013736,
+                                      "liquidity": 10352493.087078
+                                    },
+                                    {
+                                      "chain": "ethereum",
+                                      "protocolName": "Morpho",
+                                      "market": "wstETH/USDT",
+                                      "asset": "USDT",
+                                      "cap": 20000000,
+                                      "supplyApy": 2.801942353547646,
+                                      "borrowApy": 0,
+                                      "ur": 86.18614822579397,
+                                      "totalSupplied": 60519528.390678,
+                                      "totalBorrowed": 52159450.44434121,
+                                      "liquidity": 5382562.045093
+                                    }
+                                  ]
+                                }
+                              ],
+                              "strategies": [
+                                {
+                                  "name": "dForce USDT",
+                                  "description": "Morpho",
+                                  "asset": {
+                                    "symbol": "USDT",
+                                    "decimals": 6
+                                  },
+                                  "account": "morpho-agent",
+                                  "chains": [
+                                    "ethereum"
+                                  ],
+                                  "chain": "ethereum",
+                                  "chainId": 1,
+                                  "contractAddresses": {
+                                    "vault": "0xc2007A9c48Eecb36868Cf9D1da5D8566e90bf042",
+                                    "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                                  },
+                                  "workflowParams": {
+                                    "gasCost": 0.7,
+                                    "rebalanceAPYAbsoluteChange": 1,
+                                    "rebalanceAllocationPercentageChange": 10,
+                                    "rebalanceThreshold": 2
+                                  }
+                                }
+                              ],
+                              "triggerRebalancer": false
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "lastRebalancerInfo": [
+                  {
+                    "executionTime": 7,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "allocationAndMarket": [
+                                {
+                                  "marketData": [
+                                    {
+                                      "ur": 79.62568627200888,
+                                      "cap": 20000000,
+                                      "asset": "USDT",
+                                      "chain": "ethereum",
+                                      "market": "WBTC/USDT",
+                                      "borrowApy": 0,
+                                      "liquidity": 16911183.162654,
+                                      "supplyApy": 2.0804742977052593,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 86285684.53690782,
+                                      "totalSupplied": 108364132.953464
+                                    },
+                                    {
+                                      "ur": 78.27944535836087,
+                                      "cap": 20000000,
+                                      "asset": "USDT",
+                                      "chain": "ethereum",
+                                      "market": "wstETH/USDT",
+                                      "borrowApy": 0,
+                                      "liquidity": 7863441.260458,
+                                      "supplyApy": 2.065655100958308,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 55277869.3143284,
+                                      "totalSupplied": 70616071.768608
+                                    }
+                                  ],
+                                  "allocationData": [
+                                    {
+                                      "asset": "USDT",
+                                      "chain": "ethereum",
+                                      "market": "WBTC/USDT",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 13.408117,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDT",
+                                      "chain": "ethereum",
+                                      "market": "wstETH/USDT",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 5412.52341,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDT",
+                                      "chain": "ethereum",
+                                      "market": "Idle Liquidity",
+                                      "decimals": 6,
+                                      "protocolName": "",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        []
+                      ]
+                    }
+                  }
+                ],
+                "Rebalance Check": [
+                  {
+                    "executionTime": 13,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "rebalanceNeeded": false,
+                              "reason": "No rebalancing needed",
+                              "analysis": {
+                                "rebalanceNeeded": false,
+                                "reasons": [],
+                                "recommendations": [],
+                                "apyChanges": [],
+                                "allocationChanges": []
+                              },
+                              "vaultName": "Morpho Vault"
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "Summary": [
+                  {
+                    "executionTime": 2,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "name": "dForce USDT - Morpho - ethereum",
+                              "RebalanceSuccess": false,
+                              "rebalanceReason": "{\"rebalanceNeeded\":false,\"reasons\":[],\"recommendations\":[],\"apyChanges\":[],\"allocationChanges\":[]} ",
+                              "rebalanceResult": "None"
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "381238",
+          "workflowId": "u70vbVpBmmtrEg1D",
+          "status": "success",
+          "createdAt": "2026-01-05T11:35:48.637Z",
+          "startedAt": "2026-01-05T11:35:48.642Z",
+          "stoppedAt": "2026-01-05T11:35:51.410Z",
+          "data": {
+            "resultData": {
+              "runData": {
+                "Current Info": [
+                  {
+                    "executionTime": 8,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "workflowId": "u70vbVpBmmtrEg1D",
+                              "executionId": "381238",
+                              "ledgerAddress": "0x5579e27129110bBC9c0eC1388aCBf7ad04771b76",
+                              "chainName": "arbitrum",
+                              "allocationAndMarket": [
+                                {
+                                  "allocationData": [
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "Morpho",
+                                      "market": "wstETH/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "Morpho",
+                                      "market": "sUSDS/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "",
+                                      "market": "Idle Liquidity",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "Morpho",
+                                      "market": "thBILL/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 3924512.915001,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "Morpho",
+                                      "market": "WBTC/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "Morpho",
+                                      "market": "WETH/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    }
+                                  ],
+                                  "marketData": [
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "Morpho",
+                                      "market": "wstETH/USDC",
+                                      "asset": "USDC",
+                                      "cap": 15000000,
+                                      "supplyApy": 4.578299819631676,
+                                      "borrowApy": 0,
+                                      "ur": 89.61867239691217,
+                                      "totalSupplied": 28991952.54843,
+                                      "totalBorrowed": 25982202.975845713,
+                                      "liquidity": 1803381.316488
+                                    },
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "Morpho",
+                                      "market": "sUSDS/USDC",
+                                      "asset": "USDC",
+                                      "cap": 15000000,
+                                      "supplyApy": 4.57419677541227,
+                                      "borrowApy": 0,
+                                      "ur": 88.91694222457886,
+                                      "totalSupplied": 20736820.315049,
+                                      "totalBorrowed": 18438546.53874685,
+                                      "liquidity": 1543882.151967
+                                    },
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "Morpho",
+                                      "market": "thBILL/USDC",
+                                      "asset": "USDC",
+                                      "cap": 15000000,
+                                      "supplyApy": 6.072461767744467,
+                                      "borrowApy": 0,
+                                      "ur": 78.30875746766937,
+                                      "totalSupplied": 38508418.397151,
+                                      "totalBorrowed": 30155463.967260346,
+                                      "liquidity": 7463185.950631
+                                    },
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "Morpho",
+                                      "market": "WBTC/USDC",
+                                      "asset": "USDC",
+                                      "cap": 15000000,
+                                      "supplyApy": 3.4821723456045186,
+                                      "borrowApy": 0,
+                                      "ur": 90.0597150110673,
+                                      "totalSupplied": 20632539.864698,
+                                      "totalBorrowed": 18581606.60169187,
+                                      "liquidity": 355874.366103
+                                    },
+                                    {
+                                      "chain": "arbitrum",
+                                      "protocolName": "Morpho",
+                                      "market": "WETH/USDC",
+                                      "asset": "USDC",
+                                      "cap": 15000000,
+                                      "supplyApy": 3.5905726442751265,
+                                      "borrowApy": 0,
+                                      "ur": 90.45687788021438,
+                                      "totalSupplied": 18366708.593291,
+                                      "totalBorrowed": 16613951.16284808,
+                                      "liquidity": 9712.903975
+                                    }
+                                  ]
+                                }
+                              ],
+                              "strategies": [
+                                {
+                                  "name": "dForce USDC",
+                                  "description": "Morpho",
+                                  "asset": {
+                                    "symbol": "USDC",
+                                    "decimals": 6
+                                  },
+                                  "account": "morpho-agent",
+                                  "chains": [
+                                    "arbitrum"
+                                  ],
+                                  "chain": "arbitrum",
+                                  "chainId": 42161,
+                                  "contractAddresses": {
+                                    "vault": "0x5579e27129110bBC9c0eC1388aCBf7ad04771b76",
+                                    "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                                  },
+                                  "workflowParams": {
+                                    "gasCost": 0.02,
+                                    "rebalanceAPYAbsoluteChange": 1,
+                                    "rebalanceAllocationPercentageChange": 10,
+                                    "rebalanceThreshold": 2
+                                  }
+                                }
+                              ],
+                              "triggerRebalancer": false
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "lastRebalancerInfo": [
+                  {
+                    "executionTime": 7,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "allocationAndMarket": [
+                                {
+                                  "marketData": [
+                                    {
+                                      "ur": 90.298085850419,
+                                      "cap": 15000000,
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "wstETH/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 1671587.555224,
+                                      "supplyApy": 4.791106819780518,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 23010787.517472163,
+                                      "totalSupplied": 25483139.870307
+                                    },
+                                    {
+                                      "ur": 90.37598503340472,
+                                      "cap": 15000000,
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "sUSDS/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 1318857.673248,
+                                      "supplyApy": 4.684341332153847,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 18565960.23821119,
+                                      "totalSupplied": 20543023.936446
+                                    },
+                                    {
+                                      "ur": 86.90619425187212,
+                                      "cap": 15000000,
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "thBILL/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 4059368.884555,
+                                      "supplyApy": 6.325135437997368,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 30353402.062767815,
+                                      "totalSupplied": 34926626.719837
+                                    },
+                                    {
+                                      "ur": 78.27141549367987,
+                                      "cap": 15000000,
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "WBTC/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 895175.514615,
+                                      "supplyApy": 2.736162540338407,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 13895809.028770594,
+                                      "totalSupplied": 17753363.652779
+                                    },
+                                    {
+                                      "ur": 90.3698974753207,
+                                      "cap": 15000000,
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "WETH/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 9810.75937,
+                                      "supplyApy": 3.68646696645998,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 13212800.551539926,
+                                      "totalSupplied": 14620798.430305
+                                    }
+                                  ],
+                                  "allocationData": [
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "wstETH/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "sUSDS/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "Idle Liquidity",
+                                      "decimals": 6,
+                                      "protocolName": "",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "thBILL/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 4068609.289766,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "WBTC/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "arbitrum",
+                                      "market": "WETH/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        []
+                      ]
+                    }
+                  }
+                ],
+                "Rebalance Check": [
+                  {
+                    "executionTime": 11,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "rebalanceNeeded": false,
+                              "reason": "No rebalancing needed",
+                              "analysis": {
+                                "rebalanceNeeded": false,
+                                "reasons": [],
+                                "recommendations": [],
+                                "apyChanges": [],
+                                "allocationChanges": []
+                              },
+                              "vaultName": "Morpho Vault"
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "Summary": [
+                  {
+                    "executionTime": 2,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "name": "dForce USDC - Morpho - arbitrum",
+                              "RebalanceSuccess": false,
+                              "rebalanceReason": "{\"rebalanceNeeded\":false,\"reasons\":[],\"recommendations\":[],\"apyChanges\":[],\"allocationChanges\":[]} ",
+                              "rebalanceResult": "None"
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "id": "381239",
+          "workflowId": "u70vbVpBmmtrEg1D",
+          "status": "success",
+          "createdAt": "2026-01-05T11:35:51.419Z",
+          "startedAt": "2026-01-05T11:35:51.424Z",
+          "stoppedAt": "2026-01-05T11:35:52.411Z",
+          "data": {
+            "resultData": {
+              "runData": {
+                "Current Info": [
+                  {
+                    "executionTime": 7,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "workflowId": "u70vbVpBmmtrEg1D",
+                              "executionId": "381239",
+                              "ledgerAddress": "0xfc8a325A2403CD940649B48ffcDfC250e084A27C",
+                              "chainName": "base",
+                              "allocationAndMarket": [
+                                {
+                                  "allocationData": [
+                                    {
+                                      "chain": "base",
+                                      "protocolName": "Morpho",
+                                      "market": "cbBTC/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "base",
+                                      "protocolName": "Morpho",
+                                      "market": "cbETH/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 879041.657912,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "base",
+                                      "protocolName": "Morpho",
+                                      "market": "WETH/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 568336.026364,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "base",
+                                      "protocolName": "Morpho",
+                                      "market": "wstETH/USDC",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "chain": "base",
+                                      "protocolName": "",
+                                      "market": "Idle Liquidity",
+                                      "asset": "USDC",
+                                      "decimals": 6,
+                                      "totalAllocated": 0,
+                                      "idleLiquidity": 0,
+                                      "pendingWithdrawal": 0
+                                    }
+                                  ],
+                                  "marketData": [
+                                    {
+                                      "chain": "base",
+                                      "protocolName": "Morpho",
+                                      "market": "cbBTC/USDC",
+                                      "asset": "USDC",
+                                      "cap": 5000000,
+                                      "supplyApy": 5.4708377945573465,
+                                      "borrowApy": 0,
+                                      "ur": 89.34076391283699,
+                                      "totalSupplied": 1169219127.90404,
+                                      "totalBorrowed": 1044589300.68448,
+                                      "liquidity": 124629827.21956
+                                    },
+                                    {
+                                      "chain": "base",
+                                      "protocolName": "Morpho",
+                                      "market": "cbETH/USDC",
+                                      "asset": "USDC",
+                                      "cap": 3000000,
+                                      "supplyApy": 5.44077754726837,
+                                      "borrowApy": 0,
+                                      "ur": 90.08285580565662,
+                                      "totalSupplied": 7021593.981736,
+                                      "totalBorrowed": 6325252.381825903,
+                                      "liquidity": 95073.277849
+                                    },
+                                    {
+                                      "chain": "base",
+                                      "protocolName": "Morpho",
+                                      "market": "WETH/USDC",
+                                      "asset": "USDC",
+                                      "cap": 10000000,
+                                      "supplyApy": 5.47133879276047,
+                                      "borrowApy": 0,
+                                      "ur": 89.85424622415583,
+                                      "totalSupplied": 40805265.588308,
+                                      "totalBorrowed": 36665263.814139,
+                                      "liquidity": 4140001.774169
+                                    },
+                                    {
+                                      "chain": "base",
+                                      "protocolName": "Morpho",
+                                      "market": "wstETH/USDC",
+                                      "asset": "USDC",
+                                      "cap": 10000000,
+                                      "supplyApy": 5.432775233683749,
+                                      "borrowApy": 0,
+                                      "ur": 90.22454286001657,
+                                      "totalSupplied": 2579784.23927,
+                                      "totalBorrowed": 2327598.5366561133,
+                                      "liquidity": 52492.063912
+                                    }
+                                  ]
+                                }
+                              ],
+                              "strategies": [
+                                {
+                                  "name": "dForce USDC",
+                                  "description": "Morpho",
+                                  "asset": {
+                                    "symbol": "USDC",
+                                    "decimals": 6
+                                  },
+                                  "account": "morpho-agent",
+                                  "chains": [
+                                    "base"
+                                  ],
+                                  "chain": "base",
+                                  "chainId": 8453,
+                                  "contractAddresses": {
+                                    "vault": "0xfc8a325A2403CD940649B48ffcDfC250e084A27C",
+                                    "agent": "0xD71f8cc322c8d7d193C3994e14e3BD2569ee7E8e"
+                                  },
+                                  "workflowParams": {
+                                    "gasCost": 0.02,
+                                    "rebalanceAPYAbsoluteChange": 1,
+                                    "rebalanceAllocationPercentageChange": 10,
+                                    "rebalanceThreshold": 2
+                                  }
+                                }
+                              ],
+                              "triggerRebalancer": false
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "lastRebalancerInfo": [
+                  {
+                    "executionTime": 6,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "allocationAndMarket": [
+                                {
+                                  "marketData": [
+                                    {
+                                      "ur": 90.26175670509316,
+                                      "cap": 10000000,
+                                      "asset": "USDC",
+                                      "chain": "base",
+                                      "market": "wstETH/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 52308.381446,
+                                      "supplyApy": 5.484047086326812,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 51560016.260469526,
+                                      "totalSupplied": 57122770.64242
+                                    },
+                                    {
+                                      "ur": 89.79616719275786,
+                                      "cap": 10000000,
+                                      "asset": "USDC",
+                                      "chain": "base",
+                                      "market": "WETH/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 3869793.918819,
+                                      "supplyApy": 5.58450692579426,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 148128548.78988868,
+                                      "totalSupplied": 164960881.316809
+                                    },
+                                    {
+                                      "ur": 90.07255771507492,
+                                      "cap": 3000000,
+                                      "asset": "USDC",
+                                      "chain": "base",
+                                      "market": "cbETH/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 100292.470148,
+                                      "supplyApy": 5.590041125240527,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 51820314.00579418,
+                                      "totalSupplied": 57531744.762613
+                                    },
+                                    {
+                                      "ur": 89.01064853050575,
+                                      "cap": 5000000,
+                                      "asset": "USDC",
+                                      "chain": "base",
+                                      "market": "cbBTC/USDC",
+                                      "borrowApy": 0,
+                                      "liquidity": 126758980.509023,
+                                      "supplyApy": 5.570368087211116,
+                                      "protocolName": "Morpho",
+                                      "totalBorrowed": 1030186984.6381269,
+                                      "totalSupplied": 1157374990.122739
+                                    }
+                                  ],
+                                  "allocationData": [
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "base",
+                                      "market": "wstETH/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "base",
+                                      "market": "WETH/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 567907.282268,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "base",
+                                      "market": "Idle Liquidity",
+                                      "decimals": 6,
+                                      "protocolName": "",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "base",
+                                      "market": "cbETH/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 934347.611665,
+                                      "pendingWithdrawal": 0
+                                    },
+                                    {
+                                      "asset": "USDC",
+                                      "chain": "base",
+                                      "market": "cbBTC/USDC",
+                                      "decimals": 6,
+                                      "protocolName": "Morpho",
+                                      "idleLiquidity": 0,
+                                      "totalAllocated": 0,
+                                      "pendingWithdrawal": 0
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          }
+                        ],
+                        []
+                      ]
+                    }
+                  }
+                ],
+                "Rebalance Check": [
+                  {
+                    "executionTime": 8,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "rebalanceNeeded": false,
+                              "reason": "No rebalancing needed",
+                              "analysis": {
+                                "rebalanceNeeded": false,
+                                "reasons": [],
+                                "recommendations": [],
+                                "apyChanges": [],
+                                "allocationChanges": []
+                              },
+                              "vaultName": "Morpho Vault"
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ],
+                "Summary": [
+                  {
+                    "executionTime": 2,
+                    "executionStatus": "success",
+                    "data": {
+                      "main": [
+                        [
+                          {
+                            "json": {
+                              "name": "dForce USDC - Morpho - base",
+                              "RebalanceSuccess": false,
+                              "rebalanceReason": "{\"rebalanceNeeded\":false,\"reasons\":[],\"recommendations\":[],\"apyChanges\":[],\"allocationChanges\":[]} ",
+                              "rebalanceResult": "None"
+                            }
+                          }
+                        ]
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      ]
+    },
+    "_cleaned_meta": {
+      "cleaned_at": "2026-01-05T11:36:04.443Z",
+      "original_size": 230504,
+      "cleaned_size": 24274,
+      "reduction_percent": "89.47",
+      "fields_removed": 0
+    }
+  }
+]
