@@ -103,10 +103,12 @@ export type PreparedChatRequest = {
 
 function buildIntentSessionContext(envelope: ContextEnvelope): string {
   return JSON.stringify({
+    conversation_context: {
+      pending_clarification: envelope.conversation_context.pending_clarification,
+      active_context: envelope.conversation_context.active_context,
+      recent_turns_summary: envelope.conversation_context.recent_turns_summary,
+    },
     turn_relation: envelope.turn_relation,
-    pending_clarification: envelope.conversation_context.pending_clarification,
-    active_context: envelope.conversation_context.active_context,
-    recent_turns_summary: envelope.conversation_context.recent_turns_summary,
     registry_context: envelope.registry_context,
     memory_runtime: envelope.memory_runtime,
     policy_decision: envelope.policy_decision,

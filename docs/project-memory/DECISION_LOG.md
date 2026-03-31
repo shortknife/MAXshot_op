@@ -49,3 +49,8 @@
 - Decision: stop new `execution_logs_rag` / embedding writes and treat RAG evidence as legacy.
 - Why: current fact-table path is live, while embedding availability is unstable and no longer justifies being on the critical path.
 - Consequence: investigation and business query paths should rely on canonical fact tables first; RAG remains historical only.
+
+## D-011
+- Decision: product memory should evolve as `structured interaction log -> system learning assets -> user long-term memory`, not as per-turn freeform documents.
+- Why: raw conversation transcripts are useful for audit and corpus building, but they are a poor primary format for retrieval, statistics, template evolution, and future user-preference memory.
+- Consequence: near-term work should capture each query/response into structured operational logs; later iterations can derive intent hard cases, query-template examples, and user preference memory from that layer.

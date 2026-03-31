@@ -609,6 +609,8 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
     if (rankingDimension) {
       const rankingSlots = {
         days: filters.time_window_days || parseTrendDays(rawQuery),
+        date_from: filters.date_from || null,
+        date_to: filters.date_to || null,
         dimension: rankingDimension,
         limit: parseTopN(rawQuery, 20),
         chain: filters.chain || null,
@@ -630,6 +632,8 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
     if (wantsExtremesByContract || wantsYieldExtremes(rawQuery)) {
       const extremeSlots = {
         days: filters.time_window_days || parseTrendDays(rawQuery),
+        date_from: filters.date_from || null,
+        date_to: filters.date_to || null,
         timezone: 'Asia/Shanghai',
         chain: filters.chain || null,
         protocol: filters.protocol || null,
@@ -650,6 +654,8 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
     if (wantsTrendByContract || wantsYieldTrend(rawQuery)) {
       const trendSlots = {
         days: filters.time_window_days || parseTrendDays(rawQuery),
+        date_from: filters.date_from || null,
+        date_to: filters.date_to || null,
         timezone: 'Asia/Shanghai',
         chain: filters.chain || null,
         protocol: filters.protocol || null,

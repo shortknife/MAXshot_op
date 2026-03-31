@@ -28,7 +28,7 @@ export function buildWritebackEvents(input: {
 
 export function buildMemoryInsert(input: {
   memory_type: MemoryTypeValue
-  content: string
+  content: Record<string, unknown>
   source_execution_id: string
   context?: Record<string, unknown>
   weight?: number

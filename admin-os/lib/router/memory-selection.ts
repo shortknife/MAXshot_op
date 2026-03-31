@@ -4,14 +4,16 @@ import { supabase } from '@/lib/supabase'
 type MemoryRow = {
   id?: string
   type?: string
-  content?: Record<string, unknown> | null
+  content?: Record<string, unknown> | string | null
   weight?: number | null
   confidence?: number | null
 }
 
 function scoreMemoryRow(row: MemoryRow, contextTags: string[]): number {
-  const content = row.content && typeof row.content === 'object' ? row.content : {}
-  const textBlob = JSON.stringify(content).toLowerCase()
+  const textBlob =
+    row.content && typeof row.content === 'object'
+      ? JSON.stringify(row.content).toLowerCase()
+      : String(row.content || '').toLowerCase()
   let score = 0
   for (const tag of contextTags) {
     const t = String(tag || '').trim().toLowerCase()

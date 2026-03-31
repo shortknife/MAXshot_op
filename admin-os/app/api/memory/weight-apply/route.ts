@@ -58,14 +58,14 @@ export async function POST(req: Request) {
 
     const adjustmentPayload = {
       type: memoryRow.type,
-      content: JSON.stringify({
+      content: {
         original_content: memoryRow.content,
         weight_adjustment: {
           from: memoryRow.weight,
           to: recommendedWeight,
           delta: Number((recommendedWeight - Number(memoryRow.weight ?? 0)).toFixed(2)),
         },
-      }),
+      },
       context: {
         source_memory_id: memoryRow.id,
         approved_by: operatorId,

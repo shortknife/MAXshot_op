@@ -22,6 +22,14 @@
       "type": "number",
       "required": true
     },
+    "date_from": {
+      "type": "text",
+      "required": false
+    },
+    "date_to": {
+      "type": "text",
+      "required": false
+    },
     "timezone": {
       "type": "text",
       "required": true
@@ -42,6 +50,8 @@
   "examples": [
     {
       "days": 7,
+      "date_from": null,
+      "date_to": null,
       "timezone": "Asia/Shanghai",
       "protocol": "Morpho",
       "vault_keyword": null

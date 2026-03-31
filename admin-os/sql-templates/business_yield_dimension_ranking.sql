@@ -9,7 +9,11 @@ WITH scoped AS (
       ELSE COALESCE(net_apy, base_apy, 0)
     END AS apy_pct
   FROM market_metrics
-  WHERE created_at >= now() - ({{days}}::int * interval '1 day')
+  WHERE (
+      ({{date_from}} IS NOT NULL AND {{date_to}} IS NOT NULL AND created_at >= {{date_from}}::date AND created_at < ({{date_to}}::date + interval '1 day'))
+      OR
+      ({{date_from}} IS NULL AND {{date_to}} IS NULL AND created_at >= now() - ({{days}}::int * interval '1 day'))
+    )
     AND ({{chain}} IS NULL OR chain ILIKE {{chain}})
     AND ({{protocol}} IS NULL OR protocol ILIKE {{protocol}})
     AND ({{vault_keyword}} IS NULL OR market_name ILIKE ('%' || {{vault_keyword}} || '%'))

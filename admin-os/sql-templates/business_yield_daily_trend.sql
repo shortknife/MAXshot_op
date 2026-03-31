@@ -6,7 +6,11 @@ WITH scoped AS (
       ELSE COALESCE(m.net_apy, m.base_apy, 0)
     END AS apy_pct
   FROM market_metrics m
-  WHERE m.created_at >= now() - ({{days}}::int * interval '1 day')
+  WHERE (
+      ({{date_from}} IS NOT NULL AND {{date_to}} IS NOT NULL AND m.created_at >= {{date_from}}::date AND m.created_at < ({{date_to}}::date + interval '1 day'))
+      OR
+      ({{date_from}} IS NULL AND {{date_to}} IS NULL AND m.created_at >= now() - ({{days}}::int * interval '1 day'))
+    )
     AND ({{chain}} IS NULL OR m.chain ILIKE {{chain}})
     AND ({{protocol}} IS NULL OR m.protocol ILIKE {{protocol}})
     AND (

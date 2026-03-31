@@ -198,7 +198,9 @@ function parseSessionContextSnapshot(sessionContext?: string): SessionContextSna
   }
   try {
     const parsed = JSON.parse(sessionContext) as Record<string, unknown>
-    const conversationContext = (parsed.conversation_context || {}) as Record<string, unknown>
+    const conversationContext = (
+      (parsed.conversation_context as Record<string, unknown> | undefined) || parsed
+    ) as Record<string, unknown>
     return {
       activeContext: ((conversationContext.active_context as Record<string, unknown>) || {}),
       pendingClarification: ((conversationContext.pending_clarification as Record<string, unknown>) || {}),

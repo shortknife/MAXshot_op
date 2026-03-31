@@ -58,10 +58,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'missing_candidate' }, { status: 400 })
     }
 
-    const content = JSON.stringify(candidate)
     const insertPayload = buildMemoryInsert({
       memory_type: memoryType,
-      content,
+      content: candidate as Record<string, unknown>,
       source_execution_id: sourceExecutionId,
       context: { approved_by: approvedBy },
     })
