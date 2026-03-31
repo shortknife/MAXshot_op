@@ -2,12 +2,13 @@
 
 ## Immediate
 
-1. Choose the first live path to wire
-- native first, then morpho
-- replace the old direct RPC path with the shared runner
+1. Harden business query correctness on mixed historical data
+- keep user-visible reads prod-first
+- remove or narrow legacy fallback that can surface non-prod rows
 
-2. Decide the trigger shell strategy after one live path is wired
-- keep scheduler replacement deferred
+2. Verify the main user-facing chat/execution flows against current canonical facts
+- prioritize `/api/chat/ask`
+- prioritize execution detail / latest execution queries
 
 ## Working Rule
 

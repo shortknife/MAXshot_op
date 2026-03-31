@@ -61,4 +61,24 @@ describe('Query Contract pipeline consumption', () => {
     expect(result?.scopedRows).toHaveLength(1)
     expect(result?.scopedRows[0].execution_id).toBe('exec-1')
   })
+
+  it('does not fall back to non-prod vault rows when prod rows are filtered out', () => {
+    const result = runBusinessQueryPipeline({
+      query: {
+        scope: 'vault',
+        rows: [
+          { vault_name: 'Test Vault', environment: 'test', chain_name: 'sepolia', total_allocated: 100, idle_liquidity: 0 },
+        ],
+        summary: 'ok',
+        source_type: 'table',
+        source_id: 'allocation_snapshots',
+      },
+      filters: {},
+      rawQuery: '有哪些 vault',
+      queryContract: contract({ scope: 'vault', query_mode: 'metrics' }),
+      wantsSingleExecution: () => false,
+    })
+
+    expect(result).toBeNull()
+  })
 })

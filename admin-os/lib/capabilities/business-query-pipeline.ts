@@ -56,11 +56,7 @@ export function runBusinessQueryPipeline(params: {
   const qualityApplied = query.scope === 'yield' ? applyYieldQualityFilter(formattedRows) : { rows: formattedRows, excluded: 0 }
   let { rows: filteredRows, nonProdExcluded } = applyBusinessFilters(qualityApplied.rows, filters)
 
-  let fallbackUsed = false
-  if (!filteredRows.length && nonProdExcluded > 0 && (query.scope === 'vault' || query.scope === 'allocation')) {
-    filteredRows = qualityApplied.rows
-    fallbackUsed = true
-  }
+  const fallbackUsed = false
 
   const wantsSingleExecutionByContract =
     query.scope === 'execution' &&
@@ -82,8 +78,7 @@ export function runBusinessQueryPipeline(params: {
 
   const summaryWithFilter =
     summaryCore +
-    summarizeFilterSuffix(filters, nonProdExcluded, qualityApplied.excluded) +
-    (fallbackUsed ? '（仅有 testnet/staging 数据，已临时展示全部记录）' : '')
+    summarizeFilterSuffix(filters, nonProdExcluded, qualityApplied.excluded)
 
   return {
     scopedRows,
