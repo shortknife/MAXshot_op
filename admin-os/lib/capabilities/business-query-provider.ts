@@ -137,11 +137,15 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
     dateFrom?: string
     dateTo?: string
     aggregation?: string | null
+    chain?: string | null
+    protocol?: string | null
     compareTargets?: string[]
     targetKeyword?: string | null
   }): Promise<Record<string, unknown>[] | null> {
     try {
       const { days, dateFrom, dateTo, aggregation } = params
+      const chainFilter = String(params.chain || '').trim().toLowerCase()
+      const protocolFilter = String(params.protocol || '').trim().toLowerCase()
       const compareTargets = Array.isArray(params.compareTargets) ? params.compareTargets.filter(Boolean) : parseCompareVaultKeywords(rawQuery)
       const targetKeywords = compareTargets.length >= 2 ? compareTargets : (() => {
         const single = params.targetKeyword || parseVaultKeyword(rawQuery)
@@ -172,10 +176,17 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
         ? await withRetry(() => queryMarketMetricsBetween(fromIso, toIso))
         : await withRetry(() => queryMarketMetricsSince(new Date(Date.now() - (days || 7) * 24 * 60 * 60 * 1000).toISOString()))
       if (error || !Array.isArray(data)) return null
+      const filteredByScope = (data as Record<string, unknown>[]).filter((row) => {
+        const chain = String(row.chain || '').trim().toLowerCase()
+        const protocol = String(row.protocol || '').trim().toLowerCase()
+        if (chainFilter && !chain.includes(chainFilter)) return false
+        if (protocolFilter && !protocol.includes(protocolFilter)) return false
+        return true
+      })
 
       const narrowedRows = !targetKeywords.length
-        ? (data as Record<string, unknown>[])
-        : (data as Record<string, unknown>[]).flatMap((row) => {
+        ? filteredByScope
+        : filteredByScope.flatMap((row) => {
             const haystack = [row.market_name, row.market, row.protocol, row.chain]
               .map((value) => String(value || '').toLowerCase())
             const executionId = String(row.execution_id || '').trim()
@@ -597,9 +608,12 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
     const rankingDimension = queryContract.ranking_dimension || parseYieldRankingDimension(rawQuery)
     if (rankingDimension) {
       const rankingSlots = {
-        days: parseTrendDays(rawQuery),
+        days: filters.time_window_days || parseTrendDays(rawQuery),
         dimension: rankingDimension,
         limit: parseTopN(rawQuery, 20),
+        chain: filters.chain || null,
+        protocol: filters.protocol || null,
+        vault_keyword: targetKeyword || null,
       }
       const template = await tryTemplateQuery('business_yield_dimension_ranking', rankingSlots)
       if (template.ok && template.rows.length) {
@@ -615,9 +629,11 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
     const wantsExtremesByContract = ['extreme_window', 'top_bottom_in_day', 'top_1_in_period'].includes(slotQuestionShape)
     if (wantsExtremesByContract || wantsYieldExtremes(rawQuery)) {
       const extremeSlots = {
-        days: parseTrendDays(rawQuery),
+        days: filters.time_window_days || parseTrendDays(rawQuery),
         timezone: 'Asia/Shanghai',
-        vault_keyword: parseVaultKeyword(rawQuery),
+        chain: filters.chain || null,
+        protocol: filters.protocol || null,
+        vault_keyword: targetKeyword || parseVaultKeyword(rawQuery),
       }
       const template = await tryTemplateQuery('business_yield_extremes_with_reason', extremeSlots)
       if (template.ok && template.rows.length) {
@@ -633,9 +649,11 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
     const wantsTrendByContract = slotQuestionShape === 'trend_window'
     if (wantsTrendByContract || wantsYieldTrend(rawQuery)) {
       const trendSlots = {
-        days: parseTrendDays(rawQuery),
+        days: filters.time_window_days || parseTrendDays(rawQuery),
         timezone: 'Asia/Shanghai',
-        vault_keyword: parseVaultKeyword(rawQuery),
+        chain: filters.chain || null,
+        protocol: filters.protocol || null,
+        vault_keyword: targetKeyword || parseVaultKeyword(rawQuery),
       }
       const template = await tryTemplateQuery('business_yield_daily_trend', trendSlots)
       if (template.ok && template.rows.length) {
@@ -661,6 +679,8 @@ export function buildBusinessQueryResolvers({ withRetry, explainMaxTotalCost }: 
         dateFrom: queryContract.time.date_from || slotDateFrom || filters.date_from,
         dateTo: queryContract.time.date_to || slotDateTo || filters.date_to,
         aggregation: slotAggregation,
+        chain: filters.chain || null,
+        protocol: filters.protocol || null,
         compareTargets,
         targetKeyword,
       })

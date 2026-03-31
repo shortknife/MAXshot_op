@@ -38,7 +38,11 @@ export async function persistBusinessSuccessPostprocess(params: {
   fallbackScope: string
   promptMeta: PromptMeta
   evidence: Array<{ source_type?: string; source_id?: string }>
-  queryContract?: { aggregation?: string | null; scope?: string | null } | null
+  queryContract?: {
+    aggregation?: string | null
+    scope?: string | null
+    targets?: { compare_targets?: string[] | null } | null
+  } | null
 }) {
   const firstEvidence = params.evidence?.[0]
   await logBusinessQuery({
@@ -59,6 +63,9 @@ export async function persistBusinessSuccessPostprocess(params: {
     filters: {
       ...params.filtersApplied,
       vault_name: params.mentionedVault || undefined,
+      compare_targets: Array.isArray(params.queryContract?.targets?.compare_targets)
+        ? params.queryContract?.targets?.compare_targets.map((value) => String(value || '').trim()).filter(Boolean)
+        : undefined,
     },
     metric: params.metric || undefined,
     aggregation:

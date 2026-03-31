@@ -7,12 +7,17 @@ WITH scoped AS (
     END AS apy_pct
   FROM market_metrics m
   WHERE m.created_at >= now() - ({{days}}::int * interval '1 day')
+    AND ({{chain}} IS NULL OR m.chain ILIKE {{chain}})
+    AND ({{protocol}} IS NULL OR m.protocol ILIKE {{protocol}})
     AND (
       {{vault_keyword}} IS NULL OR EXISTS (
         SELECT 1
         FROM allocation_snapshots a
         WHERE a.execution_id = m.execution_id
-          AND a.vault_name ILIKE ('%' || {{vault_keyword}} || '%')
+          AND (
+            a.vault_name ILIKE ('%' || {{vault_keyword}} || '%')
+            OR a.market ILIKE ('%' || {{vault_keyword}} || '%')
+          )
       )
     )
 )

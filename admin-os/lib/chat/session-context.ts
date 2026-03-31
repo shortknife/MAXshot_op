@@ -5,6 +5,7 @@ type SessionBusinessContext = {
   chain?: string
   protocol?: string
   vault_name?: string
+  compare_targets?: string[]
   time_window_days?: number
   aggregation?: string
   exact_day?: string
@@ -86,7 +87,15 @@ export function saveBusinessSessionContext(params: {
   sessionId: string | null
   scope: string
   queryMode: string
-  filters?: { chain?: string; protocol?: string; vault_name?: string; time_window_days?: number; date_from?: string; date_to?: string }
+  filters?: {
+    chain?: string
+    protocol?: string
+    vault_name?: string
+    compare_targets?: string[]
+    time_window_days?: number
+    date_from?: string
+    date_to?: string
+  }
   metric?: string
   aggregation?: string
 }) {
@@ -99,6 +108,9 @@ export function saveBusinessSessionContext(params: {
     chain: params.filters?.chain,
     protocol: params.filters?.protocol,
     vault_name: params.filters?.vault_name,
+    compare_targets: Array.isArray(params.filters?.compare_targets)
+      ? params.filters?.compare_targets.map((value) => String(value || '').trim()).filter(Boolean)
+      : undefined,
     time_window_days: params.filters?.time_window_days,
     aggregation: params.aggregation,
     exact_day:

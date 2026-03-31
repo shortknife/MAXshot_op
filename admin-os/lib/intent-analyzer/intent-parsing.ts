@@ -1,6 +1,7 @@
 import { IntentAnalysisResult, callDeepSeek } from './deepseek-client'
 import { toCanonicalIntentType } from './intent-taxonomy'
 import { resolveCapabilityIds, MAX_MATCHED_CAPABILITIES } from '@/lib/router/capability-catalog'
+import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
 
 export const OFFICIAL_STEP3_INTENT_TYPES = [
   'business_query',
@@ -37,11 +38,12 @@ export type IntentHarnessResult = {
 }
 
 export async function parseIntent(rawQuery: string, sessionContext?: string): Promise<IntentAnalysisResult> {
+  const perf = createPerfTrace('intent.parse', buildPerfQueryMeta(rawQuery, { has_session_context: Boolean(sessionContext) }))
   try {
-    const result = await callDeepSeek(rawQuery, sessionContext)
+    const result = await perf.measure('call_deepseek', () => callDeepSeek(rawQuery, sessionContext))
 
-    validateIntentOutput(result.intent)
-    result.intent.extracted_slots = applyMvpComplexityGuard(rawQuery, result.intent.extracted_slots || {})
+    await perf.measure('validate_intent_output', () => Promise.resolve(validateIntentOutput(result.intent)))
+    result.intent.extracted_slots = await perf.measure('apply_mvp_complexity_guard', () => Promise.resolve(applyMvpComplexityGuard(rawQuery, result.intent.extracted_slots || {})))
     // Compatibility/audit field only.
     // Downstream runtime decisions should prefer matched capability ids over this canonical label.
     result.intent.extracted_slots = {
@@ -49,8 +51,10 @@ export async function parseIntent(rawQuery: string, sessionContext?: string): Pr
       intent_type_canonical: toCanonicalIntentType(result.intent.type),
     }
 
+    perf.finish({ intent_type: result.intent.type, prompt_source: result.prompt_meta?.source || 'unknown' })
     return result
-  } catch {
+  } catch (error) {
+    perf.fail(error)
     const degradedCapabilityIds = resolveCapabilityIds(['capability.product_doc_qna'], MAX_MATCHED_CAPABILITIES)
     return {
       intent: {

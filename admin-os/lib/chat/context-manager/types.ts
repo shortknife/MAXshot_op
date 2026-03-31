@@ -42,6 +42,7 @@ export type ActiveContextSnapshot = {
   chain: string | null
   protocol: string | null
   vault_name: string | null
+  compare_targets: string[]
   time_window_days: number | null
   aggregation: string | null
   exact_day: string | null

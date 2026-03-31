@@ -31,6 +31,7 @@ function buildActiveContextSnapshot(sessionId: string | null): ActiveContextSnap
       chain: null,
       protocol: null,
       vault_name: null,
+      compare_targets: [],
       time_window_days: null,
       aggregation: null,
       exact_day: null,
@@ -46,6 +47,7 @@ function buildActiveContextSnapshot(sessionId: string | null): ActiveContextSnap
     chain: String(ctx.chain || '').trim() || null,
     protocol: String(ctx.protocol || '').trim() || null,
     vault_name: String(ctx.vault_name || '').trim() || null,
+    compare_targets: Array.isArray(ctx.compare_targets) ? ctx.compare_targets.map((value) => String(value || '').trim()).filter(Boolean) : [],
     time_window_days: typeof ctx.time_window_days === 'number' ? ctx.time_window_days : null,
     aggregation: String(ctx.aggregation || '').trim() || null,
     exact_day: String(ctx.exact_day || '').trim() || null,
@@ -85,7 +87,7 @@ export async function buildConversationContext(params: {
       activeContext.scope
         ? [{
             role: 'assistant',
-            content: `active_context: scope=${activeContext.scope}; query_mode=${activeContext.query_mode || 'metrics'}; metric=${activeContext.metric || 'none'}; time_window_days=${activeContext.time_window_days ?? 'none'}; aggregation=${activeContext.aggregation || 'none'}; exact_day=${activeContext.exact_day || 'none'}; date_from=${activeContext.date_from || 'none'}; date_to=${activeContext.date_to || 'none'}; chain=${activeContext.chain || 'none'}; protocol=${activeContext.protocol || 'none'}; vault_name=${activeContext.vault_name || 'none'}`,
+            content: `active_context: scope=${activeContext.scope}; query_mode=${activeContext.query_mode || 'metrics'}; metric=${activeContext.metric || 'none'}; time_window_days=${activeContext.time_window_days ?? 'none'}; aggregation=${activeContext.aggregation || 'none'}; exact_day=${activeContext.exact_day || 'none'}; date_from=${activeContext.date_from || 'none'}; date_to=${activeContext.date_to || 'none'}; chain=${activeContext.chain || 'none'}; protocol=${activeContext.protocol || 'none'}; vault_name=${activeContext.vault_name || 'none'}; compare_targets=${activeContext.compare_targets.join('|') || 'none'}`,
           }]
         : []
     ),

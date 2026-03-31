@@ -57,6 +57,12 @@ function mergeInheritedBusinessSlots(params: {
   if (!String(merged.chain || '').trim() && activeContext.chain) merged.chain = activeContext.chain
   if (!String(merged.protocol || '').trim() && activeContext.protocol) merged.protocol = activeContext.protocol
   if (!String(merged.vault_name || '').trim() && activeContext.vault_name) merged.vault_name = activeContext.vault_name
+  const currentCompareTargets = Array.isArray(merged.compare_targets)
+    ? merged.compare_targets.map((value: unknown) => String(value || '').trim()).filter(Boolean)
+    : []
+  if (!currentCompareTargets.length && Array.isArray(activeContext.compare_targets) && activeContext.compare_targets.length > 0) {
+    merged.compare_targets = [...activeContext.compare_targets]
+  }
 
   const matchedIds = Array.isArray(merged.matched_capability_ids)
     ? merged.matched_capability_ids.map((value) => String(value || '').trim()).filter(Boolean)

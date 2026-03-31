@@ -8,12 +8,17 @@ WITH metric_scoped AS (
     END AS apy_pct
   FROM market_metrics m
   WHERE m.created_at >= now() - ({{days}}::int * interval '1 day')
+    AND ({{chain}} IS NULL OR m.chain ILIKE {{chain}})
+    AND ({{protocol}} IS NULL OR m.protocol ILIKE {{protocol}})
     AND (
       {{vault_keyword}} IS NULL OR EXISTS (
         SELECT 1
         FROM allocation_snapshots a
         WHERE a.execution_id = m.execution_id
-          AND a.vault_name ILIKE ('%' || {{vault_keyword}} || '%')
+          AND (
+            a.vault_name ILIKE ('%' || {{vault_keyword}} || '%')
+            OR a.market ILIKE ('%' || {{vault_keyword}} || '%')
+          )
       )
     )
 ),
@@ -31,8 +36,12 @@ daily_reason AS (
     count(*)::int AS reason_count
   FROM rebalance_decisions rd
   WHERE rd.decision_timestamp >= now() - ({{days}}::int * interval '1 day')
+    AND ({{chain}} IS NULL OR rd.chain ILIKE {{chain}})
+    AND ({{protocol}} IS NULL OR rd.protocol ILIKE {{protocol}})
     AND (
-      {{vault_keyword}} IS NULL OR rd.vault_name ILIKE ('%' || {{vault_keyword}} || '%')
+      {{vault_keyword}} IS NULL
+      OR rd.vault_name ILIKE ('%' || {{vault_keyword}} || '%')
+      OR rd.market_name ILIKE ('%' || {{vault_keyword}} || '%')
     )
   GROUP BY 1, 2
 ),

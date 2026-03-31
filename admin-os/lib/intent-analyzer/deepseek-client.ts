@@ -226,6 +226,16 @@ function normalizeChainAlias(raw: string): string | null {
   return null
 }
 
+function normalizeProtocolAlias(raw: string): string | null {
+  const text = String(raw || '').trim().toLowerCase()
+  if (!text) return null
+  if (/morpho/.test(text)) return 'morpho'
+  if (/aave/.test(text)) return 'aave'
+  if (/euler/.test(text)) return 'euler'
+  if (/unitus/.test(text)) return 'unitus'
+  return null
+}
+
 function currentYear() {
   return Number(
     new Intl.DateTimeFormat('en-CA', {
@@ -452,6 +462,7 @@ function buildFallbackResult(rawQuery: string, promptMeta: IntentAnalysisResult[
   const sessionSnapshot = parseSessionContextSnapshot(sessionContext)
   const activeContext = sessionSnapshot.activeContext
   const normalizedChainAlias = normalizeChainAlias(rawQuery)
+  const normalizedProtocolAlias = normalizeProtocolAlias(rawQuery)
   const recentTurnsText = sessionSnapshot.recentTurnsSummary
     .map((turn) => String(turn.content || ''))
     .join(' ')
@@ -662,6 +673,7 @@ function buildFallbackResult(rawQuery: string, promptMeta: IntentAnalysisResult[
         : null
     )
     const normalizedChain = normalizedChainAlias || String(activeContext.chain || '').trim().toLowerCase() || undefined
+    const normalizedProtocol = normalizedProtocolAlias || String(activeContext.protocol || '').trim().toLowerCase() || undefined
     const inheritedDay =
       /(当天|那天)/.test(rawQuery)
         ? String(activeContext.exact_day || activeContext.date_from || '').trim() || undefined
@@ -693,9 +705,8 @@ function buildFallbackResult(rawQuery: string, promptMeta: IntentAnalysisResult[
           ...(/vault|金库/i.test(rawQuery) ? { entity: metric === 'vault_list' ? 'chain' : 'vault' } : {}),
           ...((resolvedMetric === 'vault_list' || inheritedMetric === 'vault_list') ? { entity: 'chain' } : {}),
           ...(questionShape ? { question_shape: questionShape } : {}),
-          ...(resolvedMetric === 'vault_list'
-            ? { chain: normalizedChain }
-            : {}),
+          ...(normalizedChain ? { chain: normalizedChain } : {}),
+          ...(normalizedProtocol ? { protocol: normalizedProtocol } : {}),
           ...(inheritedDay ? { exact_day: inheritedDay, date_from: inheritedDay, date_to: inheritedDay } : {}),
           ...(absoluteDateRange && aggregation === 'max'
             ? { question_shape: 'top_1_in_period', return_fields: ['vault_name', 'apy_value', 'tvl_total'] }

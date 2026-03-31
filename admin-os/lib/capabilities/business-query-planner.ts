@@ -57,17 +57,52 @@ function buildGenericQueryTerms() {
   ])
 }
 
+function isGenericVaultToken(token: string): boolean {
+  const lower = token.toLowerCase()
+  if (!lower) return true
+  if (buildGenericQueryTerms().has(lower)) return true
+  if (['的', '上', '链上', 'protocol', 'chain'].includes(lower)) return true
+  if (/^(最近\d+天|近\d+天|today|current|latest|\d+d)$/i.test(lower)) return true
+  if (/^\d+$/.test(lower)) return true
+  if (/^(天|日|周|月|年)$/i.test(lower)) return true
+  return false
+}
+
+function stripGenericContextTerms(candidate: string): string {
+  const parts = String(candidate || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+  while (parts.length > 0 && isGenericVaultToken(parts[0])) {
+    parts.shift()
+  }
+  while (parts.length > 0 && isGenericVaultToken(parts[parts.length - 1])) {
+    parts.pop()
+  }
+  return parts.join(' ').trim()
+}
+
 function normalizeVaultCandidate(value: string | undefined): string | null {
   const generic = buildGenericQueryTerms()
   const candidate = String(value || '')
     .trim()
     .replace(/^(看|只看|比较|对比|查看|show|see|check)\s+/i, '')
     .replace(/\s+/g, ' ')
+  const strippedCandidate = stripGenericContextTerms(candidate)
+  if (!strippedCandidate) return null
   if (!candidate) return null
-  const lower = candidate.toLowerCase()
+  const lower = strippedCandidate.toLowerCase()
   if (generic.has(lower)) return null
-  if (/^(apy|yield|收益|回报率)\b/i.test(candidate)) return null
-  return candidate
+  if (/^(apy|yield|收益|回报率)\b/i.test(strippedCandidate)) return null
+  const normalizedTokens = lower
+    .replace(/[()]/g, ' ')
+    .split(/[\s/_-]+/)
+    .map((token) => token.trim())
+    .filter(Boolean)
+  if (normalizedTokens.length > 0 && normalizedTokens.every((token) => isGenericVaultToken(token))) {
+    return null
+  }
+  return strippedCandidate
 }
 
 export function parseCompareVaultKeywords(rawQuery: string): string[] {

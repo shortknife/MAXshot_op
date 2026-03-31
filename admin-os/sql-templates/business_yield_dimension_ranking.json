@@ -29,18 +29,32 @@
     "limit": {
       "type": "number",
       "required": true
+    },
+    "chain": {
+      "type": "string",
+      "required": false
+    },
+    "protocol": {
+      "type": "string",
+      "required": false
+    },
+    "vault_keyword": {
+      "type": "string",
+      "required": false
     }
   },
   "examples": [
     {
       "days": 7,
       "dimension": "chain",
-      "limit": 5
+      "limit": 5,
+      "protocol": "Morpho"
     },
     {
       "days": 7,
       "dimension": "protocol",
-      "limit": 3
+      "limit": 3,
+      "chain": "arbitrum"
     }
   ]
 }

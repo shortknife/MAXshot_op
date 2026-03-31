@@ -10,6 +10,9 @@ WITH scoped AS (
     END AS apy_pct
   FROM market_metrics
   WHERE created_at >= now() - ({{days}}::int * interval '1 day')
+    AND ({{chain}} IS NULL OR chain ILIKE {{chain}})
+    AND ({{protocol}} IS NULL OR protocol ILIKE {{protocol}})
+    AND ({{vault_keyword}} IS NULL OR market_name ILIKE ('%' || {{vault_keyword}} || '%'))
 )
 SELECT
   dimension_value,

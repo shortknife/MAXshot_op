@@ -16,6 +16,7 @@ import { buildChatEnvelope, previewRows } from '@/lib/chat/chat-route-helpers'
 import { mergeMemoryRefIds } from '@/lib/router/capability-catalog'
 import type { QueryContractV2 } from '@/lib/capabilities/business-query-contract-v2'
 import { buildYieldInterpretationFromContract } from '@/lib/capabilities/business-query-contract-render'
+import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
 
 function persistReadyFailureContext(params: {
   sessionId: string | null
@@ -104,6 +105,12 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
   if (primaryCapabilityId !== 'capability.data_fact_query' && !matchedCapabilityIds.includes('capability.data_fact_query')) {
     return { handled: false }
   }
+
+  const perf = createPerfTrace('chat.business_intent', buildPerfQueryMeta(rawQuery, {
+    intent_type: intentType,
+    canonical_intent_type: canonicalIntentType,
+    has_session_id: Boolean(sessionId),
+  }))
 
   const scope = String(parsed.intent.extracted_slots?.scope || 'unknown')
   const semanticIntentId = resolveBusinessIntentId(intentQuery, scope)
@@ -350,14 +357,14 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
     }
   }
 
-  const output = await businessDataQuery({
+  const output = await perf.measure('business_data_query', () => businessDataQuery({
     ...buildChatEnvelope(intentType, parsed.intent.extracted_slots || {}),
     memory_refs: memoryRefs,
     context: {
       channel: 'user_chat',
       raw_query: businessRawQuery,
     },
-  })
+  }))
 
   if (output.status !== 'success') {
     const queryContract = (output.metadata as { query_contract?: QueryContractV2 } | undefined)?.query_contract || null
@@ -486,11 +493,11 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
         (result as { metric_semantics?: string } | undefined)?.metric_semantics ||
         inferMetricSemanticsFromContract(queryContract, resolvedScope)
     ) || inferMetricSemantics(resolvedScope)
-  const narrativeEvidence = await fetchNarrativeEvidence({
+  const narrativeEvidence = await perf.measure('fetch_narrative_evidence', () => fetchNarrativeEvidence({
     mode: queryMode,
     scope: resolvedScope,
     rows: rows as Array<Record<string, unknown>>,
-  })
+  }))
   const investigateExplanation = buildInvestigateExplanation(
     resolvedScope,
     rows as Array<Record<string, unknown>>,
@@ -519,7 +526,7 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
           buildYieldDrilldownActions(rows as Array<Record<string, unknown>>, result.filters_applied || {}, vaultOptions)
         )
       : null
-  await persistBusinessSuccessPostprocess({
+  await perf.measure('persist_business_success_postprocess', () => persistBusinessSuccessPostprocess({
     sessionId,
     resolvedScope,
     queryMode,
@@ -535,8 +542,9 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
     promptMeta: parsed.prompt_meta || null,
     evidence: evidenceSources,
     queryContract,
-  })
+  }))
 
+  perf.finish({ outcome: 'success', scope: resolvedScope, row_count: rows.length, query_mode: queryMode })
   return {
     handled: true,
     body: buildBusinessSuccessResponse({

@@ -30,6 +30,7 @@ import { buildWithRetry } from '@/lib/capabilities/business-query-retry'
 import { tryFreeformSql } from '@/lib/capabilities/business-query-freeform'
 import { runBusinessQueryPipeline } from '@/lib/capabilities/business-query-pipeline'
 import { buildContractFinalizer } from '@/lib/capabilities/business-query-contract'
+import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
 
 const EXPLAIN_MAX_TOTAL_COST = Number.parseInt(process.env.SQL_EXPLAIN_MAX_TOTAL_COST || '100000', 10) || 100000
 const TRANSIENT_RETRY_ATTEMPTS = Number.parseInt(process.env.BUSINESS_QUERY_RETRY_ATTEMPTS || '2', 10) || 2
@@ -62,6 +63,14 @@ function resolveEmptyResultReason(params: {
 }
 
 export async function businessDataQuery(input: CapabilityInputEnvelope): Promise<CapabilityOutput> {
+  const perf = createPerfTrace(
+    'business.data_query',
+    buildPerfQueryMeta(String(input?.context?.raw_query || ''), {
+      execution_id: input.execution_id,
+      capability_id: input.capability_id,
+    })
+  )
+
   const {
     slots,
     scope,
@@ -73,19 +82,21 @@ export async function businessDataQuery(input: CapabilityInputEnvelope): Promise
     sourcePolicy,
     followUpPolicy,
     queryContract,
-  } = assembleBusinessQueryContext(input)
-  const inputContract = validateDataQueryInputContract({
-    input,
-    scope,
-    rawQuery,
-  })
+  } = await perf.measure('assemble_business_query_context', () => Promise.resolve(assembleBusinessQueryContext(input)))
+  const inputContract = await perf.measure(
+    'validate_input_contract',
+    () => Promise.resolve(validateDataQueryInputContract({ input, scope, rawQuery }))
+  )
   const finalizeOutput = buildContractFinalizer(inputContract)
 
   if (scope === 'unknown') {
     if (FREEFORM_SQL_ENABLED) {
-      const freeform = await tryFreeformSql({ rawQuery, withRetry, explainMaxTotalCost: EXPLAIN_MAX_TOTAL_COST })
+      const freeform = await perf.measure(
+        'try_freeform_sql',
+        () => tryFreeformSql({ rawQuery, withRetry, explainMaxTotalCost: EXPLAIN_MAX_TOTAL_COST })
+      )
       if (freeform && freeform.rows.length) {
-        return finalizeOutput(
+        const output = finalizeOutput(
           buildFreeformSuccessOutput({
             freeform,
             filters,
@@ -96,50 +107,62 @@ export async function businessDataQuery(input: CapabilityInputEnvelope): Promise
             followUpPolicy,
           })
         )
+        perf.finish({ scope, source_id: 'freeform_sql', row_count: freeform.rows.length, scoped_row_count: freeform.rows.length })
+        return output
       }
     }
-    return finalizeOutput(buildFailureOutput('out_of_business_scope', scope, queryContract))
+    const output = finalizeOutput(buildFailureOutput('out_of_business_scope', scope, queryContract))
+    perf.finish({ scope, source_id: null, row_count: 0, scoped_row_count: 0, outcome: 'out_of_business_scope' })
+    return output
   }
 
-  const query = await resolveQueryByScope({
-    scope,
-    rawQuery,
-    slots,
-    queryContract,
-    resolveVault,
-    resolveExecution,
-    resolveMetrics,
-    resolveRebalance,
-    extractExecutionId,
-  })
+  const query = await perf.measure(
+    'resolve_query_by_scope',
+    () => resolveQueryByScope({
+      scope,
+      rawQuery,
+      slots,
+      queryContract,
+      resolveVault,
+      resolveExecution,
+      resolveMetrics,
+      resolveRebalance,
+      extractExecutionId,
+    })
+  )
 
   if (!query) {
-    return finalizeOutput(buildFailureOutput('source_not_connected', scope, queryContract))
+    const output = finalizeOutput(buildFailureOutput('source_not_connected', scope, queryContract))
+    perf.finish({ scope, source_id: null, row_count: 0, scoped_row_count: 0, outcome: 'source_not_connected' })
+    return output
   }
   if (!query.rows.length) {
-    return finalizeOutput(buildFailureOutput(resolveEmptyResultReason({
+    const reason = resolveEmptyResultReason({
       scope,
       filters,
       querySourceId: query.source_id,
       slots,
-    }), scope, queryContract))
+    })
+    const output = finalizeOutput(buildFailureOutput(reason, scope, queryContract))
+    perf.finish({ scope, source_id: query.source_id, row_count: 0, scoped_row_count: 0, outcome: reason })
+    return output
   }
 
-  const pipeline = runBusinessQueryPipeline({
-    query,
-    filters,
-    rawQuery,
-    queryContract,
-    wantsSingleExecution,
-  })
+  const pipeline = await perf.measure(
+    'run_business_query_pipeline',
+    () => Promise.resolve(runBusinessQueryPipeline({ query, filters, rawQuery, queryContract, wantsSingleExecution }))
+  )
 
   if (!pipeline) {
-    return finalizeOutput(buildFailureOutput(resolveEmptyResultReason({
+    const reason = resolveEmptyResultReason({
       scope,
       filters,
       querySourceId: query.source_id,
       slots,
-    }), scope, queryContract))
+    })
+    const output = finalizeOutput(buildFailureOutput(reason, scope, queryContract))
+    perf.finish({ scope, source_id: query.source_id, row_count: query.rows.length, scoped_row_count: 0, outcome: reason })
+    return output
   }
 
   const {
@@ -152,7 +175,7 @@ export async function businessDataQuery(input: CapabilityInputEnvelope): Promise
     qualityAlert,
   } = pipeline
 
-  return finalizeOutput(
+  const output = finalizeOutput(
     buildSuccessOutput({
       query,
       summaryWithFilter,
@@ -171,4 +194,6 @@ export async function businessDataQuery(input: CapabilityInputEnvelope): Promise
       followUpPolicy,
     })
   )
+  perf.finish({ scope, source_id: query.source_id, row_count: query.rows.length, scoped_row_count: scopedRows.length, outcome: 'success' })
+  return output
 }
