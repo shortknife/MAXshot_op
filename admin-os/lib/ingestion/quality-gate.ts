@@ -36,8 +36,14 @@ function validateMarketRow(findings: GateFinding[], row: CanonicalMarketRow, ind
 }
 
 function validateAllocationRow(findings: GateFinding[], row: CanonicalAllocationRow, index: number): void {
+  const market = trimmed(row.market);
+  const protocol = trimmed(row.protocolName);
+  const isIdleLiquidityRow = market === 'Idle Liquidity' && protocol.length === 0;
+
   validateRequiredString(findings, 'missing_allocation_chain', `allocationData[${index}].chain`, row.chain);
-  validateRequiredString(findings, 'missing_allocation_protocol', `allocationData[${index}].protocolName`, row.protocolName);
+  if (!isIdleLiquidityRow) {
+    validateRequiredString(findings, 'missing_allocation_protocol', `allocationData[${index}].protocolName`, row.protocolName);
+  }
   validateRequiredString(findings, 'missing_allocation_market', `allocationData[${index}].market`, row.market);
   validateRequiredString(findings, 'missing_allocation_asset', `allocationData[${index}].asset`, row.asset);
 }

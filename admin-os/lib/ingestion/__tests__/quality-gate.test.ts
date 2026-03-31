@@ -50,4 +50,17 @@ describe('evaluateQualityGate', () => {
     expect(decision.outcome).toBe('quarantined');
     expect(decision.findings.some((f) => f.code === 'missing_vault_name')).toBe(true);
   });
+
+  it('accepts idle liquidity allocation rows without protocolName', () => {
+    const decision = evaluateQualityGate(
+      buildPayload({
+        allocationData: [
+          { chain: 'ethereum', protocolName: 'Morpho', market: 'Maxshot USDC V2', asset: 'USDC', totalAllocated: 100 },
+          { chain: 'ethereum', protocolName: '', market: 'Idle Liquidity', asset: 'USDC', idleLiquidity: 3.14, totalAllocated: 0 },
+        ],
+      }),
+    );
+    expect(decision.outcome).toBe('accepted');
+    expect(decision.findings.some((f) => f.code === 'missing_allocation_protocol')).toBe(false);
+  });
 });
