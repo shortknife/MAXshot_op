@@ -1,22 +1,27 @@
 import { supabase } from '@/lib/supabase'
 
 type RpcArgs = Record<string, unknown>
+const CANONICAL_EXECUTIONS_VIEW = 'executions_canonical_v1'
+
+function resolveBusinessTable(table: string): string {
+  return table === 'executions' ? CANONICAL_EXECUTIONS_VIEW : table
+}
 
 export async function businessRpc(name: string, args?: RpcArgs) {
   return supabase.rpc(name, args || {})
 }
 
 export async function businessSelect(table: string, limit: number) {
-  return supabase.from(table).select('*').limit(limit)
+  return supabase.from(resolveBusinessTable(table)).select('*').limit(limit)
 }
 
 export async function businessSelectLatestByCreatedAt(table: string, limit: number) {
-  return supabase.from(table).select('*').order('created_at', { ascending: false }).limit(limit)
+  return supabase.from(resolveBusinessTable(table)).select('*').order('created_at', { ascending: false }).limit(limit)
 }
 
 export async function businessSelectLatestByFreshness(table: string, limit: number) {
   return supabase
-    .from(table)
+    .from(resolveBusinessTable(table))
     .select('*')
     .order('updated_at', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false, nullsFirst: false })
@@ -24,9 +29,9 @@ export async function businessSelectLatestByFreshness(table: string, limit: numb
 }
 
 export async function findExecutionByExecutionIdOrId(executionId: string) {
-  const byId = await supabase.from('executions').select('*').eq('id', executionId).limit(1)
+  const byId = await supabase.from(CANONICAL_EXECUTIONS_VIEW).select('*').eq('id', executionId).limit(1)
   if ((byId.data || []).length > 0 || byId.error) return byId
-  return supabase.from('executions').select('*').eq('n8n_execution_id', executionId).limit(1)
+  return supabase.from(CANONICAL_EXECUTIONS_VIEW).select('*').eq('n8n_execution_id', executionId).limit(1)
 }
 
 export async function findAllocationExecutionIdsByVaultKeyword(keyword: string) {
