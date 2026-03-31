@@ -1,0 +1,30 @@
+{
+  "id": "recent_failures",
+  "name": "Recent Failures",
+  "description": "List recent failed executions.",
+  "category": "ops",
+  "version": "1.0",
+  "allowed_tables": [
+    "task_executions_op"
+  ],
+  "output_schema": {
+    "execution_id": "text",
+    "intent_name": "text",
+    "requester_id": "text",
+    "created_at": "timestamptz"
+  },
+  "slots": {
+    "limit": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "examples": [
+    {
+      "limit": 5
+    },
+    {
+      "limit": 20
+    }
+  ]
+}

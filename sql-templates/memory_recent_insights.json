@@ -1,0 +1,30 @@
+{
+  "id": "memory_recent_insights",
+  "name": "Recent Insight Memories",
+  "description": "Fetch recent insight memories from agent_memories_op.",
+  "category": "memory",
+  "version": "1.0",
+  "allowed_tables": [
+    "agent_memories_op"
+  ],
+  "output_schema": {
+    "id": "uuid",
+    "content": "text",
+    "weight": "numeric",
+    "created_at": "timestamptz"
+  },
+  "slots": {
+    "limit": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "examples": [
+    {
+      "limit": 5
+    },
+    {
+      "limit": 20
+    }
+  ]
+}

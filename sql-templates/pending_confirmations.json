@@ -1,0 +1,36 @@
+{
+  "id": "pending_confirmations",
+  "name": "Pending Confirmations",
+  "description": "List pending confirmations with paging.",
+  "category": "ops",
+  "version": "1.0",
+  "allowed_tables": [
+    "task_executions_op"
+  ],
+  "output_schema": {
+    "execution_id": "text",
+    "intent_name": "text",
+    "requester_id": "text",
+    "created_at": "timestamptz"
+  },
+  "slots": {
+    "limit": {
+      "type": "number",
+      "required": true
+    },
+    "offset": {
+      "type": "number",
+      "required": true
+    }
+  },
+  "examples": [
+    {
+      "limit": 10,
+      "offset": 0
+    },
+    {
+      "limit": 10,
+      "offset": 10
+    }
+  ]
+}
