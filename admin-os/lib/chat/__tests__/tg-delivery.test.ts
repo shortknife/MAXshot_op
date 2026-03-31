@@ -20,4 +20,20 @@ describe('Step9 TG delivery reply', () => {
     expect(text).toContain('继续问 TVL')
     expect(text).not.toContain('旧 summary')
   })
+
+  it('includes marketing draft body in Telegram reply', () => {
+    const text = toTelegramReply({
+      success: true,
+      delivery_envelope: {
+        type: 'marketing',
+        summary: '已生成草稿，你可以继续改写语气或缩短长度。',
+        draft: '这里是草稿正文',
+        meta: { next_actions: ['点击缩短'] },
+      },
+    })
+
+    expect(text).toContain('已生成草稿')
+    expect(text).toContain('这里是草稿正文')
+    expect(text).toContain('点击缩短')
+  })
 })

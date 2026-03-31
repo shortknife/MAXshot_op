@@ -104,12 +104,12 @@ async function run() {
     const { data } = await post('/api/intent/analyze', { raw_query: 'MAXshot 的 Vault 做什么用？' })
     check(
       'api-08b product doc-like query returns canonical field',
-      data?.success === true && typeof data?.intent?.extracted_slots?.intent_type_canonical === 'string'
+      data?.success === true && typeof data?.step3?.slots?.intent_type_canonical === 'string'
     )
     check(
       'api-08ba product doc-like query returns matched capability',
-      Array.isArray(data?.intent?.extracted_slots?.matched_capability_ids) &&
-        data.intent.extracted_slots.matched_capability_ids.includes('capability.product_doc_qna')
+      Array.isArray(data?.step3?.matched_capability_ids) &&
+        data.step3.matched_capability_ids.includes('capability.product_doc_qna')
     )
   }
   {
@@ -124,8 +124,8 @@ async function run() {
     check(
       'api-08c small talk maps to out of scope',
       data?.success === true &&
-        data?.intent?.type === 'out_of_scope' &&
-        String(data?.intent?.extracted_slots?.intent_type_canonical || '') === 'out_of_scope'
+        data?.step3?.intent_type === 'out_of_scope' &&
+        String(data?.step3?.slots?.intent_type_canonical || '') === 'out_of_scope'
     )
   }
   {
@@ -133,13 +133,13 @@ async function run() {
     check(
       'api-08d ops summary keeps canonical ops mapping',
       data?.success === true &&
-        data?.intent?.type === 'ops_summary' &&
-        String(data?.intent?.extracted_slots?.intent_type_canonical || '') === 'ops_query'
+        data?.step3?.intent_type === 'business_query' &&
+        String(data?.step3?.slots?.intent_type_canonical || '') === 'ops_query'
     )
     check(
       'api-08da ops summary returns matched capability',
-      Array.isArray(data?.intent?.extracted_slots?.matched_capability_ids) &&
-        data.intent.extracted_slots.matched_capability_ids.includes('capability.data_fact_query')
+      Array.isArray(data?.step3?.matched_capability_ids) &&
+        data.step3.matched_capability_ids.includes('capability.data_fact_query')
     )
   }
   {

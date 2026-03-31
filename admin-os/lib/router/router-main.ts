@@ -129,6 +129,7 @@ export async function executeRouter(executionId: string) {
   const fsdStepStatus = 'executing'
 
   try {
+    logger.clear(executionId)
     logger.log('router_start', { execution_id: executionId, status: 'confirmed' })
 
     const execution = await getExecutionById(executionId)
@@ -350,6 +351,14 @@ export async function executeRouter(executionId: string) {
       error: success ? undefined : 'One or more capabilities failed',
     }
 
+    logger.log('router_complete', {
+      execution_id: executionId,
+      status: success ? 'completed' : 'failed',
+      success,
+      final_answer: finalAnswer,
+      step_status: success ? 'completed' : 'failed',
+    })
+
     await updateExecutionStatus(
       executionId,
       success ? ExecutionStatus.COMPLETED : ExecutionStatus.FAILED,
@@ -357,13 +366,6 @@ export async function executeRouter(executionId: string) {
     )
 
     await logger.flush(executionId)
-
-    logger.log('router_complete', {
-      execution_id: executionId,
-      status: success ? 'completed' : 'failed',
-      success,
-      final_answer: finalAnswer,
-    })
 
     return result
   } catch (error) {

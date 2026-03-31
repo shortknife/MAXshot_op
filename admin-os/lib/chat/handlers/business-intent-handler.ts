@@ -112,10 +112,30 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
     .map((ref) => String((ref as { id?: string } | null)?.id || '').trim())
     .filter(Boolean)
   const memoryRefsRef = mergeMemoryRefIds(semanticMemoryRefsRef, matchedCapabilityIds)
-  if (modelNeedClarification && !modelClarificationExhausted) {
-    const requiredSlots = Array.isArray(parsed.intent.extracted_slots?.required_slots)
+  const suppressModelClarification = scope === 'yield' && isOverallPerformanceQuery(intentQuery)
+  if (modelNeedClarification && !modelClarificationExhausted && !suppressModelClarification) {
+    registerClarificationTurn({ sessionId, rawQuery: intentQuery, previousTurns })
+    let requiredSlots = Array.isArray(parsed.intent.extracted_slots?.required_slots)
       ? (parsed.intent.extracted_slots?.required_slots as unknown[]).map((value) => String(value)).filter(Boolean)
       : []
+    let options = Array.isArray(parsed.intent.extracted_slots?.clarification_options)
+      ? (parsed.intent.extracted_slots?.clarification_options as unknown[]).map((value) => String(value)).filter(Boolean)
+      : []
+    if (scope === 'yield') {
+      const vaultOptions = await fetchVaultOptions()
+      const derivedClarification = resolveYieldClarification({
+        intentQuery,
+        previousTurns,
+        vaultOptions,
+        extractedSlots: parsed.intent.extracted_slots as Record<string, unknown> | undefined,
+      })
+      if (requiredSlots.length === 0 && derivedClarification.requiredSlots.length > 0) {
+        requiredSlots = derivedClarification.requiredSlots
+      }
+      if (options.length === 0 && derivedClarification.nextActions.length > 0) {
+        options = derivedClarification.nextActions
+      }
+    }
     return {
       handled: true,
       body: buildModelClarificationBusinessResponse({
@@ -125,9 +145,7 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
         matchedCapabilityIds,
         promptMeta: parsed.prompt_meta || null,
         question: String(parsed.intent.extracted_slots?.clarification_question || '请先指定一个主目标。'),
-        options: Array.isArray(parsed.intent.extracted_slots?.clarification_options)
-          ? (parsed.intent.extracted_slots?.clarification_options as unknown[]).map((value) => String(value)).filter(Boolean)
-          : [],
+        options,
         requiredSlots,
         turns: previousTurns + 1,
         maxTurns: maxClarificationTurns,
@@ -443,7 +461,10 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
         : rowsRaw
   const rows = constrainedRows.length > 0 ? constrainedRows : rowsRaw
   const preview = previewRows(rows, 5)
-  const queryMode = queryContract?.query_mode || inferQueryMode(intentQuery, resolvedScope)
+  const queryMode =
+    resolvedScope === 'yield' && isOverallPerformanceQuery(intentQuery)
+      ? 'metrics'
+      : queryContract?.query_mode || inferQueryMode(intentQuery, resolvedScope)
   const interpretation =
     buildYieldInterpretationFromContract(queryContract) ||
     (() => {

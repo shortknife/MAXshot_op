@@ -146,6 +146,13 @@ describe('Step 3 intent harness', () => {
     expect(result.intent.extracted_slots?.need_clarification).toBe(false)
   })
 
+  it('keeps generic product theory out of scope unless MAXshot is explicit', async () => {
+    const result = await parseIntent('这个产品的核心原理是什么？')
+    expect(result.intent.type).toBe('out_of_scope')
+    expect(result.intent.extracted_slots?.matched_capability_ids).toEqual([])
+    expect(result.intent.extracted_slots?.in_scope).toBe(false)
+  })
+
   it('does not mark composite avg-plus-extremes query as ready semantics', async () => {
     const result = await parseIntent('3月份的APY均值是多少？最高和最低分别是多少？')
     expect(result.intent.type).toBe('business_query')

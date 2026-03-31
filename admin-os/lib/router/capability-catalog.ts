@@ -117,6 +117,18 @@ export function inferLegacyIntentTypeFromCapabilityIds(capabilityIds: unknown[])
   return 'out_of_scope'
 }
 
+export function inferPrimaryCapabilityIdFromIntentName(intentName: unknown): string | null {
+  const normalized = String(intentName || '').trim()
+  if (!normalized) return null
+  if (normalized === 'business_query') return 'capability.data_fact_query'
+  if (normalized === 'general_qna' || normalized === 'documentation' || normalized === 'product_qna') {
+    return 'capability.product_doc_qna'
+  }
+  if (normalized === 'content_brief') return 'capability.content_generator'
+  if (normalized === 'marketing_gen') return 'capability.context_assembler'
+  return null
+}
+
 export function inferScopeFromCapabilityIds(capabilityIds: unknown[]): string | null {
   const primary = getPrimaryCapabilityId(capabilityIds)
   if (primary === 'capability.data_fact_query') return 'unknown'

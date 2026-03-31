@@ -108,6 +108,36 @@ export async function GET(request: Request) {
       }
     }
 
+    if (businessTotal === 0) {
+      for (const row of rows) {
+        const events = (row.audit_log?.events || []) as Array<{ event_type?: string; data?: Record<string, unknown> }>
+        let rowHasBusinessSignal = false
+        for (const rawEvent of events) {
+          const ev = normalizeAuditEvent(
+            {
+              event_type: String(rawEvent?.event_type || 'unknown_event'),
+              data: rawEvent?.data || {},
+            },
+            row.execution_id
+          )
+          const eventType = String(ev?.event_type || '')
+          const eventData = (ev?.data || {}) as Record<string, unknown>
+          const isBusiness =
+            String(eventData.data_plane || '').toLowerCase() === 'business' ||
+            eventType.startsWith('business_')
+          if (!isBusiness) continue
+          rowHasBusinessSignal = true
+          const qType = String(eventData.scope || eventData.question_type || 'business_query')
+          businessQuestionCounts[qType] = (businessQuestionCounts[qType] || 0) + 1
+          const err = String(eventData.reason || eventData.error || '')
+          if (err) {
+            businessErrorCounts[err] = (businessErrorCounts[err] || 0) + 1
+          }
+        }
+        if (rowHasBusinessSignal) businessTotal += 1
+      }
+    }
+
     return NextResponse.json({
       success: true,
       total,

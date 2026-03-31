@@ -4,7 +4,7 @@ import { normalizeAuditEvent } from './audit-event'
 
 export class AuditLogger {
   private static instance: AuditLogger
-  private events: AuditEvent[] = []
+  private eventsByExecution = new Map<string, AuditEvent[]>()
 
   private constructor() {}
 
@@ -16,16 +16,23 @@ export class AuditLogger {
   }
 
   log(event_type: string, data: Record<string, unknown>) {
+    const executionId = String(data?.execution_id || '').trim()
     const event: AuditEvent = {
       timestamp: new Date().toISOString(),
       event_type,
       data,
     }
-    this.events.push(event)
+    if (!executionId) {
+      return
+    }
+    const current = this.eventsByExecution.get(executionId) || []
+    current.push(event)
+    this.eventsByExecution.set(executionId, current)
   }
 
   async flush(execution_id: string): Promise<void> {
-    if (this.events.length === 0) {
+    const pendingEvents = this.eventsByExecution.get(execution_id) || []
+    if (pendingEvents.length === 0) {
       return
     }
 
@@ -45,7 +52,7 @@ export class AuditLogger {
       created_at: new Date().toISOString(),
     }
 
-    const normalizedEvents = this.events.map((event) =>
+    const normalizedEvents = pendingEvents.map((event) =>
       normalizeAuditEvent(
         {
           ...event,
@@ -66,16 +73,24 @@ export class AuditLogger {
       created_at: existingLog.created_at || new Date().toISOString(),
     }
 
-    await supabase
+    const { error: updateError } = await supabase
       .from('task_executions_op')
       .update({ audit_log: auditLog })
       .eq('execution_id', execution_id)
 
-    this.events = []
+    if (updateError) {
+      throw new Error(`Failed to update audit_log: ${updateError.message}`)
+    }
+
+    this.eventsByExecution.delete(execution_id)
   }
 
-  clear() {
-    this.events = []
+  clear(execution_id?: string) {
+    if (execution_id) {
+      this.eventsByExecution.delete(execution_id)
+      return
+    }
+    this.eventsByExecution.clear()
   }
 }
 

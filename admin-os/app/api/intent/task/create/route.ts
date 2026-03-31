@@ -7,6 +7,7 @@ import { assertSealable, buildSealedExecutionEnvelope, normalizeSealerGate } fro
 import {
   getCapabilityDefinition,
   getPrimaryCapabilityId,
+  inferPrimaryCapabilityIdFromIntentName,
   inferLegacyIntentTypeFromCapabilityIds,
   MAX_MATCHED_CAPABILITIES,
   normalizeCapabilityCandidates,
@@ -99,19 +100,22 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const finalMatchedCapabilityIds = resolveCapabilityIds(
-      requestedCapabilityCandidates,
-      MAX_MATCHED_CAPABILITIES
-    )
-    const primaryCapabilityId =
-      getPrimaryCapabilityId(finalMatchedCapabilityIds) ||
-      (capability_binding?.capability_id ? String(capability_binding.capability_id) : null)
-    const primaryCapability = primaryCapabilityId ? getCapabilityDefinition(primaryCapabilityId) : null
     const finalIntent =
       intent_name ||
       payload?.intent ||
       payload?.extracted_slots?.intent ||
-      inferLegacyIntentTypeFromCapabilityIds(finalMatchedCapabilityIds);
+      inferLegacyIntentTypeFromCapabilityIds(requestedCapabilityCandidates);
+    const inferredPrimaryCapabilityId =
+      inferPrimaryCapabilityIdFromIntentName(finalIntent) ||
+      (capability_binding?.capability_id ? String(capability_binding.capability_id) : null)
+    const finalMatchedCapabilityIds = resolveCapabilityIds(
+      [...requestedCapabilityCandidates, inferredPrimaryCapabilityId],
+      MAX_MATCHED_CAPABILITIES
+    )
+    const primaryCapabilityId =
+      getPrimaryCapabilityId([inferredPrimaryCapabilityId, ...finalMatchedCapabilityIds]) ||
+      inferredPrimaryCapabilityId
+    const primaryCapability = primaryCapabilityId ? getCapabilityDefinition(primaryCapabilityId) : null
     const finalSlots = payload?.slots || payload?.extracted_slots || {};
 
     const sealability = assertSealable({

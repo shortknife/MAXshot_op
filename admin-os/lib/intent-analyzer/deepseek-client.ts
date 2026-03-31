@@ -95,6 +95,35 @@ function isCapabilityOverviewQuery(raw: string) {
   )
 }
 
+function isOpsSummaryQuery(raw: string) {
+  const normalized = normalize(raw)
+  return (
+    /\bops\s+summary\b/.test(normalized) ||
+    normalized.includes('执行状态汇总') ||
+    normalized.includes('最近执行状态汇总') ||
+    (normalized.includes('状态汇总') && (normalized.includes('执行') || normalized.includes('ops')))
+  )
+}
+
+function isCurrentApyClarificationQuery(raw: string) {
+  const normalized = normalize(raw)
+  return (
+    /(当前|现在)/.test(normalized) &&
+    /(apy|收益|yield)/.test(normalized) &&
+    !/(实时|最新|real-time|realtime|latest)/.test(normalized)
+  )
+}
+
+function isGenericProductTheoryQuery(raw: string) {
+  const normalized = normalize(raw)
+  return (
+    /(这个产品|该产品|这款产品)/.test(normalized) &&
+    /(原理|核心原理|底层原理|理论|机制)/.test(normalized) &&
+    !/maxshot/.test(normalized) &&
+    !looksLikeMaxshotDomainQuestion(raw)
+  )
+}
+
 function isExplicitMetricAsk(raw: string) {
   const normalized = normalize(raw)
   return (
@@ -419,6 +448,7 @@ function buildPromptMeta(promptResolved: Awaited<ReturnType<typeof getPromptBySl
 
 function buildFallbackResult(rawQuery: string, promptMeta: IntentAnalysisResult['prompt_meta'], sessionContext?: string): IntentAnalysisResult {
   const normalized = normalize(rawQuery)
+  const isGenericProductTheory = isGenericProductTheoryQuery(rawQuery)
   const sessionSnapshot = parseSessionContextSnapshot(sessionContext)
   const activeContext = sessionSnapshot.activeContext
   const normalizedChainAlias = normalizeChainAlias(rawQuery)
@@ -506,6 +536,27 @@ function buildFallbackResult(rawQuery: string, promptMeta: IntentAnalysisResult[
     }
   }
 
+  if (isGenericProductTheory) {
+    return {
+      intent: {
+        type: 'out_of_scope',
+        extracted_slots: {
+          in_scope: false,
+          reason: 'non_business_query',
+          need_clarification: false,
+          clarification_question: '',
+          clarification_options: [],
+          matched_capability_ids: [],
+          matched_capability_id: null,
+        },
+        confidence: 0.8,
+      },
+      raw_query: rawQuery,
+      tokens_used: 0,
+      prompt_meta: promptMeta,
+    }
+  }
+
   if (isCapabilityOverviewQuery(rawQuery)) {
     return {
       intent: {
@@ -521,6 +572,78 @@ function buildFallbackResult(rawQuery: string, promptMeta: IntentAnalysisResult[
           matched_capability_id: 'capability.product_doc_qna',
         },
         confidence: 0.72,
+      },
+      raw_query: rawQuery,
+      tokens_used: 0,
+      prompt_meta: promptMeta,
+    }
+  }
+
+  if (isOverallPerformanceBusinessQuery(rawQuery)) {
+    return {
+      intent: {
+        type: 'business_query',
+        extracted_slots: {
+          in_scope: true,
+          need_clarification: false,
+          clarification_question: '',
+          clarification_options: [],
+          scope: 'yield',
+          metric: 'apy',
+          aggregation: 'avg',
+          metric_agg: 'avg',
+          time_window_days: 7,
+          question_shape: 'window_summary',
+          matched_capability_ids: ['capability.data_fact_query'],
+          matched_capability_id: 'capability.data_fact_query',
+        },
+        confidence: 0.8,
+      },
+      raw_query: rawQuery,
+      tokens_used: 0,
+      prompt_meta: promptMeta,
+    }
+  }
+
+  if (isCurrentApyClarificationQuery(rawQuery)) {
+    return {
+      intent: {
+        type: 'business_query',
+        extracted_slots: {
+          in_scope: true,
+          need_clarification: true,
+          clarification_question: '你希望看哪个时间范围？',
+          clarification_options: ['最近7天', '最近30天', '今天（Asia/Shanghai）'],
+          required_slots: ['time_window', 'metric_agg'],
+          scope: 'yield',
+          metric: 'apy',
+          entity: /vault|金库/i.test(rawQuery) ? 'vault' : null,
+          matched_capability_ids: ['capability.data_fact_query'],
+          matched_capability_id: 'capability.data_fact_query',
+        },
+        confidence: 0.78,
+      },
+      raw_query: rawQuery,
+      tokens_used: 0,
+      prompt_meta: promptMeta,
+    }
+  }
+
+  if (isOpsSummaryQuery(rawQuery)) {
+    return {
+      intent: {
+        type: 'business_query',
+        extracted_slots: {
+          in_scope: true,
+          need_clarification: false,
+          clarification_question: '',
+          clarification_options: [],
+          scope: 'execution',
+          question_shape: 'summary',
+          matched_capability_ids: ['capability.data_fact_query'],
+          matched_capability_id: 'capability.data_fact_query',
+        },
+        confidence: 0.78,
       },
       raw_query: rawQuery,
       tokens_used: 0,
@@ -1027,6 +1150,45 @@ export async function callDeepSeek(rawQuery: string, sessionContext?: string): P
     inScope = false
   }
 
+  if (isGenericProductTheoryQuery(rawQuery)) {
+    matchedCapabilityIds = []
+    intentType = 'out_of_scope'
+    inScope = false
+    needClarification = false
+  }
+
+  if (isOpsSummaryQuery(rawQuery)) {
+    matchedCapabilityIds = ['capability.data_fact_query']
+    intentType = 'business_query'
+    inScope = true
+    needClarification = false
+    slots = {
+      scope: 'execution',
+      question_shape: 'summary',
+      ...slots,
+    }
+  }
+
+  if (isCurrentApyClarificationQuery(rawQuery)) {
+    matchedCapabilityIds = ['capability.data_fact_query']
+    intentType = 'business_query'
+    inScope = true
+    needClarification = true
+    slots = {
+      scope: 'yield',
+      metric: 'apy',
+      entity: /vault|金库/i.test(rawQuery) ? 'vault' : slots.entity,
+      required_slots: ['time_window', 'metric_agg'],
+      clarification_question: '你希望看哪个时间范围？',
+      clarification_options: ['最近7天', '最近30天', '今天（Asia/Shanghai）'],
+      ...slots,
+    }
+    delete (slots as Record<string, unknown>).aggregation
+    delete (slots as Record<string, unknown>).metric_agg
+    delete (slots as Record<string, unknown>).question_shape
+    delete (slots as Record<string, unknown>).return_fields
+  }
+
   if (llmOutput.matched === false) {
     matchedCapabilityIds = []
     inScope = false
@@ -1050,14 +1212,21 @@ export async function callDeepSeek(rawQuery: string, sessionContext?: string): P
     inScope = true
   }
 
-  if (intentType === 'metric_query' && /(整体表现|总体表现|整体情况|表现如何|overall performance|health)/i.test(rawQuery)) {
+  if (isOverallPerformanceBusinessQuery(rawQuery)) {
     intentType = 'business_query'
     inScope = true
     needClarification = false
+    matchedCapabilityIds = ['capability.data_fact_query']
     slots = {
       ...slots,
       scope: 'yield',
+      metric: 'apy',
+      aggregation: 'avg',
+      metric_agg: 'avg',
+      time_window_days: 7,
+      question_shape: 'window_summary',
     }
+    delete (slots as Record<string, unknown>).return_fields
   }
 
   if (intentType === 'general_qna' && isSmallTalkQuery(rawQuery)) {

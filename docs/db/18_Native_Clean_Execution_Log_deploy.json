@@ -1,0 +1,619 @@
+{
+  "name": "18_Native_Clean_Execution_Log_deploy",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 18_Native_Clean_Execution_Log - Native执行日志清洗与RAG构建工作流\n\n**功能**: 清洗Native工作流的执行日志，提取关键业务事件，生成结构化叙述，并构建RAG知识库。\n\n**触发**: Manual Trigger / Webhook (POST)\n\n**核心流程**:\n1. **数据接入**: 从API或URL获取执行日志数据\n2. **数据清洗**: 清洗冗余字段，保留关键业务数据\n3. **RPC处理**: 调用Supabase RPC函数批量写入数据库\n4. **RAG构建**: 构建RAG文档并存储到向量库\n\n**关键特性**:\n- 使用RPC函数统一处理多表写入，简化工作流\n- 生成结构化叙述用于RAG检索\n- 使用LangChain Vector Store节点存储RAG文档\n\n**数据表**:\n- `execution_logs` ← RPC函数写入\n- `execution_logs_rag` (向量库) ← 存储RAG文档\n\n**修复记录**:\n- 2025-01-30: 修复Step13_ExtractExecutionID节点（UUID提取逻辑）\n- 2025-01-30: 修复Step14_BuildRAGDocument节点（使用UUID，修复Market Details数据清洗）\n- 2025-01-30: 添加资产引用标注，完善错误处理，添加alwaysOutputData配置\n- 2025-01-30: v4 优化 - 升级 RPC v4，新增 is_blocked 和 threshold_details 字段，Metadata 瘦身为 9 维标签，扩展事件驱动 RAG 写入",
+        "height": 1984,
+        "width": 4608,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "9c759d6a-9b3f-4ea0-8e8f-e4236fc7222b",
+      "name": "Workflow Description"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 读取已提取的 JSON 数据\nconst inputData = $input.first().json;\nlet logData;\n\n// 处理提取的数据\nif (inputData.data) {\n  try {\n    logData = typeof inputData.data === 'string' ? JSON.parse(inputData.data) : inputData.data;\n  } catch (e) {\n    logData = inputData;\n  }\n} else {\n  logData = inputData;\n}\n\n// 递归收集所有字段路径\nfunction collectFields(obj, prefix = '', fields = [], maxDepth = 5, currentDepth = 0) {\n  if (currentDepth >= maxDepth) return fields;\n  \n  for (const key in obj) {\n    if (obj.hasOwnProperty(key)) {\n      const fullPath = prefix ? `${prefix}.${key}` : key;\n      const value = obj[key];\n      \n      if (value === null || value === undefined) {\n        fields.push({ path: fullPath, type: 'null', sample: null });\n      } else if (Array.isArray(value)) {\n        fields.push({ path: fullPath, type: 'array', length: value.length });\n        if (value.length > 0 && typeof value[0] === 'object' && value[0] !== null && currentDepth < maxDepth - 1) {\n          collectFields(value[0], `${fullPath}[0]`, fields, maxDepth, currentDepth + 1);\n        }\n      } else if (typeof value === 'object') {\n        fields.push({ path: fullPath, type: 'object', keys: Object.keys(value).slice(0, 5) });\n        collectFields(value, fullPath, fields, maxDepth, currentDepth + 1);\n      } else {\n        const sample = typeof value === 'string' && value.length > 50 ? value.substring(0, 50) + '...' : value;\n        fields.push({ path: fullPath, type: typeof value, sample: sample });\n      }\n    }\n  }\n  return fields;\n}\n\n// 收集所有字段\nconst allFields = collectFields(logData);\n\n// 标记需要清洗的字段（根据之前的分析）\nconst fieldsToClean = [\n  'Readable date',\n  'Readable time',\n  'Day of week',\n  'Year',\n  'Month',\n  'Day of month',\n  'Hour',\n  'Minute',\n  'Second'\n];\n\n// 生成字段清单\nconst fieldList = allFields.map(field => {\n  const fieldName = field.path.split('.').pop() || field.path;\n  const shouldClean = fieldsToClean.some(cleanField => fieldName === cleanField || field.path.includes(cleanField));\n  return {\n    path: field.path,\n    type: field.type,\n    should_clean: shouldClean,\n    sample: field.sample,\n    recommendation: shouldClean ? '清洗' : '保留'\n  };\n});\n\n// 保存解析后的数据\nreturn [{\n  json: {\n    execution_id: logData.data?.id || '',\n    total_fields: allFields.length,\n    fields_to_clean: fieldList.filter(f => f.should_clean).length,\n    field_list: fieldList.slice(0, 200), // 限制输出数量\n    original_data: logData, // 保留原始数据用于后续清洗\n    parsed_data: logData // 便于后续节点使用\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "alwaysOutputData": true,
+      "position": [
+        2032,
+        608
+      ],
+      "id": "ef3c1d7c-2583-4cf0-9bc0-06b3a2d94540",
+      "name": "Step8_AnalyzeDataStructure"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 准备主执行记录数据\nconst cleaned = $input.first().json;\nconst data = cleaned.data || {};\nconst meta = cleaned._cleaned_meta || {};\n\n// 计算执行时长\nlet durationMs = null;\nif (data.startedAt && data.stoppedAt) {\n  durationMs = new Date(data.stoppedAt) - new Date(data.startedAt);\n}\n\n// 保存 execution_logs 的 created_at，供子表使用（时间戳一致性优化）\nconst executionLogCreatedAt = data.createdAt || new Date().toISOString();\n\nreturn [{\n  json: {\n    execution_log: {\n      execution_id: data.id,\n      workflow_id: data.workflowId,\n      status: data.status,\n      is_success: cleaned.isSuccess || false,\n      created_at: executionLogCreatedAt,\n      started_at: data.startedAt,\n      stopped_at: data.stoppedAt,\n      finished: data.finished || false,\n      execution_duration_ms: durationMs,\n      original_size: meta.original_size,\n      cleaned_size: meta.cleaned_size,\n      reduction_percent: meta.reduction_percent\n    },\n    cleaned_data: cleaned,\n    execution_log_created_at: executionLogCreatedAt // 供子表使用\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2480,
+        704
+      ],
+      "id": "c9f896e9-ffe2-4945-9f7b-ba2013dcd946",
+      "name": "Step10_PrepareDatabaseData"
+    },
+    {
+      "parameters": {
+        "jsCode": "try {\n  const prepareDataOutput = $('Step10_PrepareDatabaseData').first().json;\n  const cleaned = prepareDataOutput.cleaned_data || {};\n  const data = cleaned.data || {};\n\n  // --- 1. 基础字段提取 (保留原逻辑) ---\n  const baseData = {\n    workflowId: data.workflowId || '',\n    status: data.status || 'unknown',\n    createdAt: data.createdAt || new Date().toISOString(),\n    startedAt: data.startedAt || null,\n    stoppedAt: data.stoppedAt || null\n  };\n\n  const allMarkets = [];\n  const allAllocationData = [];\n  let vaultName = '';\n  let rebalanceDecision = null;\n\n  const subExecutions = cleaned.data?.subExecutionLogs || [];\n  \n  subExecutions.forEach((subExec) => {\n    const currentInfo = subExec.data?.resultData?.runData?.['Current Info']?.[0]?.data?.main?.[0]?.[0]?.json;\n    const summary = subExec.data?.resultData?.runData?.Summary?.[0]?.data?.main?.[0]?.[0]?.json;\n    const rebalanceCheck = subExec.data?.resultData?.runData?.['Rebalance Check']?.[0]?.data?.main?.[0]?.[0]?.json;\n    \n    if (!vaultName && summary?.name) { vaultName = summary.name; }\n    \n    if (!rebalanceDecision && rebalanceCheck) {\n      // ✅ v4 新增字段提取: is_blocked 和 threshold_details\n      // 资产来源: 07_Code-null值默认值处理-v1.0\n      // 参考: Alex-Mike_19_Morpho_Execution_Log_RPC_v4_Database_Request_2025-01-30.md\n      \n      // 提取 is_blocked: 支持两种工作流结构（native 和 morpho）\n      const isBlocked = rebalanceCheck?.conditions?.waitingPeriodBlocked || \n                       (rebalanceCheck?.reason && rebalanceCheck.reason.toLowerCase().includes('waiting period')) ||\n                       false;\n      \n      // 提取 threshold_details: 构建 JSONB 结构\n      const thresholdDetails = {\n        thresholdsMet: rebalanceCheck?.conditions?.thresholdsMet || [],\n        waitingPeriod: rebalanceCheck?.conditions?.waitingPeriod || null\n      };\n      \n      rebalanceDecision = {\n        rebalanceNeeded: rebalanceCheck.rebalanceNeeded || false,\n        rebalanceReason: rebalanceCheck.reason || 'No rebalancing needed',\n        is_blocked: isBlocked,  // ✅ v4 新增\n        threshold_details: thresholdDetails  // ✅ v4 新增\n      };\n    }\n    \n    if (currentInfo?.allocationAndMarket) {\n      const chainName = currentInfo.chainName || '';\n      const marketData = currentInfo.allocationAndMarket[0]?.marketData || [];\n      const allocationData = currentInfo.allocationAndMarket[0]?.allocationData || [];\n      const strategies = currentInfo.strategies || [];\n      const gasCost = strategies[0]?.workflowParams?.gasCost || null;\n      \n      marketData.forEach(market => {\n        allMarkets.push({\n          chain: market.chain || chainName,\n          protocolName: market.protocolName || '',\n          market: market.market || '',\n          cap: market.cap || null,\n          tvl: market.totalSupplied || null,\n          baseApy: market.supplyApy || null,\n          netApy: market.supplyApy || null,\n          rewardApy: null,\n          estDepositGas: gasCost || null\n        });\n      });\n      \n      allocationData.forEach(alloc => {\n        allAllocationData.push({\n          chain: alloc.chain || chainName,\n          protocolName: alloc.protocolName || '',\n          market: alloc.market || '',\n          asset: alloc.asset || '',\n          totalAllocated: alloc.totalAllocated || 0,\n          idleLiquidity: alloc.idleLiquidity || 0,\n          pendingWithdrawal: alloc.pendingWithdrawal || 0\n        });\n      });\n    }\n  });\n\n  // --- 2. 嵌入波动守卫判定逻辑 (核心微调部分) ---\n  const APY_THRESHOLD = 0.3;     \n  const TVL_THRESHOLD = 0.05;    \n  const HEARTBEAT_LIMIT = 12 * 60 * 60 * 1000; \n\n  let is_critical_event = false;\n  let reason = \"Normal state\";\n\n  // 获取参考数据 (假设你已有 Get_Last_Stat 节点，若无则默认为 true 确保安全入库)\n  let lastExecution = null;\n  try { lastExecution = $node[\"Get_Last_Stat\"]?.json; } catch (e) { lastExecution = null; }\n\n  if (rebalanceDecision?.rebalanceNeeded === true) {\n    is_critical_event = true;\n    reason = \"Rebalance triggered\";\n  } else if (!lastExecution) {\n    is_critical_event = true;\n    reason = \"Initial run or no history\";\n  } else if (allMarkets.length > 0) {\n    const m = allMarkets[0];\n    const lastApy = lastExecution.base_apy || 0;\n    const lastTvl = lastExecution.tvl || 0;\n    const lastTime = new Date(lastExecution.created_at).getTime();\n\n    const apyDiff = Math.abs(m.baseApy - lastApy);\n    const tvlChange = lastTvl > 0 ? Math.abs(m.tvl - lastTvl) / lastTvl : 1;\n\n    if (apyDiff >= APY_THRESHOLD) {\n      is_critical_event = true;\n      reason = `APY Volatility: ${apyDiff.toFixed(2)}%`;\n    } else if (tvlChange >= TVL_THRESHOLD) {\n      is_critical_event = true;\n      reason = `TVL Volatility: ${(tvlChange * 100).toFixed(2)}%`;\n    } else if (Date.now() - lastTime > HEARTBEAT_LIMIT) {\n      is_critical_event = true;\n      reason = \"12-hour Heartbeat\";\n    }\n  }\n\n  // --- 3. 构建最终输出 (完全兼容原 RPC 格式，仅增加判定位) ---\n  const finalPayload = {\n    ...baseData,\n    vaultName: vaultName,\n    markets: allMarkets,\n    allocationData: allAllocationData,\n    rebalanceDecision: rebalanceDecision || {\n      rebalanceNeeded: false,\n      rebalanceReason: 'No rebalancing data available',\n      is_blocked: false,  // ✅ v4 新增：默认值\n      threshold_details: null  // ✅ v4 新增：默认值\n    },\n    is_critical_event: is_critical_event,\n    debug_reason: reason\n  };\n\n  return [{\n    json: {\n      json_data: finalPayload,\n      cleaned_data: cleaned,\n      execution_log_created_at: prepareDataOutput.execution_log_created_at\n    }\n  }];\n\n} catch (error) {\n  return [{ json: { error: true, error_message: error.message, success: false } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2704,
+        704
+      ],
+      "id": "1f564fc7-7a63-4ca6-8eeb-08dab877efc4",
+      "name": "Step11_PrepareRPCJSONData",
+      "notes": "资产来源: 07_Code-null值默认值处理-v1.0, 08_Code-错误处理基础-v1.0\n参考: Alex-Mike_19_Morpho_Execution_Log_RPC_v4_Database_Request_2025-01-30.md\n更新: 2025-01-30 - v4 优化：新增 is_blocked 和 threshold_details 字段提取，支持 RPC v4"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.INGESTION_API_URL || 'https://YOUR-ADMIN-OS-DOMAIN/api/ingestion' }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "apikey",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV6YmJ1bXFieWZzc2lqbWN3d3d5Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTkxMzU1MCwiZXhwIjoyMDc1NDg5NTUwfQ.Kqkj_QUO-qVeKwMXLfobWRfuMwnFQaWsg0GDQrmHYSg"
+            },
+            {
+              "name": "x-ingestion-token",
+              "value": "={{ $env.INGESTION_SHARED_TOKEN || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "source_system",
+              "value": "native"
+            },
+            {
+              "name": "payload",
+              "value": "={{ $json }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2928,
+        704
+      ],
+      "id": "bad8ee73-7fd2-4eb5-87c0-a6a0f775f1ef",
+      "name": "Step12_CallRPCProcessLogData",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "wWbCVZX4UE3wAQ1z",
+          "name": "MaxshotSupabase"
+        }
+      },
+      "notes": "更新: Step12 改为调用 MAXshot ingestion API（shared runner），不再直接调用 Supabase RPC。设置 n8n 环境变量 INGESTION_API_URL；如启用鉴权，再设置 INGESTION_SHARED_TOKEN。"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Step13: 提取 ingestion 结果并传递 cleaned_data\nconst httpResponse = $node[\"Step12_CallRPCProcessLogData\"].json;\nconst responseBody = httpResponse.body || httpResponse;\nconst originalData = $node[\"Step11_PrepareRPCJSONData\"].json;\n\nconst ingestionStatus = responseBody.status || 'unknown';\nconst executionId = ingestionStatus === 'written' ? (responseBody.execution_id || '').toString().trim() : '';\nconst is_critical_event = ingestionStatus === 'written'\n  ? (originalData.json_data?.is_critical_event || false)\n  : false;\n\nreturn {\n  execution_id: executionId,\n  ingestion_status: ingestionStatus,\n  quarantine_reasons: responseBody.reasons || [],\n  is_critical_event: is_critical_event,\n  cleaned_data: originalData.cleaned_data,\n  json_data: originalData.json_data\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3152,
+        704
+      ],
+      "id": "839574fd-940b-4dfa-a702-5dfa58b7f402",
+      "name": "Step13_ExtractExecutionID",
+      "notes": "更新: Step13 适配 ingestion API 返回；仅在 written 状态下继续保留 execution_id 和 is_critical_event。"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 读取分析结果和原始数据\nconst inputData = $input.first().json;\nconst originalData = inputData.original_data || inputData.parsed_data;\n\nif (!originalData) {\n  throw new Error('原始数据不存在');\n}\n\n// 清洗函数：精简 Schedule Trigger 节点\nfunction cleanScheduleTrigger(nodeData) {\n  if (!nodeData || !nodeData.data || !nodeData.data.main) return nodeData;\n  \n  const cleaned = JSON.parse(JSON.stringify(nodeData));\n  if (cleaned.data.main && cleaned.data.main[0] && cleaned.data.main[0][0]) {\n    const json = cleaned.data.main[0][0].json;\n    // 只保留 timestamp 和 Timezone\n    cleaned.data.main[0][0].json = {\n      timestamp: json.timestamp,\n      Timezone: json.Timezone\n    };\n  }\n  return cleaned;\n}\n\n// 清洗函数：精简节点执行数据\nfunction cleanNodeExecution(nodeData) {\n  if (!nodeData) return nodeData;\n  \n  const cleaned = {\n    executionTime: nodeData.executionTime,\n    executionStatus: nodeData.executionStatus,\n    data: nodeData.data\n  };\n  \n  // 清洗 data.main 中的 pairedItem\n  if (cleaned.data && cleaned.data.main) {\n    cleaned.data.main = cleaned.data.main.map(mainArray => \n      mainArray.map(item => ({ json: item.json }))\n    );\n  }\n  \n  return cleaned;\n}\n\n// 清洗函数：精简子执行日志\nfunction cleanSubExecution(subExec) {\n  if (!subExec) return null;\n  \n  const cleaned = {\n    id: subExec.id,\n    workflowId: subExec.workflowId,\n    status: subExec.status,\n    createdAt: subExec.createdAt,\n    startedAt: subExec.startedAt,\n    stoppedAt: subExec.stoppedAt,\n    parentExecution: subExec.parentExecution\n  };\n  \n  // 只保留关键节点的业务数据\n  if (subExec.data && subExec.data.resultData && subExec.data.resultData.runData) {\n    cleaned.data = {\n      resultData: {\n        runData: {}\n      }\n    };\n    \n    // 只保留关键节点：Summary, Rebalance Check, Current Info\n    const keyNodes = ['Summary', 'Rebalance Check', 'Current Info', 'lastRebalancerInfo'];\n    \n    Object.keys(subExec.data.resultData.runData).forEach(nodeName => {\n      if (keyNodes.includes(nodeName)) {\n        const nodeData = subExec.data.resultData.runData[nodeName];\n        if (Array.isArray(nodeData)) {\n          cleaned.data.resultData.runData[nodeName] = nodeData.map(cleanNodeExecution);\n        }\n      }\n    });\n  }\n  \n  return cleaned;\n}\n\n// 主清洗逻辑\nconst cleaned = {\n  isSuccess: originalData.isSuccess,\n  status: originalData.status,\n  timestamp: originalData.timestamp,\n  data: {\n    id: originalData.data?.id,\n    workflowId: originalData.data?.workflowId,\n    status: originalData.data?.status,\n    createdAt: originalData.data?.createdAt,\n    startedAt: originalData.data?.startedAt,\n    stoppedAt: originalData.data?.stoppedAt,\n    finished: originalData.data?.finished,\n    data: {\n      resultData: {\n        runData: {}\n      }\n    }\n  }\n};\n\n// 清洗主工作流的节点数据\nif (originalData.data?.data?.resultData?.runData) {\n  const runData = originalData.data.data.resultData.runData;\n  \n  Object.keys(runData).forEach(nodeName => {\n    if (nodeName === 'Schedule Trigger') {\n      if (runData[nodeName] && runData[nodeName][0]) {\n        cleaned.data.data.resultData.runData[nodeName] = [cleanScheduleTrigger(runData[nodeName][0])];\n      }\n    } else {\n      if (Array.isArray(runData[nodeName])) {\n        cleaned.data.data.resultData.runData[nodeName] = runData[nodeName].map(cleanNodeExecution);\n      }\n    }\n  });\n}\n\n// 清洗子执行日志\nif (originalData.data?.subExecutionLogs) {\n  cleaned.data.subExecutionLogs = originalData.data.subExecutionLogs\n    .map(cleanSubExecution)\n    .filter(subExec => subExec !== null);\n}\n\n// 添加清洗元数据\nconst originalSize = JSON.stringify(originalData).length;\nconst cleanedSize = JSON.stringify(cleaned).length;\n\ncleaned._cleaned_meta = {\n  cleaned_at: new Date().toISOString(),\n  original_size: originalSize,\n  cleaned_size: cleanedSize,\n  reduction_percent: ((1 - cleanedSize / originalSize) * 100).toFixed(2),\n  fields_removed: inputData.fields_to_clean || 0\n};\n\nreturn [{\n  json: cleaned\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2256,
+        608
+      ],
+      "id": "caec0098-8166-4802-ba43-eab7b5e85e15",
+      "name": "Step9_CleanBasedOnAnalysis"
+    },
+    {
+      "parameters": {
+        "operation": "toJson",
+        "options": {
+          "format": true,
+          "encoding": "utf8",
+          "fileName": "={{ 'cleaned_execution_log_' + ($json.data?.id || $now.format('YYYY-MM-DD_HH-mm-ss')) + '.json' }}"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        2464,
+        432
+      ],
+      "id": "7ce88d20-600c-48ab-8df8-c4344d2f0762",
+      "name": "Convert Cleaned to JSON1"
+    },
+    {
+      "parameters": {
+        "fileName": "=/home/node/.n8n-files/{{ $binary.data.fileName }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        2704,
+        432
+      ],
+      "id": "7b52d1ac-048f-47d0-a753-385a9172081f",
+      "name": "Save Cleaned Log1"
+    },
+    {
+      "parameters": {
+        "jsCode": "/**\n * Build RAG Document: 生产级语义增强版\n * 1. 语义定性：将 APY 等数字转化为高/中/低描述，方便向量检索。\n * 2. 强上下文：在正文顶部加入检索锚点（TAG）。\n * 3. 结构拆分：每个 Vault 独立成文。\n * 4. 修正：使用 Step13 返回的 UUID 作为 execution_id（不是 n8n 原始数字 ID）\n * 5. ⚠️ 修复：确保 execution_id 始终是字符串格式（不是对象）\n * 6. ✅ v4 优化：Metadata 瘦身为 9 维标签（符合\"SQL 存事实，RAG 存因果\"哲学）\n * 资产来源: 07_Code-null值默认值处理-v1.0, 08_Code-错误处理基础-v1.0\n * 参考: Mike_DatabaseExpert/4.Working/Database/RAG_Metadata_字段映射表_2025-01-30.md\n */\n// === Step14: Build RAG Document v4 优化版 ===\n\n// ✅ 关键修正：从 Step13 获取 UUID（数据库 UUID，不是 n8n 原始数字 ID）\nconst step13Output = $('Step13_ExtractExecutionID').first().json;\nlet executionIdRaw = step13Output.execution_id || '';\n\n// ⚠️ 修复：确保 execution_id 始终是字符串格式\nlet executionId = '';\nif (typeof executionIdRaw === 'string') {\n  executionId = executionIdRaw.trim();\n} else if (executionIdRaw && typeof executionIdRaw === 'object') {\n  // 如果是对象，尝试提取内部的 execution_id 字段\n  executionId = (executionIdRaw.execution_id || executionIdRaw.id || '').toString().trim();\n} else if (executionIdRaw) {\n  // 其他类型，转换为字符串\n  executionId = executionIdRaw.toString().trim();\n}\n\n// 从 Step10 获取其他数据\nconst prepareDataOutput = $('Step10_PrepareDatabaseData').first().json;\nconst cleaned = prepareDataOutput.cleaned_data || {};\nconst data = cleaned.data || {};\n\nconst workflowId = data.workflowId || '';\nconst status = data.status || '';\nconst createdAt = data.createdAt || '';\n\nconst subExecutions = cleaned.data?.subExecutionLogs || [];\nlet documents = [];\n\nsubExecutions.forEach((subExec, idx) => {\n  const summary = subExec.data?.resultData?.runData?.Summary?.[0]?.data?.main?.[0]?.[0]?.json;\n  const rebalanceCheck = subExec.data?.resultData?.runData?.['Rebalance Check']?.[0]?.data?.main?.[0]?.[0]?.json;\n  const currentInfo = subExec.data?.resultData?.runData?.['Current Info']?.[0]?.data?.main?.[0]?.[0]?.json;\n  \n  if (summary || rebalanceCheck || currentInfo) {\n    let narrative = [];\n    const vault = summary?.name || 'Unknown Vault';\n    const chain = currentInfo?.chainName || 'Unknown Chain';\n\n    // --- 1. 业务指标定性分析 ---\n    const marketData = currentInfo?.allocationAndMarket?.[0]?.marketData || [];\n    const apys = marketData.map(m => m.supplyApy || 0);\n    const maxApy = apys.length > 0 ? Math.max(...apys) : 0;\n    \n    // 定性描述 APY 水平 (语义锚点)\n    let apyPerformance = \"stable\";\n    if (maxApy > 8) apyPerformance = \"high-yielding\";\n    else if (maxApy > 4) apyPerformance = \"competitive\";\n    else if (maxApy > 0 && maxApy <= 2) apyPerformance = \"low-yield\";\n\n    // ✅ 修复：Market Details 数据清洗（去除空值和重复逗号）\n    const marketNames = marketData\n      .map(m => m.market)\n      .filter(Boolean) // 去除空值、null、undefined\n      .filter((name, index, arr) => arr.indexOf(name) === index) // 去重\n      .join(', '); // 用逗号和空格连接\n    \n    const totalAllocated = currentInfo?.allocationAndMarket?.[0]?.allocationData?.reduce((sum, a) => sum + (parseFloat(a.totalAllocated) || 0), 0) || 0;\n\n    // --- 2. 构建叙述性正文 (page_content) ---\n    // 顶部加入强特征标签，防止向量检索时的链间干扰\n    narrative.push(`[LOG_ANCHOR: ${chain.toUpperCase()}_${vault.replace(/\\s+/g, '_').toUpperCase()}]`);\n    \n    narrative.push(`On ${createdAt}, the autonomous agent performed a routine management task for the ${vault} on ${chain}.`);\n    \n    narrative.push(`The current market environment for this vault is characterized as ${apyPerformance}, with the highest available Supply APY reaching ${maxApy.toFixed(2)}%.`);\n    \n    if (rebalanceCheck) {\n      const rebalanceStatus = rebalanceCheck.rebalanceNeeded ? \"active rebalancing was triggered\" : \"no rebalancing was required\";\n      narrative.push(`Strategic Analysis: The system determined that ${rebalanceStatus}. The logic behind this decision was: ${rebalanceCheck.reason || 'all parameters are within safe thresholds'}.`);\n    }\n\n    if (marketData.length > 0) {\n      narrative.push(`Market Details: The agent monitored ${marketData.length} specific markets, including ${marketNames || 'N/A'}.`);\n    }\n\n    narrative.push(`Financial Summary: The total capital currently allocated across the protocols is ${totalAllocated.toFixed(2)} USD. The overall execution status ended in ${status}.`);\n\n    // --- 3. 构建 9 维 Metadata（v4 优化：瘦身为 9 维标签）---\n    // 资产来源: 07_Code-null值默认值处理-v1.0\n    // 参考: Mike_DatabaseExpert/4.Working/Database/RAG_Metadata_字段映射表_2025-01-30.md\n    \n    // ✅ 提取 asset 和 protocol_name（9 维标签新增字段）\n    const asset = currentInfo?.allocationAndMarket?.[0]?.allocationData?.[0]?.asset || \n                  currentInfo?.allocationAndMarket?.[0]?.marketData?.[0]?.asset || \n                  'Unknown';\n    const protocolName = currentInfo?.allocationAndMarket?.[0]?.allocationData?.[0]?.protocolName || \n                         currentInfo?.allocationAndMarket?.[0]?.marketData?.[0]?.protocolName || \n                         'Unknown';\n    \n    // ✅ 提取 is_blocked（支持两种工作流结构）\n    const isBlocked = rebalanceCheck?.conditions?.waitingPeriodBlocked || \n                     (rebalanceCheck?.reason && rebalanceCheck.reason.toLowerCase().includes('waiting period')) ||\n                     false;\n    \n    // ✅ 提取 rebalance_reason（用于因果追溯）\n    const rebalanceReason = rebalanceCheck?.reason || '';\n    \n    // ✅ 9 维标签（符合\"SQL 存事实，RAG 存因果\"哲学）\n    const enhancedMetadata = {\n      execution_id: executionId, // 1. execution_id\n      vault_name: vault, // 2. vault_name\n      chain_name: chain, // 3. chain_name\n      asset: asset, // 4. asset ✅ 新增\n      protocol_name: protocolName, // 5. protocol_name ✅ 新增\n      is_blocked: isBlocked, // 6. is_blocked ✅ 新增\n      apy_level: apyPerformance, // 7. apy_level（语义标签，非数值）\n      rebalance_reason: rebalanceReason, // 8. rebalance_reason ✅ 新增（用于因果追溯）\n      created_at: createdAt // 9. created_at\n      // ❌ 移除的字段: workflow_id, source_type, max_apy, involved_markets, total_allocated_sum, rebalance_needed, rebalance_success, status, snapshot_type\n    };\n\n    documents.push({\n      json: {\n        page_content: narrative.join('\\n\\n'),\n        metadata: enhancedMetadata\n      }\n    });\n  }\n});\n\nreturn documents;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "alwaysOutputData": true,
+      "position": [
+        3632,
+        704
+      ],
+      "id": "5be56b26-60d1-437f-bb09-605963e337e2",
+      "name": "Step14_BuildRAGDocument",
+      "notes": "资产来源: 07_Code-null值默认值处理-v1.0\n参考: Mike_DatabaseExpert/4.Working/Database/RAG_Metadata_字段映射表_2025-01-30.md\n更新: 2025-01-30 - v4 优化：Metadata 瘦身为 9 维标签，移除数值字段，新增 asset, protocol_name, is_blocked, rebalance_reason"
+    },
+    {
+      "parameters": {
+        "chunkSize": 1500,
+        "chunkOverlap": 200,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        3824,
+        1344
+      ],
+      "id": "765e630a-ff8e-4173-83b0-237d6b9e7f68",
+      "name": "Text Splitter1"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3600,
+        1120
+      ],
+      "id": "ada7ce46-f554-481b-be14-0768c3db2669",
+      "name": "Embeddings1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QpzMh0gTlFFiDOTi",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": {
+          "__rl": true,
+          "value": "execution_logs_rag",
+          "mode": "list",
+          "cachedResultName": "execution_logs_rag"
+        },
+        "embeddingBatchSize": 100,
+        "options": {
+          "queryName": "content"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1.3,
+      "position": [
+        3904,
+        704
+      ],
+      "id": "d7610d0d-af12-4127-92bf-2478bd038028",
+      "name": "Vector Store Insert1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "fnZnIabVYCs4FncC",
+          "name": "SupabaseMaxshot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assignment-1",
+              "name": "data",
+              "value": "={{ $json.data || $json }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1728,
+        640
+      ],
+      "id": "b994a96e-3414-4843-8f91-41323a37483f",
+      "name": "Step7_NormalizeData"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "8406215a-595b-4272-8670-ed8bf6bb310d",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        928,
+        704
+      ],
+      "id": "b3230e46-0eb7-43dd-8bab-19c9d2672d69",
+      "name": "Step1_Webhook",
+      "webhookId": "8406215a-595b-4272-8670-ed8bf6bb310d"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "assignment-1",
+              "name": "data",
+              "value": "={{ $json.body || $json }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1504,
+        640
+      ],
+      "id": "b7d1c681-b938-4a8a-9330-6c3c67e21650",
+      "name": "Step2_Parse API Response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "16e958d4-50cf-47db-b6ca-43ae19f8ad12",
+              "leftValue": "={{ $json.is_critical_event || false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "rebalance-needed-check",
+              "leftValue": "={{ $json.json_data && $json.json_data.rebalanceDecision && $json.json_data.rebalanceDecision.rebalanceNeeded || false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "is-blocked-check",
+              "leftValue": "={{ $json.json_data && $json.json_data.rebalanceDecision && $json.json_data.rebalanceDecision.is_blocked || false }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3392,
+        704
+      ],
+      "id": "116c6d0f-9dcb-4025-b6e0-117b7fe1d980",
+      "name": "If",
+      "notes": "资产来源: 09_IF-条件判断基础-v1.0\n更新: 2025-01-30 - v4 优化：扩展 RAG 写入触发条件（事件驱动），支持决策变动、被拦截、关键事件（OR 逻辑）"
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $('Step14_BuildRAGDocument').first().json.page_content }}",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "execution_id",
+                "value": "={{ $('Step14_BuildRAGDocument').first().json.metadata.execution_id }}"
+              },
+              {
+                "name": "vault_name",
+                "value": "={{ $('Step14_BuildRAGDocument').first().json.metadata.vault_name }}"
+              },
+              {
+                "name": "chain_name",
+                "value": "={{ $('Step14_BuildRAGDocument').first().json.metadata.chain_name }}"
+              },
+              {
+                "name": "asset",
+                "value": "={{ $('Step14_BuildRAGDocument').first().json.metadata.asset }}"
+              },
+              {
+                "name": "protocol_name",
+                "value": "={{ $('Step14_BuildRAGDocument').first().json.metadata.protocol_name }}"
+              },
+              {
+                "name": "is_blocked",
+                "value": "={{ $('Step14_BuildRAGDocument').first().json.metadata.is_blocked }}"
+              },
+              {
+                "name": "apy_level",
+                "value": "={{ $('Step14_BuildRAGDocument').first().json.metadata.apy_level }}"
+              },
+              {
+                "name": "rebalance_reason",
+                "value": "={{ $('Step14_BuildRAGDocument').first().json.metadata.rebalance_reason }}"
+              },
+              {
+                "name": "created_at",
+                "value": "={{ $('Step14_BuildRAGDocument').first().json.metadata.created_at }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1,
+      "position": [
+        4000,
+        1120
+      ],
+      "id": "e87bf3c5-fad2-4080-a691-3d213339ef43",
+      "name": "Step17_DefaultDataLoader",
+      "notes": "资产来源: @n8n/n8n-nodes-langchain.documentDefaultDataLoader\n参考: Mike_DatabaseExpert/4.Working/Database/RAG_Metadata_字段映射表_2025-01-30.md\n更新: 2025-01-30 - v4 优化：Metadata 配置清理为 9 维标签，移除重复和数值字段"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Step10_PrepareDatabaseData": {
+      "main": [
+        [
+          {
+            "node": "Step11_PrepareRPCJSONData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step11_PrepareRPCJSONData": {
+      "main": [
+        [
+          {
+            "node": "Step12_CallRPCProcessLogData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step12_CallRPCProcessLogData": {
+      "main": [
+        [
+          {
+            "node": "Step13_ExtractExecutionID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step13_ExtractExecutionID": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Cleaned to JSON1": {
+      "main": [
+        [
+          {
+            "node": "Save Cleaned Log1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Vector Store Insert1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step14_BuildRAGDocument": {
+      "main": [
+        [
+          {
+            "node": "Vector Store Insert1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Text Splitter1": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "Step17_DefaultDataLoader",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step7_NormalizeData": {
+      "main": [
+        [
+          {
+            "node": "Step8_AnalyzeDataStructure",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step1_Webhook": {
+      "main": [
+        [
+          {
+            "node": "Step2_Parse API Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step2_Parse API Response": {
+      "main": [
+        [
+          {
+            "node": "Step7_NormalizeData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step9_CleanBasedOnAnalysis": {
+      "main": [
+        [
+          {
+            "node": "Convert Cleaned to JSON1",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Step10_PrepareDatabaseData",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step8_AnalyzeDataStructure": {
+      "main": [
+        [
+          {
+            "node": "Step9_CleanBasedOnAnalysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Step14_BuildRAGDocument",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Step17_DefaultDataLoader": {
+      "ai_document": [
+        [
+          {
+            "node": "Vector Store Insert1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9939bde6-c3d5-4f33-867f-d76012862574",
+  "meta": {
+    "instanceId": "54f5eed0abf5db738d967158eb80fe995d44657bb9b1121776714569845a3f71"
+  },
+  "id": "e7YCBk36nM9HTg52",
+  "tags": [
+    {
+      "updatedAt": "2026-01-20T07:46:04.670Z",
+      "createdAt": "2026-01-20T07:46:04.670Z",
+      "id": "mQxdYcmoLDfsl1JW",
+      "name": "CleanData"
+    }
+  ]
+}

@@ -101,12 +101,11 @@ describe('Step5 task create route', () => {
     expect(mocks.insertTask).not.toHaveBeenCalled()
   })
 
-  it('forces pending_confirmation for side-effect capabilities', async () => {
+  it('keeps pending_confirmation when gate already requires confirmation', async () => {
     const res = await POST(buildRequest({
       intent_name: 'marketing_gen',
-      payload: { extracted_slots: { topic: 'launch' }, matched_capability_id: 'capability.publisher' },
-      gate: { gate_result: 'pass', require_confirmation: false },
-      capability_binding: { capability_id: 'capability.publisher' },
+      payload: { extracted_slots: { topic: 'launch' } },
+      gate: { gate_result: 'require_confirmation', require_confirmation: true, reason_for_pending: 'side_effect' },
       operator_id: 'op',
       confirm_token: 'token',
     }))
@@ -115,5 +114,20 @@ describe('Step5 task create route', () => {
     expect(res.status).toBe(200)
     expect(body.status).toBe('pending_confirmation')
     expect(body.sealed_execution.gate.require_confirmation).toBe(true)
+  })
+
+  it('infers primary capability from intent name when capability ids are omitted', async () => {
+    const res = await POST(buildRequest({
+      intent_name: 'content_brief',
+      payload: { extracted_slots: {} },
+      gate: { gate_result: 'require_confirmation', require_confirmation: true },
+      operator_id: 'op',
+      confirm_token: 'token',
+    }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.sealed_execution.primary_capability_id).toBe('capability.content_generator')
+    expect(body.sealed_execution.matched_capability_ids).toContain('capability.content_generator')
   })
 })

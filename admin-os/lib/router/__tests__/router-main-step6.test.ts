@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
   const executeCapability = vi.fn()
   const log = vi.fn()
   const flush = vi.fn()
+  const clear = vi.fn()
   const buildMemoryRuntime = vi.fn(() => ({ ref_ids: ['capability_registry_v1:capability.data_fact_query'] }))
   return {
     getExecutionById,
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => {
     executeCapability,
     log,
     flush,
+    clear,
     buildMemoryRuntime,
   }
 })
@@ -48,6 +50,7 @@ vi.mock('@/lib/router/capability-scheduling', () => ({
 vi.mock('@/lib/router/audit-logging', () => ({
   AuditLogger: {
     getInstance: () => ({
+      clear: mocks.clear,
       log: mocks.log,
       flush: mocks.flush,
     }),
@@ -70,6 +73,7 @@ describe('Step6 router main', () => {
     mocks.executeCapability.mockReset()
     mocks.log.mockReset()
     mocks.flush.mockReset()
+    mocks.clear.mockReset()
     mocks.buildMemoryRuntime.mockClear()
   })
 
@@ -149,6 +153,14 @@ describe('Step6 router main', () => {
         extracted_slots: expect.objectContaining({ scope: 'yield', metric: 'apy' }),
       })
     )
+    expect(mocks.clear).toHaveBeenCalledTimes(1)
+    expect(mocks.clear).toHaveBeenCalledWith('exec-1')
+    const routerCompleteCall = mocks.log.mock.calls.find((call) => call[0] === 'router_complete')
+    expect(routerCompleteCall).toBeTruthy()
+    const routerCompleteOrder = mocks.log.mock.invocationCallOrder.find(
+      (_, index) => mocks.log.mock.calls[index]?.[0] === 'router_complete'
+    )
+    expect(routerCompleteOrder).toBeDefined()
+    expect(mocks.flush.mock.invocationCallOrder[0]).toBeGreaterThan(Number(routerCompleteOrder))
   })
 })
-

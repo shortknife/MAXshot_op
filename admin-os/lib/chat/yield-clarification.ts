@@ -15,6 +15,10 @@ export function isOverallPerformanceQuery(rawQuery: string): boolean {
   return /(整体表现|整体|表现|performance|overall)/i.test(String(rawQuery || ''))
 }
 
+function isExplicitRealtimeQuery(rawQuery: string): boolean {
+  return /(实时|最新|real-time|realtime)/i.test(String(rawQuery || ''))
+}
+
 export function applyDefaultYieldAssumption(rawQuery: string): string {
   return `${rawQuery}；默认口径：按天均值（最近7天）`
 }
@@ -42,7 +46,9 @@ function hasResolvedTimeWindow(intentQuery: string, extractedSlots?: Record<stri
 function hasResolvedAggregation(intentQuery: string, extractedSlots?: Record<string, unknown>): boolean {
   if (hasYieldGranularity(intentQuery) || detectYieldAggregation(intentQuery)) return true
   const agg = String(extractedSlots?.aggregation || extractedSlots?.metric_agg || '').trim().toLowerCase()
-  return ['avg', 'max', 'min', 'realtime', 'latest'].includes(agg)
+  if (['avg', 'max', 'min'].includes(agg)) return true
+  if (['realtime', 'latest'].includes(agg)) return isExplicitRealtimeQuery(intentQuery)
+  return false
 }
 
 export function resolveYieldClarification(params: ResolveYieldClarificationParams): {

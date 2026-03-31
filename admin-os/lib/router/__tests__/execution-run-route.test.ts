@@ -98,4 +98,28 @@ describe('Step6 execution run route', () => {
       reason: 'status_not_confirmed',
     })
   })
+
+  it('returns 200 when router ran but capability execution failed', async () => {
+    mocks.executeRouter.mockResolvedValue({
+      success: false,
+      error: 'One or more capabilities failed',
+      routing_decision: {
+        dispatch_ready: true,
+        primary_capability_id: 'capability.content_generator',
+      },
+      capability_outputs: [],
+      final_answer: 'Execution failed',
+    })
+
+    const res = await POST(buildRequest({ execution_id: 'exec-1', operator_id: 'op', confirm_token: 'token' }))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.success).toBe(true)
+    expect(body.result.success).toBe(false)
+    expect(body.routing_decision).toMatchObject({
+      dispatch_ready: true,
+      primary_capability_id: 'capability.content_generator',
+    })
+  })
 })

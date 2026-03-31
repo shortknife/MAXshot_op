@@ -1,0 +1,46 @@
+# Decision Log
+
+## D-001
+- Decision: `Step1-9` are frozen as MVP baselines.
+- Why: each step completed brainstorming, contract, focused tests, closure, and freeze evidence.
+- Consequence: current work is validation and hardening, not new step design.
+
+## D-002
+- Decision: keep `Post-MVP` complex queries out of `Step3` freeze scope.
+- Why: complex composite semantics were delaying delivery and were not required for MVP usefulness.
+- Consequence: unsupported composite queries should degrade to clarification, not fake readiness.
+
+## D-003
+- Decision: `Step4` is gate-only.
+- Why: Step ownership drift caused confusion earlier.
+- Consequence: `Step4` may `continue_chat | pass | require_confirmation`; it must not re-do Step3 semantics.
+
+## D-004
+- Decision: `Step5` seals only `pass` and `require_confirmation`.
+- Why: sealing must operate on authoritative gate output.
+- Consequence: `continue_chat` and `out_of_scope` must not enter seal path.
+
+## D-005
+- Decision: `Step6` consumes sealed authority and routes deterministically.
+- Why: router must not reinterpret raw user intent.
+- Consequence: downstream execution uses sealed primary capability and normalized router input only.
+
+## D-006
+- Decision: `Step8` and `Step9` use canonical audit/delivery shapes.
+- Why: delivery validation exposed integration drift at trace and response layers.
+- Consequence: audit writes and final delivery must flow through shared helpers, not route-local formatting.
+
+## D-007
+- Decision: adopt a lightweight development memory layer instead of a complex memory system.
+- Why: current project memory existed, but was scattered and costly to recover.
+- Consequence: `/Users/alexzheng/Documents/JOB/AI_Project/MAXshot_opencode/docs/project-memory/*` becomes the working-memory entry point; `/Users/alexzheng/Documents/JOB/AI_Project/MAXshot_opencode/docs/status/*` remains evidence.
+
+## D-008
+- Decision: do not integrate `Claude-mem` into the current Codex desktop workflow now.
+- Why: the current environment already has Codex-native state plus project-memory docs, while `Claude-mem` is designed primarily for Cursor/OpenClaw/Claude Code style hooks.
+- Consequence: strengthen local project memory files instead of introducing a third memory system.
+
+## D-009
+- Decision: ingestion hardening comes after green mainline and starts with shared code, not trigger replacement.
+- Why: the core problem is data-quality enforcement, not the trigger mechanism.
+- Consequence: implement shared ingestion core first; defer trigger-shell replacement decisions.

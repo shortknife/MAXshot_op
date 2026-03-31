@@ -36,20 +36,31 @@ export function toTelegramReply(payload: unknown): string {
     success?: boolean
     error?: string
     details?: string
-    delivery_envelope?: { summary?: string; meta?: { next_actions?: string[] } }
-    data?: { summary?: string; error?: string; meta?: { next_actions?: string[]; delivery_envelope?: { summary?: string; meta?: { next_actions?: string[] } } } }
+    delivery_envelope?: { type?: string; summary?: string; draft?: string | null; meta?: { next_actions?: string[] } }
+    data?: {
+      type?: string
+      summary?: string
+      draft?: string | null
+      error?: string
+      meta?: { next_actions?: string[]; delivery_envelope?: { type?: string; summary?: string; draft?: string | null; meta?: { next_actions?: string[] } } }
+    }
   }
   if (body?.error) return `${body.error}${body.details ? `: ${body.details}` : ''}`
   const envelope = body?.delivery_envelope || body?.data?.meta?.delivery_envelope
+  const deliveryType = String(envelope?.type || body?.data?.type || '').trim()
   const summary = String(envelope?.summary || body?.data?.summary || '').trim()
+  const draft = String(envelope?.draft || body?.data?.draft || '').trim()
   const nextActions = Array.isArray(envelope?.meta?.next_actions)
     ? envelope.meta.next_actions.filter(Boolean).slice(0, 3)
     : Array.isArray(body?.data?.meta?.next_actions)
       ? body.data.meta.next_actions.filter(Boolean).slice(0, 3)
     : []
-  if (!summary) return '已收到你的问题，但当前没有可展示结果。'
-  if (!nextActions.length) return summary
-  return `${summary}\n\n你可以继续问：\n- ${nextActions.join('\n- ')}`
+  const sections: string[] = []
+  if (summary) sections.push(summary)
+  if (deliveryType === 'marketing' && draft) sections.push(draft)
+  if (nextActions.length) sections.push(`你可以继续问：\n- ${nextActions.join('\n- ')}`)
+  if (!sections.length) return '已收到你的问题，但当前没有可展示结果。'
+  return sections.join('\n\n')
 }
 
 async function sendTelegramMessage(chatId: string, text: string) {

@@ -37,6 +37,11 @@ function isProductDefinitionQuestion(rawQuery: string): boolean {
   return /(什么是|做什么用|描述|介绍|说明|如何工作|怎么工作|什么意思|产品定义)/i.test(rawQuery)
 }
 
+function isGenericProductTheoryQuestion(rawQuery: string): boolean {
+  const text = String(rawQuery || '').trim().toLowerCase()
+  return /(这个产品|该产品|这款产品)/.test(text) && /(原理|核心原理|底层原理|理论|机制)/.test(text) && !/maxshot/.test(text)
+}
+
 function isExplicitMetricAsk(rawQuery: string): boolean {
   return /(多少|最高|最低|均值|平均|走势|趋势|列表|详情|统计|排名|比较|对比|最近|top|\bmax\b|\bmin\b|apy|收益|tvl|execution|执行)/i.test(
     rawQuery
@@ -154,6 +159,7 @@ export function normalizeChatIntent(params: NormalizeChatIntentParams): {
     if (
       matchedCapabilityIds.includes('capability.product_doc_qna') &&
       isProductDefinitionQuestion(intentQuery) &&
+      !isGenericProductTheoryQuestion(intentQuery) &&
       !isExplicitMetricAsk(intentQuery)
     ) {
       updateIntent('documentation', {
@@ -212,7 +218,7 @@ export function normalizeChatIntent(params: NormalizeChatIntentParams): {
       const looksLikeProductDoc = /(maxshot|vault|apy|execution|金库|收益|业务|protocol|chain|tvl|rebalance|调仓|风险|策略|能力|能做什么|做什么业务|capability)/i.test(
         intentQuery
       )
-      if (!looksLikeProductDoc && !looksLikeContentBrief(intentQuery)) {
+      if ((!looksLikeProductDoc && !looksLikeContentBrief(intentQuery)) || isGenericProductTheoryQuestion(intentQuery)) {
         updateIntent('out_of_scope', {
           in_scope: false,
           reason: 'non_business_query',
@@ -276,6 +282,11 @@ export function normalizeChatIntent(params: NormalizeChatIntentParams): {
     if (looksOverallPerformance) {
       updateIntent('business_query', {
         scope: 'yield',
+        metric: 'apy',
+        aggregation: 'avg',
+        metric_agg: 'avg',
+        time_window_days: 7,
+        question_shape: 'window_summary',
         in_scope: true,
         need_clarification: false,
       })
