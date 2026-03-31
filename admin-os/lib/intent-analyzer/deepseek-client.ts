@@ -2,6 +2,7 @@ import fs from 'fs/promises'
 import path from 'path'
 import { getPromptBySlug, PromptResolution } from '@/lib/prompts/prompt-registry'
 import { hasTimeWindow } from '@/lib/chat/query-clarification'
+import { extractRelativeTimeSlots } from '@/lib/time/range-slots'
 import {
   describeActiveCapabilitiesForPrompt,
   getCapabilityRegistryMeta,
@@ -293,6 +294,8 @@ function extractCalendarPeriod(raw: string): Record<string, unknown> {
   const text = String(raw || '').trim()
   const range = extractAbsoluteDateRange(text)
   if (range) return range
+  const relative = extractRelativeTimeSlots(text)
+  if (relative) return relative
   const year = currentYear()
   let match = text.match(/(\d{1,2})月第([一二三四五12345])周/)
   if (match) {

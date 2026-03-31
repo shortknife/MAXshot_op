@@ -36,7 +36,7 @@ function hasYieldScope(text: string): boolean {
 }
 
 function hasTimeWindow(text: string): boolean {
-  return /(最近|last|过去|上周|本周|今天|昨日|7天|30天|本月|近|week|day|month)/.test(text)
+  return /(最近|last|过去|上周|本周|今天|昨日|昨天|7天|30天|本月|上月|近|week|day|month|yesterday|today|this week|last week|this month|last month|\d+\s*(天|day|days)前)/.test(text)
 }
 
 function hasAggregation(text: string): boolean {

@@ -1,3 +1,5 @@
+import { extractRelativeTimeSlots } from '@/lib/time/range-slots'
+
 export type BusinessFilters = {
   chain?: string
   protocol?: string
@@ -150,6 +152,10 @@ export function parseBusinessFilters(rawQuery: string, slots?: SlotLike): Busine
   } else if (/(今天|today)/.test(text)) {
     timeWindowDays = 1
   }
+  const relativeSlots = extractRelativeTimeSlots(rawQuery)
+  if (!timeWindowDays && relativeSlots?.time_window_days) timeWindowDays = relativeSlots.time_window_days
+  if (!dateFrom && relativeSlots?.date_from) dateFrom = relativeSlots.date_from
+  if (!dateTo && relativeSlots?.date_to) dateTo = relativeSlots.date_to
 
   const slotRange = deriveDateRangeFromCalendarSlots(slots)
   const slotDateFrom = readStringSlot(slots, 'date_from')

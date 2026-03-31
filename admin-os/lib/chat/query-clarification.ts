@@ -42,7 +42,7 @@ export function hasYieldGranularity(text: string): boolean {
 
 export function hasTimeWindow(text: string): boolean {
   return (
-    /(最近|last|过去|上周|本周|今天|昨日|7天|30天|本月|近|week|day|month)/.test(text) ||
+    /(最近|last|过去|上周|本周|今天|昨日|昨天|7天|30天|本月|上月|近|week|day|month|yesterday|today|this week|last week|this month|last month|\d+\s*(天|day|days)前)/.test(text) ||
     /(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})\s*(?:到|至|-|~)\s*(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/.test(text) ||
     /(\d{1,2})月(\d{1,2})日?\s*(?:到|至|-|~)\s*(\d{1,2})月(\d{1,2})日?/.test(text) ||
     /(\d{1,2})[/-](\d{1,2})\s*(?:到|至|-|~)\s*(\d{1,2})[/-](\d{1,2})/.test(text)

@@ -73,6 +73,29 @@ describe('Step 3 intent harness', () => {
     expect(result.intent.extracted_slots?.need_clarification).toBe(false)
   })
 
+  it('keeps relative week semantics for 本周 APY queries', async () => {
+    const result = await parseIntent('本周 APY 走势如何')
+    expect(result.intent.type).toBe('business_query')
+    expect(result.intent.extracted_slots?.scope).toBe('yield')
+    expect(result.intent.extracted_slots?.metric).toBe('apy')
+    expect(result.intent.extracted_slots?.date_from).toBeTruthy()
+    expect(result.intent.extracted_slots?.date_to).toBeTruthy()
+    expect(result.intent.extracted_slots?.timezone).toBe('Asia/Shanghai')
+    expect(result.intent.extracted_slots?.need_clarification).toBe(false)
+  })
+
+  it('keeps relative day semantics for 昨天调仓 queries', async () => {
+    const result = await parseIntent('昨天有调仓吗？')
+    expect(result.intent.type).toBe('business_query')
+    expect(result.intent.extracted_slots?.scope).toBe('rebalance')
+    expect(result.intent.extracted_slots?.metric).toBe('rebalance_action')
+    expect(result.intent.extracted_slots?.exact_day).toBeTruthy()
+    expect(result.intent.extracted_slots?.date_from).toBe(result.intent.extracted_slots?.exact_day)
+    expect(result.intent.extracted_slots?.date_to).toBe(result.intent.extracted_slots?.exact_day)
+    expect(result.intent.extracted_slots?.timezone).toBe('Asia/Shanghai')
+    expect(result.intent.extracted_slots?.need_clarification).toBe(false)
+  })
+
   it('keeps exact-day rebalance follow-up semantics', async () => {
     const sessionContext = makeSessionContext({
       conversation_context: {
