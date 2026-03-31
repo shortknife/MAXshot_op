@@ -843,6 +843,23 @@ function buildFallbackResult(rawQuery: string, promptMeta: IntentAnalysisResult[
   }
 }
 
+function shouldUseHeuristicFastPath(rawQuery: string): boolean {
+  const inferredScope = inferBusinessScope(rawQuery)
+  const inferredMetric = inferBusinessMetric(rawQuery)
+
+  if (isSmallTalkQuery(rawQuery)) return true
+  if (isGenericProductTheoryQuery(rawQuery)) return true
+  if (isOpsSummaryQuery(rawQuery)) return true
+  if (isCurrentApyClarificationQuery(rawQuery)) return true
+  if (isOverallPerformanceBusinessQuery(rawQuery)) return true
+  if (isBrandStoryQuery(rawQuery)) return true
+  if (isProductDocLikeQuery(rawQuery) && !isExplicitMetricAsk(rawQuery)) return true
+  if (inferredScope === 'execution' && inferredMetric === 'execution_detail') return true
+  if (inferredScope === 'rebalance') return true
+  if (inferredScope === 'vault' && inferredMetric === 'vault_list') return true
+  return false
+}
+
 
 function currentDateTimeForPrompt() {
   return new Intl.DateTimeFormat('sv-SE', {
@@ -1055,6 +1072,14 @@ async function callIntentNormalizer(params: {
 }
 
 export async function callDeepSeek(rawQuery: string, sessionContext?: string): Promise<IntentAnalysisResult> {
+  if (shouldUseHeuristicFastPath(rawQuery)) {
+    return buildFallbackResult(rawQuery, {
+      slug: 'intent_analyzer',
+      version: '0',
+      source: 'local_stub',
+    }, sessionContext)
+  }
+
   const promptResolved =
     (await getLocalPromptBySlug('intent_analyzer_op_v2')) ??
     (await getLocalPromptBySlug('intent_analyzer_op_v1')) ??
