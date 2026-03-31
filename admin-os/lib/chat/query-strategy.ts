@@ -48,9 +48,9 @@ export function buildEvidenceChain(scope: string, mode: QueryMode, rawQuery: str
   const asksRebalanceCause = /(调仓|rebalance|拦截|block|冷却|cooldown|没动)/.test(text)
 
   if (mode === 'investigate') {
-    if (asksRebalanceCause) return ['rebalance_decisions', 'execution_logs_rag', 'market_metrics']
-    if (scope === 'yield') return ['market_metrics', 'rebalance_decisions', 'execution_logs_rag']
-    return ['rebalance_decisions', 'execution_logs_rag', 'market_metrics']
+    if (asksRebalanceCause) return ['rebalance_decisions', 'market_metrics', 'allocation_snapshots']
+    if (scope === 'yield') return ['market_metrics', 'rebalance_decisions', 'allocation_snapshots']
+    return ['rebalance_decisions', 'executions', 'market_metrics']
   }
 
   if (mode === 'lookup') return ['executions', 'rebalance_decisions']

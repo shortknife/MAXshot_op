@@ -6,7 +6,6 @@ const DEFAULT_TABLES = [
   'allocation_snapshots',
   'executions',
   'rebalance_decisions',
-  'execution_logs_rag',
   'data_query_logs',
 ]
 

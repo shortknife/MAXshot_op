@@ -1,31 +1,10 @@
-import { supabase } from '@/lib/supabase'
-
 export async function fetchNarrativeEvidence(params: {
   mode: 'metrics' | 'investigate' | 'lookup'
   scope: string
   rows: Array<Record<string, unknown>>
 }) {
-  if (params.mode !== 'investigate') return []
-  const first = params.rows?.[0] || {}
-  const executionId = String(first.execution_id || '').trim()
-  if (!executionId) return []
-  try {
-    const { data, error } = await supabase
-      .from('execution_logs_rag')
-      .select('content, metadata, created_at')
-      .contains('metadata', { execution_id: executionId })
-      .order('created_at', { ascending: false })
-      .limit(2)
-    if (error || !Array.isArray(data)) return []
-    return data.map((item) => ({
-      source: 'execution_logs_rag',
-      execution_id: executionId,
-      created_at: item.created_at || null,
-      snippet: String(item.content || '').slice(0, 180),
-    }))
-  } catch {
-    return []
-  }
+  void params
+  return []
 }
 
 export function buildInvestigateExplanation(scope: string, rows: Array<Record<string, unknown>>, narrativeCount: number): string | null {
@@ -34,14 +13,14 @@ export function buildInvestigateExplanation(scope: string, rows: Array<Record<st
     const blocked = rows.filter((r) => Boolean(r.is_blocked)).length
     const needed = rows.filter((r) => Boolean(r.rebalance_needed)).length
     const latestReason = String(rows[0]?.rebalance_reason || '无')
-    return `原因分析：最近样本中需要调仓 ${needed} 条、被拦截 ${blocked} 条；最新决策原因为「${latestReason}」${narrativeCount > 0 ? `，并已补充 ${narrativeCount} 条叙事证据` : ''}。`
+    return `原因分析：最近样本中需要调仓 ${needed} 条、被拦截 ${blocked} 条；最新决策原因为「${latestReason}」。`
   }
   if (scope === 'yield') {
     const apys = rows.map((r) => Number(r.net_apy ?? r.avg_apy_pct)).filter((n) => Number.isFinite(n))
     if (!apys.length) return null
     const max = Math.max(...apys)
     const min = Math.min(...apys)
-    return `原因分析：样本 APY 区间为 ${min.toFixed(2)}% ~ ${max.toFixed(2)}%${narrativeCount > 0 ? `，并补充了 ${narrativeCount} 条执行叙事线索` : ''}。`
+    return `原因分析：样本 APY 区间为 ${min.toFixed(2)}% ~ ${max.toFixed(2)}%。`
   }
   if (scope === 'execution') {
     const latest = rows[0]
@@ -79,7 +58,6 @@ export function deriveReasonTags(scope: string, rows: Array<Record<string, unkno
     if (status === 'completed') tags.add('execution_completed')
     if (status === 'pending') tags.add('execution_pending')
   }
-  if (narrativeCount > 0) tags.add('rag_context_attached')
   return Array.from(tags)
 }
 
@@ -98,7 +76,6 @@ export function buildReasonBreakdown(reasonTags: string[], narrativeCount: numbe
     'apy_spread_wide',
     'execution_pending',
     'execution_completed',
-    'rag_context_attached',
   ]
   const main = priority.find((p) => reasonTags.includes(p)) || (reasonTags[0] || 'insufficient_signal')
   const secondary = reasonTags.filter((x) => x !== main)
@@ -120,9 +97,7 @@ export function mapReasonTagToZh(tag: string): string {
     execution_completed: '执行完成',
     apy_volatility_high: 'APY 波动较高',
     apy_spread_wide: 'APY 区间较宽',
-    rag_context_attached: '已附加叙事证据',
     insufficient_signal: '信号不足',
   }
   return dict[tag] || tag
 }
-

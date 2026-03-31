@@ -9,8 +9,7 @@
       "market_metrics",
       "allocation_snapshots",
       "executions",
-      "rebalance_decisions",
-      "execution_logs_rag"
+      "rebalance_decisions"
     ],
     "semantics": {
       "net_apy": "yield_metric",

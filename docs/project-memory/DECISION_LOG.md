@@ -44,3 +44,8 @@
 - Decision: ingestion hardening comes after green mainline and starts with shared code, not trigger replacement.
 - Why: the core problem is data-quality enforcement, not the trigger mechanism.
 - Consequence: implement shared ingestion core first; defer trigger-shell replacement decisions.
+
+## D-010
+- Decision: stop new `execution_logs_rag` / embedding writes and treat RAG evidence as legacy.
+- Why: current fact-table path is live, while embedding availability is unstable and no longer justifies being on the critical path.
+- Consequence: investigation and business query paths should rely on canonical fact tables first; RAG remains historical only.

@@ -39,6 +39,8 @@ Workspace: `/Users/alexzheng/Documents/JOB/AI_Project/MAXshot_opencode`
 - `native adapter` implemented
 - `morpho adapter` implemented
 - `shared ingestion runner` implemented
+- live fact ingestion verified for both native and morpho
+- new RAG / embedding writes disabled from active path; legacy rows remain read-only history
 
 ## Canonical References
 
