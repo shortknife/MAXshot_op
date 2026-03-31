@@ -1,4 +1,5 @@
 import { buildBusinessNextActionsByMode, buildBusinessNextActionsFromContract, buildEvidenceChain, inferMetricSemanticsFromContract, inferQueryMode } from '@/lib/chat/query-strategy'
+import type { QueryContractLike } from '@/lib/chat/query-strategy'
 import { buildUserOutcome, mapErrorToUserMessage } from '@/lib/user-chat-core'
 import { toCanonicalIntentType } from '@/lib/intent-analyzer/intent-taxonomy'
 import { inferLegacyIntentTypeFromCapabilityIds } from '@/lib/router/capability-catalog'
@@ -116,7 +117,7 @@ export function buildBusinessFailureResponse(params: {
   clarificationAutoAssumed: boolean
   outputNextActions?: string[]
   memoryRefsRef?: string[]
-  queryContract?: unknown
+  queryContract?: QueryContractLike | null
   criticDecision?: unknown
 }) {
   const queryMode = inferQueryMode(params.intentQuery, params.scope)

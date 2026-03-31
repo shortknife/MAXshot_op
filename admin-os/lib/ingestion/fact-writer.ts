@@ -16,7 +16,7 @@ interface RpcResult {
 }
 
 interface RpcCapable {
-  rpc(name: string, args: Record<string, unknown>): Promise<RpcResult>;
+  rpc(name: string, args: Record<string, unknown>): PromiseLike<RpcResult> | RpcResult;
 }
 
 export function buildRpcJsonData(payload: CanonicalIngestionPayload): Record<string, unknown> {
@@ -40,7 +40,7 @@ export function buildRpcJsonData(payload: CanonicalIngestionPayload): Record<str
 
 export async function writeCanonicalFacts(
   payload: CanonicalIngestionPayload,
-  db: RpcCapable = supabase,
+  db: RpcCapable = supabase as unknown as RpcCapable,
 ): Promise<FactWriteResult> {
   const json_data = buildRpcJsonData(payload);
   const { data, error } = await db.rpc(PROCESS_LOG_DATA_RPC, { json_data });

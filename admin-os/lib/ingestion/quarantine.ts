@@ -30,7 +30,7 @@ interface SupabaseInsertResult {
 }
 
 interface SupabaseInsertBuilder {
-  insert(payload: QuarantineRecord): Promise<SupabaseInsertResult>;
+  insert(payload: QuarantineRecord): PromiseLike<SupabaseInsertResult> | SupabaseInsertResult;
 }
 
 interface SupabaseLike {
@@ -68,7 +68,7 @@ export function buildQuarantineRecord(
 
 export async function writeQuarantineRecord(
   record: QuarantineRecord,
-  db: SupabaseLike = supabase,
+  db: SupabaseLike = supabase as unknown as SupabaseLike,
 ): Promise<QuarantineRecord> {
   const { error } = await db.from(INGESTION_QUARANTINE_TABLE).insert(record);
   if (error) {
@@ -80,7 +80,7 @@ export async function writeQuarantineRecord(
 export async function quarantinePayload(
   payload: CanonicalIngestionPayload,
   decision: GateDecision,
-  db: SupabaseLike = supabase,
+  db: SupabaseLike = supabase as unknown as SupabaseLike,
 ): Promise<QuarantineRecord> {
   if (decision.outcome !== 'quarantined') {
     throw new Error(`quarantine_requires_quarantined_outcome:${decision.outcome}`);

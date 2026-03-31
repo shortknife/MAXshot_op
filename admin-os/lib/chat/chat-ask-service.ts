@@ -24,6 +24,16 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   const draft = String(body?.draft || '').trim()
   const sessionId = getClarificationSessionId(body?.session_id)
   const finalize = (payload: Record<string, unknown>) => finalizeDelivery(payload)
+  const normalizeAndFinalize = (payload: unknown) =>
+    finalize(
+      ensureCanonicalIntentMeta(
+        payload,
+        intentType,
+        canonicalIntentType,
+        matchedCapabilityIds,
+        primaryCapabilityId
+      ) as Record<string, unknown>
+    )
 
   if (rewriteAction) {
     const rewritten = rewriteDraft(draft, rewriteAction)
@@ -77,13 +87,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   if (gateResponse) {
     return {
       status: 200,
-      body: finalize(ensureCanonicalIntentMeta(
-        gateResponse.body,
-        intentType,
-        canonicalIntentType,
-        matchedCapabilityIds,
-        primaryCapabilityId
-      )),
+      body: normalizeAndFinalize(gateResponse.body),
     }
   }
 
@@ -106,13 +110,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   if (businessHandled.handled) {
     return {
       status: 200,
-      body: finalize(ensureCanonicalIntentMeta(
-        businessHandled.body,
-        intentType,
-        canonicalIntentType,
-        matchedCapabilityIds,
-        primaryCapabilityId
-      )),
+      body: normalizeAndFinalize(businessHandled.body),
     }
   }
 
@@ -126,12 +124,6 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   })
   return {
     status: 200,
-    body: finalize(ensureCanonicalIntentMeta(
-      nonBusinessBody,
-      intentType,
-      canonicalIntentType,
-      matchedCapabilityIds,
-      primaryCapabilityId
-    )),
+    body: normalizeAndFinalize(nonBusinessBody),
   }
 }

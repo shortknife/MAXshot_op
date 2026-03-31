@@ -126,7 +126,7 @@ function validateIntentOutput(intent: { type: string; extracted_slots: Record<st
     throw new Error('confidence must be a number between 0 and 1')
   }
 
-  const validIntentTypes = [...OFFICIAL_STEP3_INTENT_TYPES]
+  const validIntentTypes: string[] = [...OFFICIAL_STEP3_INTENT_TYPES]
 
   if (!validIntentTypes.includes(intent.type)) {
     throw new Error(`Invalid intent type: ${intent.type}`)

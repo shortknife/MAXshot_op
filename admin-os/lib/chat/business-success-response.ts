@@ -1,4 +1,5 @@
 import { buildBusinessNextActionsByMode, buildBusinessNextActionsFromContract, buildEvidenceChain } from '@/lib/chat/query-strategy'
+import type { QueryContractLike } from '@/lib/chat/query-strategy'
 import { buildBusinessHighlights, buildUserOutcome } from '@/lib/user-chat-core'
 import { toCanonicalIntentType } from '@/lib/intent-analyzer/intent-taxonomy'
 import { inferLegacyIntentTypeFromCapabilityIds } from '@/lib/router/capability-catalog'
@@ -49,7 +50,7 @@ type BusinessSuccessResponseParams = {
   followUpPolicy: unknown
   nextActions: string[] | null
   memoryRefsRef?: string[]
-  queryContract?: unknown
+  queryContract?: QueryContractLike | null
   criticDecision?: unknown
 }
 

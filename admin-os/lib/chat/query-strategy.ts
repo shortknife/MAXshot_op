@@ -1,6 +1,6 @@
 export type QueryMode = 'metrics' | 'investigate' | 'lookup'
 
-type QueryContractLike = {
+export type QueryContractLike = {
   scope?: string | null
   metric?: string | null
   aggregation?: string | null
