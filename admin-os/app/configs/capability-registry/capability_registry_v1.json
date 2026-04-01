@@ -435,6 +435,113 @@
       ]
     },
     {
+      "capability_id": "capability.kb_upload_qc",
+      "aliases": [
+        "kb_upload_qc"
+      ],
+      "name": "KB Upload & QC",
+      "description": "Ingest KB source material and return a QC result preview for readiness.",
+      "lifecycle": "active",
+      "risk_class": "side_effect",
+      "examples": [
+        "Upload a customer KB markdown file",
+        "Validate a new FAQ document before indexing"
+      ],
+      "prompt_slot_schema": {
+        "description": "KB source metadata for ingest.",
+        "fields": [
+          {
+            "name": "source_type",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "markdown",
+              "pdf",
+              "url",
+              "text"
+            ]
+          },
+          {
+            "name": "source_ref",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "kb_scope",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "customer_context",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "uploaded_by",
+            "type": "string",
+            "required": false
+          }
+        ]
+      },
+      "runtime_slot_schema": {
+        "type": "object",
+        "required": [
+          "source_type",
+          "source_ref"
+        ],
+        "properties": {
+          "source_type": {
+            "type": "string",
+            "enum": [
+              "markdown",
+              "pdf",
+              "url",
+              "text"
+            ]
+          },
+          "source_ref": {
+            "type": "string"
+          },
+          "kb_scope": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "customer_context": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "uploaded_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "clarification_policy": {
+        "max_turns": 1,
+        "ui_mode": "natural_language_only",
+        "allow_multi_match": false,
+        "max_multi_match": 1,
+        "ask_for": [
+          "kb_scope",
+          "customer_context"
+        ],
+        "prefer_examples_over_buttons": true
+      },
+      "tags": [
+        "kb",
+        "ingest",
+        "qc",
+        "side_effect"
+      ]
+    },
+    {
       "capability_id": "capability.content_generator",
       "aliases": [
         "content_generator"

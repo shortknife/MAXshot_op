@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   businessDataQuery: vi.fn(),
   productDocQnA: vi.fn(),
   faqAnswering: vi.fn(),
+  kbUploadQc: vi.fn(),
   contentGenerator: vi.fn(),
   contextAssembler: vi.fn(),
 }))
@@ -24,6 +25,10 @@ vi.mock('@/lib/capabilities/faq-answering', () => ({
   faqAnswering: mocks.faqAnswering,
 }))
 
+vi.mock('@/lib/capabilities/kb-upload-qc', () => ({
+  kbUploadQc: mocks.kbUploadQc,
+}))
+
 vi.mock('@/lib/capabilities/content-generator', () => ({
   contentGenerator: mocks.contentGenerator,
 }))
@@ -39,6 +44,7 @@ describe('Step7 capability registry', () => {
     mocks.businessDataQuery.mockReset()
     mocks.productDocQnA.mockReset()
     mocks.faqAnswering.mockReset()
+    mocks.kbUploadQc.mockReset()
     mocks.contentGenerator.mockReset()
     mocks.contextAssembler.mockReset()
   })
@@ -153,6 +159,34 @@ describe('Step7 capability registry', () => {
 
     expect(output.status).toBe('success')
     expect(output.capability_id).toBe('capability.faq_answering')
+  })
+
+  it('executes kb upload qc through its canonical capability path', async () => {
+    mocks.kbUploadQc.mockResolvedValue({
+      capability_id: 'kb_upload_qc',
+      capability_version: '1.0',
+      status: 'success',
+      result: { ingest_status: 'accepted' },
+      evidence: { sources: [{ source: 'stub' }], doc_quotes: null },
+      audit: {
+        capability_id: 'kb_upload_qc',
+        capability_version: '1.0',
+        status: 'success',
+        used_skills: ['stub'],
+      },
+      used_skills: ['stub'],
+    })
+
+    const registry = CapabilityRegistry.getInstance()
+    const output = await registry.executeCapability({
+      capability_id: 'capability.kb_upload_qc',
+      execution_id: 'exec-1',
+      intent: { type: 'task_management', extracted_slots: { source_type: 'markdown', source_ref: 'file.md' } },
+      slots: { source_type: 'markdown', source_ref: 'file.md' },
+    })
+
+    expect(output.status).toBe('success')
+    expect(output.capability_id).toBe('capability.kb_upload_qc')
   })
 
   it('executes content generator and context assembler through their canonical paths', async () => {

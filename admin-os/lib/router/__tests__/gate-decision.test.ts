@@ -60,6 +60,24 @@ describe('Step4 GateDecision', () => {
     expect(decision.confirmation_request?.preview.capability_id).toBe('capability.publisher')
   })
 
+  it('returns require_confirmation for kb upload qc side-effect capability', () => {
+    const decision = evaluateGateDecision({
+      intent_name: 'task_management',
+      matched_capability_ids: ['capability.kb_upload_qc'],
+      execution_mode: 'deterministic',
+      entry_channel: 'admin_os',
+      slots: {
+        source_type: 'markdown',
+        source_ref: 'app/configs/faq-kb/account-access.md',
+      },
+    })
+
+    expect(decision.gate_result).toBe('require_confirmation')
+    expect(decision.require_confirmation).toBe(true)
+    expect(decision.gate_reason).toBe('side_effect_confirmation_required')
+    expect(decision.confirmation_request?.preview.capability_id).toBe('capability.kb_upload_qc')
+  })
+
   it('continues chat when query contract is incomplete', () => {
     const decision = evaluateGateDecision({
       intent_name: 'business_query',
