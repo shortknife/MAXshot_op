@@ -1,6 +1,7 @@
 import { productDocQnA } from '@/lib/capabilities/product-doc-qna'
 import { faqAnswering } from '@/lib/capabilities/faq-answering'
 import { faqFallback } from '@/lib/capabilities/faq-fallback'
+import { faqQaReview } from '@/lib/capabilities/faq-qa-review'
 import { buildQnaSuccessResponse } from '@/lib/chat/non-business-response'
 import { buildChatEnvelope } from '@/lib/chat/chat-route-helpers'
 import { toCanonicalIntentType } from '@/lib/intent-analyzer/intent-taxonomy'
@@ -20,7 +21,7 @@ export async function handleQnaIntent(params: {
   rawQuery: string
 }): Promise<{ body: unknown }> {
   const { intentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery } = params
-  const qnaSlots = {
+  const qnaSlots: Record<string, unknown> = {
     ...(parsed.intent.extracted_slots || {}),
     question: String((parsed.intent.extracted_slots || {}).question || rawQuery || '').trim(),
   }
@@ -40,21 +41,37 @@ export async function handleQnaIntent(params: {
   } | null
   let finalCapabilityId = qna.capability_id
 
+  let reviewPayload: Record<string, unknown> | null = null
+
   if (useFaqCapability && qnaResult?.fallback_required) {
+    const fallbackReason = qnaResult.reason || qna.evidence?.fallback_reason || 'faq_generation_failed'
     const fallbackOutput = await faqFallback(
       buildChatEnvelope(intentType, {
         question: qnaSlots.question,
-        reason: qnaResult.reason || qna.evidence?.fallback_reason || 'faq_generation_failed',
+        reason: fallbackReason,
         kb_scope: typeof qna.metadata?.kb_scope === 'string' ? qna.metadata.kb_scope : null,
         citations: Array.isArray(qnaResult.citations) ? qnaResult.citations : [],
       })
     )
+    const reviewOutput = await faqQaReview(
+      buildChatEnvelope(intentType, {
+        question: qnaSlots.question,
+        draft_answer: qnaResult.answer || null,
+        reason: fallbackReason,
+        citations: Array.isArray(qnaResult.citations) ? qnaResult.citations : [],
+        confidence: typeof qnaResult.confidence === 'number' ? qnaResult.confidence : null,
+        customer_context: typeof qnaSlots.customer_context === 'string' ? qnaSlots.customer_context : null,
+        channel: typeof qnaSlots.channel === 'string' ? qnaSlots.channel : null,
+        kb_scope: typeof qna.metadata?.kb_scope === 'string' ? qna.metadata.kb_scope : null,
+      })
+    )
+    reviewPayload = ((reviewOutput.result as { review_payload?: Record<string, unknown> } | null)?.review_payload) || null
     qnaResult = {
       ...qnaResult,
       fallback_message: (fallbackOutput.result as { fallback_message?: string } | null)?.fallback_message,
       review_required: true,
     }
-    finalCapabilityId = fallbackOutput.capability_id
+    finalCapabilityId = reviewOutput.capability_id
   }
 
   const resolvedAnswer = qnaResult?.fallback_message || qnaResult?.answer
@@ -76,6 +93,7 @@ export async function handleQnaIntent(params: {
         fallback_required: Boolean(qnaResult?.fallback_required),
         review_required: Boolean(qnaResult?.review_required),
         reason: qnaResult?.reason || qna.evidence?.fallback_reason || null,
+        review_payload: reviewPayload,
       },
     }),
   }

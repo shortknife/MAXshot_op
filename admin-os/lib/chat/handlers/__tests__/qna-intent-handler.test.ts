@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   productDocQnA: vi.fn(),
   faqAnswering: vi.fn(),
   faqFallback: vi.fn(),
+  faqQaReview: vi.fn(),
 }))
 
 vi.mock('@/lib/capabilities/product-doc-qna', () => ({
@@ -16,6 +17,10 @@ vi.mock('@/lib/capabilities/faq-answering', () => ({
 
 vi.mock('@/lib/capabilities/faq-fallback', () => ({
   faqFallback: mocks.faqFallback,
+}))
+
+vi.mock('@/lib/capabilities/faq-qa-review', () => ({
+  faqQaReview: mocks.faqQaReview,
 }))
 
 import { handleQnaIntent } from '@/lib/chat/handlers/qna-intent-handler'
@@ -53,7 +58,7 @@ describe('qna-intent-handler', () => {
     expect((result.body as { data?: { meta?: { answer_meta?: { capability_id?: string } } } }).data?.meta?.answer_meta?.capability_id).toBe('faq_answering')
   })
 
-  it('routes low-confidence faq answers through faq fallback', async () => {
+  it('routes low-confidence faq answers through fallback and review packaging', async () => {
     mocks.faqAnswering.mockResolvedValue({
       capability_id: 'faq_answering',
       capability_version: '1.0',
@@ -83,6 +88,20 @@ describe('qna-intent-handler', () => {
       used_skills: [],
       metadata: { kb_scope: 'public' },
     })
+    mocks.faqQaReview.mockResolvedValue({
+      capability_id: 'faq_qa_review',
+      capability_version: '1.0',
+      status: 'success',
+      result: {
+        review_payload: { question: 'What does the Pro plan include?', priority: 'high' },
+        manual_review_required: true,
+        queue_status: 'prepared',
+      },
+      evidence: { sources: [{ source_id: 'plans-and-billing' }], doc_quotes: null, review_reason: 'faq_low_confidence' },
+      audit: { capability_id: 'faq_qa_review', capability_version: '1.0', status: 'success', used_skills: [] },
+      used_skills: [],
+      metadata: { manual_review_required: true },
+    })
 
     const result = await handleQnaIntent({
       intentType: 'general_qna',
@@ -93,8 +112,9 @@ describe('qna-intent-handler', () => {
     })
 
     expect(mocks.faqFallback).toHaveBeenCalledTimes(1)
-    expect((result.body as { data?: { summary?: string; meta?: { answer_meta?: { capability_id?: string; review_required?: boolean } } } }).data?.summary).toContain('confidence is too low')
-    expect((result.body as { data?: { meta?: { answer_meta?: { capability_id?: string; review_required?: boolean } } } }).data?.meta?.answer_meta?.capability_id).toBe('faq_fallback')
-    expect((result.body as { data?: { meta?: { answer_meta?: { review_required?: boolean } } } }).data?.meta?.answer_meta?.review_required).toBe(true)
+    expect(mocks.faqQaReview).toHaveBeenCalledTimes(1)
+    expect((result.body as { data?: { summary?: string; meta?: { answer_meta?: { capability_id?: string; review_required?: boolean; review_payload?: { priority?: string } } } } }).data?.summary).toContain('confidence is too low')
+    expect((result.body as { data?: { meta?: { answer_meta?: { capability_id?: string } } } }).data?.meta?.answer_meta?.capability_id).toBe('faq_qa_review')
+    expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { priority?: string } } } } }).data?.meta?.answer_meta?.review_payload?.priority).toBe('high')
   })
 })

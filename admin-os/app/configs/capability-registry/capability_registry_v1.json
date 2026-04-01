@@ -533,6 +533,111 @@
       ]
     },
     {
+      "capability_id": "capability.faq_qa_review",
+      "aliases": [
+        "faq_qa_review"
+      ],
+      "name": "FAQ QA Review",
+      "description": "Prepare flagged FAQ cases for manual QA review.",
+      "lifecycle": "active",
+      "risk_class": "read_only",
+      "examples": [
+        "Package this low-confidence answer for review"
+      ],
+      "prompt_slot_schema": {
+        "description": "Internal review packaging capability.",
+        "fields": [
+          {
+            "name": "question",
+            "type": "natural_language",
+            "required": true
+          },
+          {
+            "name": "draft_answer",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "reason",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "confidence",
+            "type": "number",
+            "required": false
+          }
+        ]
+      },
+      "runtime_slot_schema": {
+        "type": "object",
+        "required": [
+          "question",
+          "reason"
+        ],
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "draft_answer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          },
+          "customer_context": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "channel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "kb_scope": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "citations": {
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "clarification_policy": {
+        "max_turns": 0,
+        "ui_mode": "natural_language_only",
+        "allow_multi_match": false,
+        "ask_for": [],
+        "prefer_examples_over_buttons": false
+      },
+      "tags": [
+        "faq",
+        "review",
+        "ops_support",
+        "read_only"
+      ]
+    },
+    {
       "capability_id": "capability.kb_upload_qc",
       "aliases": [
         "kb_upload_qc"

@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   productDocQnA: vi.fn(),
   faqAnswering: vi.fn(),
   faqFallback: vi.fn(),
+  faqQaReview: vi.fn(),
   kbUploadQc: vi.fn(),
   contentGenerator: vi.fn(),
   contextAssembler: vi.fn(),
@@ -30,6 +31,10 @@ vi.mock('@/lib/capabilities/faq-fallback', () => ({
   faqFallback: mocks.faqFallback,
 }))
 
+vi.mock('@/lib/capabilities/faq-qa-review', () => ({
+  faqQaReview: mocks.faqQaReview,
+}))
+
 vi.mock('@/lib/capabilities/kb-upload-qc', () => ({
   kbUploadQc: mocks.kbUploadQc,
 }))
@@ -50,6 +55,7 @@ describe('Step7 capability registry', () => {
     mocks.productDocQnA.mockReset()
     mocks.faqAnswering.mockReset()
     mocks.faqFallback.mockReset()
+    mocks.faqQaReview.mockReset()
     mocks.kbUploadQc.mockReset()
     mocks.contentGenerator.mockReset()
     mocks.contextAssembler.mockReset()
@@ -193,6 +199,34 @@ describe('Step7 capability registry', () => {
 
     expect(output.status).toBe('success')
     expect(output.capability_id).toBe('capability.faq_fallback')
+  })
+
+  it('executes faq qa review through its canonical capability path', async () => {
+    mocks.faqQaReview.mockResolvedValue({
+      capability_id: 'faq_qa_review',
+      capability_version: '1.0',
+      status: 'success',
+      result: { queue_status: 'prepared' },
+      evidence: { sources: [{ source: 'stub' }], doc_quotes: null },
+      audit: {
+        capability_id: 'faq_qa_review',
+        capability_version: '1.0',
+        status: 'success',
+        used_skills: ['stub'],
+      },
+      used_skills: ['stub'],
+    })
+
+    const registry = CapabilityRegistry.getInstance()
+    const output = await registry.executeCapability({
+      capability_id: 'capability.faq_qa_review',
+      execution_id: 'exec-1',
+      intent: { type: 'general_qna', extracted_slots: { question: 'What does the plan include?', reason: 'faq_low_confidence' } },
+      slots: { question: 'What does the plan include?', reason: 'faq_low_confidence' },
+    })
+
+    expect(output.status).toBe('success')
+    expect(output.capability_id).toBe('capability.faq_qa_review')
   })
 
   it('executes kb upload qc through its canonical capability path', async () => {
