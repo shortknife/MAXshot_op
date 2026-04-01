@@ -111,6 +111,7 @@ export function inferLegacyIntentTypeFromCapabilityIds(capabilityIds: unknown[])
   if (!primary) return 'out_of_scope'
   if (primary === 'capability.data_fact_query') return 'business_query'
   if (primary === 'capability.product_doc_qna') return 'general_qna'
+  if (primary === 'capability.faq_answering') return 'general_qna'
   if (primary === 'capability.content_generator') return 'content_brief'
   if (primary === 'capability.context_assembler') return 'marketing_gen'
   if (primary === 'capability.publisher') return 'task_management'
@@ -121,6 +122,7 @@ export function inferPrimaryCapabilityIdFromIntentName(intentName: unknown): str
   const normalized = String(intentName || '').trim()
   if (!normalized) return null
   if (normalized === 'business_query') return 'capability.data_fact_query'
+  if (normalized === 'faq_qna' || normalized === 'customer_faq') return 'capability.faq_answering'
   if (normalized === 'general_qna' || normalized === 'documentation' || normalized === 'product_qna') {
     return 'capability.product_doc_qna'
   }

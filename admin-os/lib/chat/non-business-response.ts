@@ -133,6 +133,7 @@ export function buildQnaSuccessResponse(params: {
   promptMeta: PromptMeta
   qnaPromptMeta: unknown
   answer: string
+  answerMeta?: Record<string, unknown> | null
 }) {
   return {
     success: true,
@@ -145,6 +146,7 @@ export function buildQnaSuccessResponse(params: {
         exit_type: 'answered',
         intent_prompt: params.promptMeta || null,
         qna_prompt: params.qnaPromptMeta || null,
+        ...(params.answerMeta ? { answer_meta: params.answerMeta } : {}),
       },
     }),
   }

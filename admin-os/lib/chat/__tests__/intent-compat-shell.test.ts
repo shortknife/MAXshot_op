@@ -24,4 +24,25 @@ describe('intent-compat compatibility shell', () => {
     expect(result.extractedSlots.matched_capability_id).toBe('capability.product_doc_qna')
     expect(result.extractedSlots.question_shape).toBe('capability_overview')
   })
+
+  it('routes faq-style support questions into faq answering', () => {
+    const result = normalizeChatIntent({
+      parsed: {
+        intent: {
+          type: 'general_qna',
+          extracted_slots: {
+            matched_capability_ids: ['capability.product_doc_qna'],
+            matched_capability_id: 'capability.product_doc_qna',
+          },
+        },
+      },
+      intentQuery: 'How do I reset my password?',
+      previousTurns: 0,
+      looksLikeContentBrief: () => false,
+    })
+
+    expect(result.intentType).toBe('general_qna')
+    expect(result.extractedSlots.matched_capability_id).toBe('capability.faq_answering')
+    expect(result.extractedSlots.question).toBe('How do I reset my password?')
+  })
 })

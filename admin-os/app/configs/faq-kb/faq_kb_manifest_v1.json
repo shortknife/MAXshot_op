@@ -1,0 +1,49 @@
+{
+  "registry_id": "faq_kb_manifest_v1",
+  "version": "1.0.0",
+  "documents": [
+    {
+      "id": "account-access",
+      "title": "Account Access FAQ",
+      "kb_scope": "general",
+      "path": "app/configs/faq-kb/account-access.md",
+      "keywords": [
+        "password",
+        "reset password",
+        "forgot password",
+        "login email",
+        "账户",
+        "密码重置"
+      ]
+    },
+    {
+      "id": "plans-billing",
+      "title": "Plans and Billing FAQ",
+      "kb_scope": "billing",
+      "path": "app/configs/faq-kb/plans-and-billing.md",
+      "keywords": [
+        "pro plan",
+        "pricing",
+        "billing",
+        "invoice",
+        "upload invoices",
+        "套餐",
+        "发票"
+      ]
+    },
+    {
+      "id": "knowledge-base",
+      "title": "Knowledge Base FAQ",
+      "kb_scope": "kb",
+      "path": "app/configs/faq-kb/knowledge-base.md",
+      "keywords": [
+        "knowledge base",
+        "upload document",
+        "validation",
+        "low confidence",
+        "知识库",
+        "人工审核"
+      ]
+    }
+  ]
+}

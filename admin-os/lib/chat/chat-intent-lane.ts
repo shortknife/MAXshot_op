@@ -25,6 +25,7 @@ export function resolveChatIntentLane(params: ResolveChatIntentLaneParams): Chat
   const matchedCapabilityIds = extractMatchedCapabilityIds(extractedSlots)
 
   if (matchedCapabilityIds.includes('capability.data_fact_query')) return 'business'
+  if (matchedCapabilityIds.includes('capability.faq_answering')) return 'qna'
   if (
     matchedCapabilityIds.includes('capability.content_generator') ||
     matchedCapabilityIds.includes('capability.context_assembler')

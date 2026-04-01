@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mocks = vi.hoisted(() => ({
   businessDataQuery: vi.fn(),
   productDocQnA: vi.fn(),
+  faqAnswering: vi.fn(),
   contentGenerator: vi.fn(),
   contextAssembler: vi.fn(),
 }))
@@ -19,6 +20,10 @@ vi.mock('@/lib/capabilities/product-doc-qna', () => ({
   productDocQnA: mocks.productDocQnA,
 }))
 
+vi.mock('@/lib/capabilities/faq-answering', () => ({
+  faqAnswering: mocks.faqAnswering,
+}))
+
 vi.mock('@/lib/capabilities/content-generator', () => ({
   contentGenerator: mocks.contentGenerator,
 }))
@@ -33,6 +38,7 @@ describe('Step7 capability registry', () => {
   beforeEach(() => {
     mocks.businessDataQuery.mockReset()
     mocks.productDocQnA.mockReset()
+    mocks.faqAnswering.mockReset()
     mocks.contentGenerator.mockReset()
     mocks.contextAssembler.mockReset()
   })
@@ -121,6 +127,34 @@ describe('Step7 capability registry', () => {
     expect(output.capability_id).toBe('capability.product_doc_qna')
   })
 
+  it('executes faq answering through its canonical capability path', async () => {
+    mocks.faqAnswering.mockResolvedValue({
+      capability_id: 'faq_answering',
+      capability_version: '1.0',
+      status: 'success',
+      result: { answer: 'Use the forgot password link.' },
+      evidence: { sources: [{ source: 'stub' }], doc_quotes: null },
+      audit: {
+        capability_id: 'faq_answering',
+        capability_version: '1.0',
+        status: 'success',
+        used_skills: ['stub'],
+      },
+      used_skills: ['stub'],
+    })
+
+    const registry = CapabilityRegistry.getInstance()
+    const output = await registry.executeCapability({
+      capability_id: 'capability.faq_answering',
+      execution_id: 'exec-1',
+      intent: { type: 'general_qna', extracted_slots: { question: 'How do I reset my password?' } },
+      slots: { question: 'How do I reset my password?' },
+    })
+
+    expect(output.status).toBe('success')
+    expect(output.capability_id).toBe('capability.faq_answering')
+  })
+
   it('executes content generator and context assembler through their canonical paths', async () => {
     mocks.contentGenerator.mockResolvedValue({
       capability_id: 'content_generator',
@@ -171,4 +205,3 @@ describe('Step7 capability registry', () => {
     expect(context.capability_id).toBe('capability.context_assembler')
   })
 })
-

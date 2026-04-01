@@ -42,6 +42,12 @@ function isGenericProductTheoryQuestion(rawQuery: string): boolean {
   return /(这个产品|该产品|这款产品)/.test(text) && /(原理|核心原理|底层原理|理论|机制)/.test(text) && !/maxshot/.test(text)
 }
 
+function looksLikeFaqSupportQuestion(rawQuery: string): boolean {
+  return /(faq|support|help|password|reset|invoice|billing|pricing|plan include|knowledge base|upload document|客户|帮助中心|发票|订阅|套餐|密码|知识库|人工审核)/i.test(
+    rawQuery
+  )
+}
+
 function isExplicitMetricAsk(rawQuery: string): boolean {
   return /(多少|最高|最低|均值|平均|走势|趋势|列表|详情|统计|排名|比较|对比|最近|top|\bmax\b|\bmin\b|apy|收益|tvl|execution|执行)/i.test(
     rawQuery
@@ -96,6 +102,23 @@ export function normalizeChatIntent(params: NormalizeChatIntentParams): {
   const followUpChain = normalizeChainAliasFromQuery(trimmedQuery)
   const looksOverallPerformance = /(整体表现|总体表现|整体情况|performance|overall)/i.test(intentQuery)
   const looksBusinessish = /(maxshot|业务|vault|金库|apy|收益|yield|execution|执行|rebalance|调仓|tvl)/i.test(intentQuery)
+  const looksFaqSupport = looksLikeFaqSupportQuestion(intentQuery) && !isExplicitMetricAsk(intentQuery)
+
+  if (
+    looksFaqSupport &&
+    !matchedCapabilityIds.includes('capability.data_fact_query')
+  ) {
+    updateIntent('general_qna', {
+      in_scope: true,
+      matched_capability_ids: ['capability.faq_answering'],
+      matched_capability_id: 'capability.faq_answering',
+      question: String(extractedSlots.question || intentQuery || '').trim(),
+    })
+    return {
+      intentType,
+      extractedSlots,
+    }
+  }
 
   if (hasFollowUpHint && !hasCapabilityAuthority) {
     updateIntent('business_query', {
@@ -215,6 +238,18 @@ export function normalizeChatIntent(params: NormalizeChatIntentParams): {
     }
 
     if (matchedCapabilityIds.includes('capability.product_doc_qna')) {
+      if (looksFaqSupport) {
+        updateIntent('general_qna', {
+          in_scope: true,
+          matched_capability_ids: ['capability.faq_answering'],
+          matched_capability_id: 'capability.faq_answering',
+          question: String(extractedSlots.question || intentQuery || '').trim(),
+        })
+        return {
+          intentType,
+          extractedSlots,
+        }
+      }
       const looksLikeProductDoc = /(maxshot|vault|apy|execution|金库|收益|业务|protocol|chain|tvl|rebalance|调仓|风险|策略|能力|能做什么|做什么业务|capability)/i.test(
         intentQuery
       )
@@ -235,6 +270,19 @@ export function normalizeChatIntent(params: NormalizeChatIntentParams): {
         in_scope: true,
         matched_capability_ids: matchedCapabilityIds,
         matched_capability_id: primaryCapabilityId,
+      })
+      return {
+        intentType,
+        extractedSlots,
+      }
+    }
+
+    if (matchedCapabilityIds.includes('capability.faq_answering')) {
+      updateIntent(capabilityIntentType === 'out_of_scope' ? 'general_qna' : capabilityIntentType, {
+        in_scope: true,
+        matched_capability_ids: matchedCapabilityIds,
+        matched_capability_id: primaryCapabilityId,
+        question: String(extractedSlots.question || intentQuery || '').trim(),
       })
       return {
         intentType,

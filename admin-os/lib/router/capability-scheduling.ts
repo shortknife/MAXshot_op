@@ -2,6 +2,7 @@ import { CapabilityInputEnvelope, CapabilityOutput } from './types/capability'
 import { dataFactQuery } from '../capabilities/data-fact-query'
 import { businessDataQuery } from '../capabilities/business-data-query'
 import { productDocQnA } from '../capabilities/product-doc-qna'
+import { faqAnswering } from '../capabilities/faq-answering'
 import { contentGenerator } from '../capabilities/content-generator'
 import { contextAssembler } from '../capabilities/context-assembler'
 import { getCapabilityDefinition, listActiveCapabilityDefinitions } from './capability-catalog'
@@ -27,6 +28,7 @@ export class CapabilityRegistry {
     const byCanonicalId = new Map<string, CapabilityFunction>([
       ['capability.data_fact_query', businessDataQuery],
       ['capability.product_doc_qna', productDocQnA],
+      ['capability.faq_answering', faqAnswering],
       ['capability.content_generator', contentGenerator],
       ['capability.context_assembler', contextAssembler],
       ['capability.publisher', pendingConfirmationCapability()],

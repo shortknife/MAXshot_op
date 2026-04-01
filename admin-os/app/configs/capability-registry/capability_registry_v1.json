@@ -1,7 +1,7 @@
 {
   "registry_id": "capability_registry_v1",
   "version": "1.0.0",
-  "updated_at": "2026-03-20",
+  "updated_at": "2026-04-01",
   "basis": {
     "capability_catalog": "lib/router/capability-catalog.ts",
     "semantic_index": "app/configs/capability-index/business_data_query.index.json"
@@ -307,6 +307,131 @@
         "read_only",
         "maxshot",
         "fsd"
+      ]
+    },
+    {
+      "capability_id": "capability.faq_answering",
+      "aliases": [
+        "faq_answering",
+        "customer_faq"
+      ],
+      "name": "FAQ Answering",
+      "description": "Answer customer-facing FAQ questions from bounded KB sources with citations and confidence markers.",
+      "lifecycle": "active",
+      "risk_class": "read_only",
+      "examples": [
+        "How do I reset my password?",
+        "What does the Pro plan include?",
+        "How can customers upload invoices?"
+      ],
+      "prompt_slot_schema": {
+        "description": "Customer FAQ question plus optional KB scope and channel context.",
+        "fields": [
+          {
+            "name": "question",
+            "type": "natural_language",
+            "required": true
+          },
+          {
+            "name": "kb_scope",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "customer_context",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "channel",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "locale",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "top_k",
+            "type": "integer",
+            "required": false
+          },
+          {
+            "name": "min_confidence",
+            "type": "number",
+            "required": false
+          }
+        ]
+      },
+      "runtime_slot_schema": {
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "kb_scope": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "customer_context": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "channel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "locale": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "top_k": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 10
+          },
+          "min_confidence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "additionalProperties": true
+      },
+      "clarification_policy": {
+        "max_turns": 2,
+        "ui_mode": "natural_language_only",
+        "allow_multi_match": false,
+        "ask_for": [
+          "kb_scope",
+          "customer_context",
+          "locale"
+        ],
+        "prefer_examples_over_buttons": true
+      },
+      "tags": [
+        "faq",
+        "kb",
+        "customer_support",
+        "read_only"
       ]
     },
     {
