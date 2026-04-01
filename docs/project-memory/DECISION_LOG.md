@@ -54,3 +54,8 @@
 - Decision: product memory should evolve as `structured interaction log -> system learning assets -> user long-term memory`, not as per-turn freeform documents.
 - Why: raw conversation transcripts are useful for audit and corpus building, but they are a poor primary format for retrieval, statistics, template evolution, and future user-preference memory.
 - Consequence: near-term work should capture each query/response into structured operational logs; later iterations can derive intent hard cases, query-template examples, and user preference memory from that layer.
+
+## D-012
+- Decision: treat `Nexa` as the platform/product-family name and `MAXshot` as a customer sample solution, not the platform identity.
+- Why: the current workspace already contains a general runtime plus imported FAQ platform assets, so keeping `MAXshot` as the platform name would blur platform identity and customer identity.
+- Consequence: documentation and future module planning should use `Nexa platform` framing first; any repository-wide physical rename remains a separate later migration.
