@@ -59,3 +59,8 @@
 - Decision: treat `Nexa` as the platform/product-family name and `MAXshot` as a customer sample solution, not the platform identity.
 - Why: the current workspace already contains a general runtime plus imported FAQ platform assets, so keeping `MAXshot` as the platform name would blur platform identity and customer identity.
 - Consequence: documentation and future module planning should use `Nexa platform` framing first; any repository-wide physical rename remains a separate later migration.
+
+## D-013
+- Decision: define the FAQ / KB Plane as a separate capability family instead of extending existing read-only capabilities.
+- Why: customer FAQ, platform documentation QnA, and ops/data fact queries have different grounding sources, evidence expectations, and fallback behavior.
+- Consequence: the next implementation phase must introduce `capability.faq_answering` and related FAQ capabilities under a distinct contract and routing boundary; `capability.product_doc_qna` and `capability.data_fact_query` must retain their current ownership boundaries.
