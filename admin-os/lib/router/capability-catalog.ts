@@ -112,6 +112,7 @@ export function inferLegacyIntentTypeFromCapabilityIds(capabilityIds: unknown[])
   if (primary === 'capability.data_fact_query') return 'business_query'
   if (primary === 'capability.product_doc_qna') return 'general_qna'
   if (primary === 'capability.faq_answering') return 'general_qna'
+  if (primary === 'capability.faq_fallback') return 'general_qna'
   if (primary === 'capability.content_generator') return 'content_brief'
   if (primary === 'capability.context_assembler') return 'marketing_gen'
   if (primary === 'capability.publisher') return 'task_management'

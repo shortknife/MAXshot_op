@@ -435,6 +435,104 @@
       ]
     },
     {
+      "capability_id": "capability.faq_fallback",
+      "aliases": [
+        "faq_fallback"
+      ],
+      "name": "FAQ Fallback",
+      "description": "Return a bounded fallback outcome when FAQ grounding is insufficient or out of scope.",
+      "lifecycle": "active",
+      "risk_class": "read_only",
+      "examples": [
+        "Fallback when FAQ grounding confidence is too low",
+        "Return a safe FAQ handoff response"
+      ],
+      "prompt_slot_schema": {
+        "description": "Fallback context for an unresolved FAQ answer.",
+        "fields": [
+          {
+            "name": "question",
+            "type": "natural_language",
+            "required": true
+          },
+          {
+            "name": "reason",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "faq_low_confidence",
+              "faq_no_grounding_evidence",
+              "faq_out_of_scope",
+              "faq_generation_failed"
+            ]
+          },
+          {
+            "name": "kb_scope",
+            "type": "string",
+            "required": false
+          },
+          {
+            "name": "channel",
+            "type": "string",
+            "required": false
+          }
+        ]
+      },
+      "runtime_slot_schema": {
+        "type": "object",
+        "required": [
+          "question",
+          "reason"
+        ],
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string",
+            "enum": [
+              "faq_low_confidence",
+              "faq_no_grounding_evidence",
+              "faq_out_of_scope",
+              "faq_generation_failed"
+            ]
+          },
+          "kb_scope": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "channel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "citations": {
+            "type": [
+              "array",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": true
+      },
+      "clarification_policy": {
+        "max_turns": 0,
+        "ui_mode": "natural_language_only",
+        "allow_multi_match": false,
+        "ask_for": [],
+        "prefer_examples_over_buttons": false
+      },
+      "tags": [
+        "faq",
+        "fallback",
+        "customer_support",
+        "read_only"
+      ]
+    },
+    {
       "capability_id": "capability.kb_upload_qc",
       "aliases": [
         "kb_upload_qc"

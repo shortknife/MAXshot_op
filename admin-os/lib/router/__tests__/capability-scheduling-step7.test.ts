@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   businessDataQuery: vi.fn(),
   productDocQnA: vi.fn(),
   faqAnswering: vi.fn(),
+  faqFallback: vi.fn(),
   kbUploadQc: vi.fn(),
   contentGenerator: vi.fn(),
   contextAssembler: vi.fn(),
@@ -25,6 +26,10 @@ vi.mock('@/lib/capabilities/faq-answering', () => ({
   faqAnswering: mocks.faqAnswering,
 }))
 
+vi.mock('@/lib/capabilities/faq-fallback', () => ({
+  faqFallback: mocks.faqFallback,
+}))
+
 vi.mock('@/lib/capabilities/kb-upload-qc', () => ({
   kbUploadQc: mocks.kbUploadQc,
 }))
@@ -44,6 +49,7 @@ describe('Step7 capability registry', () => {
     mocks.businessDataQuery.mockReset()
     mocks.productDocQnA.mockReset()
     mocks.faqAnswering.mockReset()
+    mocks.faqFallback.mockReset()
     mocks.kbUploadQc.mockReset()
     mocks.contentGenerator.mockReset()
     mocks.contextAssembler.mockReset()
@@ -161,6 +167,34 @@ describe('Step7 capability registry', () => {
     expect(output.capability_id).toBe('capability.faq_answering')
   })
 
+  it('executes faq fallback through its canonical capability path', async () => {
+    mocks.faqFallback.mockResolvedValue({
+      capability_id: 'faq_fallback',
+      capability_version: '1.0',
+      status: 'success',
+      result: { fallback_message: 'fallback' },
+      evidence: { sources: [{ source: 'stub' }], doc_quotes: null },
+      audit: {
+        capability_id: 'faq_fallback',
+        capability_version: '1.0',
+        status: 'success',
+        used_skills: ['stub'],
+      },
+      used_skills: ['stub'],
+    })
+
+    const registry = CapabilityRegistry.getInstance()
+    const output = await registry.executeCapability({
+      capability_id: 'capability.faq_fallback',
+      execution_id: 'exec-1',
+      intent: { type: 'general_qna', extracted_slots: { question: 'What does the plan include?', reason: 'faq_low_confidence' } },
+      slots: { question: 'What does the plan include?', reason: 'faq_low_confidence' },
+    })
+
+    expect(output.status).toBe('success')
+    expect(output.capability_id).toBe('capability.faq_fallback')
+  })
+
   it('executes kb upload qc through its canonical capability path', async () => {
     mocks.kbUploadQc.mockResolvedValue({
       capability_id: 'kb_upload_qc',
@@ -220,22 +254,20 @@ describe('Step7 capability registry', () => {
     })
 
     const registry = CapabilityRegistry.getInstance()
-    const content = await registry.executeCapability({
+    const contentOutput = await registry.executeCapability({
       capability_id: 'capability.content_generator',
-      execution_id: 'exec-1',
-      intent: { type: 'marketing_gen', extracted_slots: { topic: 'launch' } },
-      slots: { topic: 'launch' },
-    })
-    const context = await registry.executeCapability({
-      capability_id: 'capability.context_assembler',
       execution_id: 'exec-1',
       intent: { type: 'marketing_gen', extracted_slots: {} },
       slots: {},
     })
+    const contextOutput = await registry.executeCapability({
+      capability_id: 'capability.context_assembler',
+      execution_id: 'exec-2',
+      intent: { type: 'context_assembly', extracted_slots: {} },
+      slots: {},
+    })
 
-    expect(content.status).toBe('success')
-    expect(content.capability_id).toBe('capability.content_generator')
-    expect(context.status).toBe('success')
-    expect(context.capability_id).toBe('capability.context_assembler')
+    expect(contentOutput.capability_id).toBe('capability.content_generator')
+    expect(contextOutput.capability_id).toBe('capability.context_assembler')
   })
 })

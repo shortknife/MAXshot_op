@@ -3,6 +3,7 @@ import { dataFactQuery } from '../capabilities/data-fact-query'
 import { businessDataQuery } from '../capabilities/business-data-query'
 import { productDocQnA } from '../capabilities/product-doc-qna'
 import { faqAnswering } from '../capabilities/faq-answering'
+import { faqFallback } from '../capabilities/faq-fallback'
 import { kbUploadQc } from '../capabilities/kb-upload-qc'
 import { contentGenerator } from '../capabilities/content-generator'
 import { contextAssembler } from '../capabilities/context-assembler'
@@ -30,6 +31,7 @@ export class CapabilityRegistry {
       ['capability.data_fact_query', businessDataQuery],
       ['capability.product_doc_qna', productDocQnA],
       ['capability.faq_answering', faqAnswering],
+      ['capability.faq_fallback', faqFallback],
       ['capability.kb_upload_qc', kbUploadQc],
       ['capability.content_generator', contentGenerator],
       ['capability.context_assembler', contextAssembler],
