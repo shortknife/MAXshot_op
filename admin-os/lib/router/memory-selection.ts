@@ -1,4 +1,4 @@
-import { MemoryType } from './types/memory'
+import { MemoryType, WorkingMind } from './types/memory'
 import { supabase } from '@/lib/supabase'
 
 type MemoryRow = {
@@ -44,8 +44,10 @@ export async function selectMemories(types: MemoryType[], contextTags: string[])
     .slice(0, 5)
 }
 
-export function createWorkingMind(memories: unknown[]) {
+export function createWorkingMind(memories: unknown[]): WorkingMind {
   return {
     memory_refs: memories,
+    source_policy: 'router_context_only',
+    memory_ref_count: Array.isArray(memories) ? memories.length : 0,
   }
 }

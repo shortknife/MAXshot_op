@@ -130,7 +130,7 @@ export function parseVaultKeyword(rawQuery: string): string | null {
   if (m0b?.[1]) return normalizeVaultCandidate(m0b[1])
   const m2 = text.match(/([A-Za-z0-9 _\-]+?)\s*的\s*(?:apy|收益|yield)/i)
   if (m2?.[1]) return normalizeVaultCandidate(m2[1])
-  const m3 = text.match(/(?:vault|金库)\s*[:：]?\s*([A-Za-z0-9 _\-]+)/i)
+  const m3 = text.match(/(?:\bvault\b|金库)\s*[:：]?\s*([A-Za-z0-9 _\-]+)/i)
   if (m3?.[1]) return normalizeVaultCandidate(m3[1])
   return null
 }
