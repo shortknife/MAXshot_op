@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -44,6 +45,13 @@ type ChatMeta = {
     fallback_required?: boolean
     review_required?: boolean
     reason?: string | null
+    review_payload?: {
+      question?: string
+      reason?: string
+      priority?: string
+      kb_scope?: string | null
+      channel?: string | null
+    } | null
   } | null
 }
 
@@ -343,6 +351,7 @@ export default function ChatPage() {
                                 <MetaBadge label={`confidence: ${meta.answer_meta.confidence.toFixed(2)}`} />
                               )}
                               {meta.answer_meta?.fallback_required && <MetaBadge label="fallback" />}
+                              {meta.answer_meta?.review_required && <MetaBadge label="review required" />}
                             </div>
                           </div>
 
@@ -458,6 +467,46 @@ export default function ChatPage() {
                               {meta.answer_meta.reason && (
                                 <div className="text-xs text-slate-500">reason: {meta.answer_meta.reason}</div>
                               )}
+                            </div>
+                          )}
+
+                          {meta.answer_meta?.review_payload && (
+                            <div className="space-y-3 rounded-2xl border border-amber-200 bg-[linear-gradient(180deg,rgba(255,251,235,0.95),rgba(255,247,237,0.92))] p-4">
+                              <SectionTitle>Review Payload</SectionTitle>
+                              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                {meta.answer_meta.review_payload.priority && (
+                                  <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                    <div className="text-xs text-slate-500">priority</div>
+                                    <div className="mt-1 font-medium text-slate-900">{meta.answer_meta.review_payload.priority}</div>
+                                  </div>
+                                )}
+                                {meta.answer_meta.review_payload.reason && (
+                                  <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                    <div className="text-xs text-slate-500">reason</div>
+                                    <div className="mt-1 font-medium text-slate-900">{meta.answer_meta.review_payload.reason}</div>
+                                  </div>
+                                )}
+                                {meta.answer_meta.review_payload.kb_scope && (
+                                  <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                    <div className="text-xs text-slate-500">kb scope</div>
+                                    <div className="mt-1 font-medium text-slate-900">{meta.answer_meta.review_payload.kb_scope}</div>
+                                  </div>
+                                )}
+                                {meta.answer_meta.review_payload.channel && (
+                                  <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                    <div className="text-xs text-slate-500">channel</div>
+                                    <div className="mt-1 font-medium text-slate-900">{meta.answer_meta.review_payload.channel}</div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="flex justify-end">
+                                <Link
+                                  href="/faq-review"
+                                  className="rounded-full border border-amber-300 bg-white px-4 py-2 text-sm text-amber-900 transition hover:bg-amber-50"
+                                >
+                                  打开 Review Queue
+                                </Link>
+                              </div>
                             </div>
                           )}
 

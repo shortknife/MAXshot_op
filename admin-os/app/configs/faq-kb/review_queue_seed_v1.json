@@ -1,0 +1,56 @@
+{
+  "queue_id": "faq_review_queue_seed_v1",
+  "items": [
+    {
+      "review_id": "faq-review-001",
+      "question": "What does the Pro plan include?",
+      "reason": "faq_low_confidence",
+      "priority": "high",
+      "queue_status": "prepared",
+      "kb_scope": "billing",
+      "channel": "web",
+      "confidence": 0.22,
+      "created_at": "2026-04-01T18:00:00+08:00",
+      "draft_answer": "The Pro plan includes additional billing automation and invoice handling, but the exact feature list was not grounded with enough certainty.",
+      "citations": [
+        {
+          "source_id": "plans-and-billing",
+          "title": "Plans and Billing",
+          "snippet": "After upload, the document enters a review step before it becomes part of the billing record."
+        }
+      ]
+    },
+    {
+      "review_id": "faq-review-002",
+      "question": "How can customers upload invoices?",
+      "reason": "faq_generation_failed",
+      "priority": "high",
+      "queue_status": "prepared",
+      "kb_scope": "billing",
+      "channel": "tg",
+      "confidence": 0.48,
+      "created_at": "2026-04-01T18:12:00+08:00",
+      "draft_answer": "Customers can upload invoices from the billing area, but the answer needs review before it is presented as final.",
+      "citations": [
+        {
+          "source_id": "plans-and-billing",
+          "title": "Plans and Billing",
+          "snippet": "Open the billing area, select Invoices, and use the upload action to attach a PDF or image file."
+        }
+      ]
+    },
+    {
+      "review_id": "faq-review-003",
+      "question": "Can I sync KB documents from an external drive automatically?",
+      "reason": "faq_out_of_scope",
+      "priority": "normal",
+      "queue_status": "prepared",
+      "kb_scope": "kb",
+      "channel": "web",
+      "confidence": null,
+      "created_at": "2026-04-01T18:25:00+08:00",
+      "draft_answer": null,
+      "citations": []
+    }
+  ]
+}
