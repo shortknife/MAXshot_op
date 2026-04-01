@@ -64,3 +64,9 @@
 - Decision: define the FAQ / KB Plane as a separate capability family instead of extending existing read-only capabilities.
 - Why: customer FAQ, platform documentation QnA, and ops/data fact queries have different grounding sources, evidence expectations, and fallback behavior.
 - Consequence: the next implementation phase must introduce `capability.faq_answering` and related FAQ capabilities under a distinct contract and routing boundary; `capability.product_doc_qna` and `capability.data_fact_query` must retain their current ownership boundaries.
+
+## D-014
+- Decision: freeze `Nexa FAQ / KB Plane Stage 1` after the four-capability bounded path became green.
+- Why: imported FAQ assets were only fully absorbed once the runtime could execute the complete bounded chain `faq_answering -> faq_fallback -> faq_qa_review` alongside isolated `kb_upload_qc`, with focused tests, build, and phase0 regression all passing.
+- Consequence: further work should shift from adding FAQ capabilities to management surfaces, review visibility, and stronger KB source expansion under the current contracts.
+
