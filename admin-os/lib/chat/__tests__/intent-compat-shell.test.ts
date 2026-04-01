@@ -45,4 +45,42 @@ describe('intent-compat compatibility shell', () => {
     expect(result.extractedSlots.matched_capability_id).toBe('capability.faq_answering')
     expect(result.extractedSlots.question).toBe('How do I reset my password?')
   })
+
+  it('routes invoice upload faq questions into faq answering', () => {
+    const result = normalizeChatIntent({
+      parsed: {
+        intent: {
+          type: 'general_qna',
+          extracted_slots: {
+            matched_capability_ids: ['capability.product_doc_qna'],
+            matched_capability_id: 'capability.product_doc_qna',
+          },
+        },
+      },
+      intentQuery: 'How can customers upload invoices?',
+      previousTurns: 0,
+      looksLikeContentBrief: () => false,
+    })
+
+    expect(result.extractedSlots.matched_capability_id).toBe('capability.faq_answering')
+  })
+
+  it('keeps product architecture questions on product doc qna', () => {
+    const result = normalizeChatIntent({
+      parsed: {
+        intent: {
+          type: 'general_qna',
+          extracted_slots: {
+            matched_capability_ids: ['capability.product_doc_qna'],
+            matched_capability_id: 'capability.product_doc_qna',
+          },
+        },
+      },
+      intentQuery: 'Router 的职责是什么？',
+      previousTurns: 0,
+      looksLikeContentBrief: () => false,
+    })
+
+    expect(result.extractedSlots.matched_capability_id).toBe('capability.product_doc_qna')
+  })
 })

@@ -37,6 +37,14 @@ type ChatMeta = {
     message?: string
     examples?: string[]
   } | null
+  answer_meta?: {
+    capability_id?: string
+    citations?: Array<{ source_id?: string; title?: string; snippet?: string; score?: number }>
+    confidence?: number | null
+    fallback_required?: boolean
+    review_required?: boolean
+    reason?: string | null
+  } | null
 }
 
 type ChatMessage = {
@@ -330,6 +338,11 @@ export default function ChatPage() {
                               {meta.data_plane && <MetaBadge label={`data_plane: ${meta.data_plane}`} />}
                               {meta.scope && <MetaBadge label={`scope: ${meta.scope}`} />}
                               {typeof meta.row_count === 'number' && <MetaBadge label={`rows: ${meta.row_count}`} />}
+                              {meta.answer_meta?.capability_id && <MetaBadge label={`capability: ${meta.answer_meta.capability_id}`} />}
+                              {typeof meta.answer_meta?.confidence === 'number' && (
+                                <MetaBadge label={`confidence: ${meta.answer_meta.confidence.toFixed(2)}`} />
+                              )}
+                              {meta.answer_meta?.fallback_required && <MetaBadge label="fallback" />}
                             </div>
                           </div>
 
@@ -428,6 +441,23 @@ export default function ChatPage() {
                                     <li key={`${item}-${idx}`}>{item}</li>
                                   ))}
                               </ul>
+                            </div>
+                          )}
+
+                          {Array.isArray(meta.answer_meta?.citations) && meta.answer_meta.citations.length > 0 && (
+                            <div className="space-y-2 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                              <SectionTitle>FAQ Citations</SectionTitle>
+                              <div className="space-y-3">
+                                {meta.answer_meta.citations.slice(0, 3).map((item, idx) => (
+                                  <div key={`${item.source_id || item.title || 'citation'}-${idx}`} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                                    <div className="text-sm font-medium text-slate-800">{item.title || item.source_id || 'Untitled source'}</div>
+                                    {item.snippet && <div className="mt-1 text-sm leading-6 text-slate-600">{item.snippet}</div>}
+                                  </div>
+                                ))}
+                              </div>
+                              {meta.answer_meta.reason && (
+                                <div className="text-xs text-slate-500">reason: {meta.answer_meta.reason}</div>
+                              )}
                             </div>
                           )}
 
