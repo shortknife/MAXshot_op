@@ -1,0 +1,183 @@
+{
+  "run_at": "2026-02-09T07:24:49.345Z",
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0
+  },
+  "results": [
+    {
+      "id": "R-O1",
+      "name": "ops_query, lifecycle active → step5_data_fact_query",
+      "pass": true,
+      "path": [
+        "step0",
+        "step2",
+        "step2b(true)",
+        "step3(true)",
+        "step4",
+        "step5_data_fact_query"
+      ],
+      "error": null,
+      "step2": {
+        "execution_id": "exec-ops-001",
+        "task_id": "task-exec-ops",
+        "entry_type": "raw_query",
+        "requester_id": "test_user",
+        "intent_name": "ops_query",
+        "status": "executing",
+        "created_at": "2026-02-09T07:24:49.343Z",
+        "payload": {},
+        "slots": {},
+        "capability_id": "capability.data_fact_query",
+        "capability_version": "v1.0",
+        "lifecycle": "active",
+        "risk_class": "low",
+        "webhook_url": "https://local-mock/data_fact_query",
+        "lifecycle_ok": true
+      },
+      "step4": {
+        "capabilityInput": {
+          "execution": {
+            "execution_id": "exec-ops-001",
+            "task_id": "task-exec-ops",
+            "channel": "admin_os",
+            "intent": "ops",
+            "requester": "test_user",
+            "created_at": "2026-02-09T07:24:49.343Z"
+          },
+          "experience_recommendations": [],
+          "context": {
+            "memory_refs": []
+          },
+          "payload": {
+            "intent": "ops_query",
+            "slots": {},
+            "query": "DAU 多少？"
+          }
+        },
+        "webhook_url": "https://local-mock/data_fact_query"
+      }
+    },
+    {
+      "id": "R-P1",
+      "name": "product_doc_qna, lifecycle active → step5_product_doc_qna",
+      "pass": true,
+      "path": [
+        "step0",
+        "step2",
+        "step2b(true)",
+        "step3(false)",
+        "step3b(false)",
+        "step4",
+        "step5_product_doc_qna"
+      ],
+      "error": null,
+      "step2": {
+        "execution_id": "exec-p15-001",
+        "task_id": "task-exec-p15",
+        "entry_type": "raw_query",
+        "requester_id": "test_user",
+        "intent_name": "product_doc_qna",
+        "status": "executing",
+        "created_at": "2026-02-09T07:24:49.343Z",
+        "payload": {},
+        "slots": {},
+        "capability_id": "capability.product_doc_qna",
+        "capability_version": "v1.0",
+        "lifecycle": "active",
+        "risk_class": "low",
+        "webhook_url": "https://local-mock/product_doc_qna",
+        "lifecycle_ok": true
+      },
+      "step4": {
+        "capabilityInput": {
+          "execution": {
+            "execution_id": "exec-p15-001",
+            "task_id": "task-exec-p15",
+            "channel": "admin_os",
+            "intent": "ops",
+            "requester": "test_user",
+            "created_at": "2026-02-09T07:24:49.343Z"
+          },
+          "experience_recommendations": [],
+          "context": {
+            "memory_refs": []
+          },
+          "payload": {
+            "intent": "product_doc_qna",
+            "slots": {},
+            "query": "Entry 支持哪些入口类型？"
+          }
+        },
+        "webhook_url": "https://local-mock/product_doc_qna"
+      }
+    },
+    {
+      "id": "R-M1",
+      "name": "marketing_gen, lifecycle draft → step2c Reject",
+      "pass": true,
+      "path": [
+        "step0",
+        "step2",
+        "step2b(false)",
+        "step2c_Reject"
+      ],
+      "error": null,
+      "step2": {
+        "execution_id": "exec-mkt-001",
+        "task_id": "task-exec-mkt",
+        "entry_type": "raw_query",
+        "requester_id": "test_user",
+        "intent_name": "marketing_gen",
+        "status": "executing",
+        "created_at": "2026-02-09T07:24:49.344Z",
+        "payload": {},
+        "slots": {},
+        "capability_id": "capability.content_generator",
+        "capability_version": "v1.0",
+        "lifecycle": "draft",
+        "risk_class": "medium",
+        "webhook_url": "https://local-mock/content_generator",
+        "lifecycle_ok": false
+      },
+      "step4": null,
+      "step2c": {
+        "result": null,
+        "evidence": {
+          "sources": [],
+          "sql_refs": null,
+          "doc_quotes": null
+        },
+        "audit": {
+          "capability_id": "capability.content_generator",
+          "capability_version": "v1.0",
+          "invocation_source": "execution:exec-mkt-001",
+          "elapsed_ms": 0,
+          "status": "failure",
+          "error": "capability_lifecycle_not_active",
+          "capability_logic_type": "deterministic_code",
+          "used_skills": [],
+          "failure_mode": "policy_blocked",
+          "recommendations": [],
+          "notes": {
+            "lifecycle": "draft",
+            "reason": "Router rejected: capability.lifecycle !== active"
+          }
+        },
+        "next_actions": []
+      }
+    },
+    {
+      "id": "R-E1",
+      "name": "missing execution_id → step0 throw",
+      "pass": true,
+      "path": [
+        "step0(throw)"
+      ],
+      "error": null,
+      "step2": null,
+      "step4": null
+    }
+  ]
+}
