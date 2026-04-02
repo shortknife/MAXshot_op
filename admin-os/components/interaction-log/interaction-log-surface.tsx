@@ -1,0 +1,164 @@
+'use client'
+
+import { AppNav } from '@/components/app-nav'
+import { AuthGuard } from '@/components/auth-guard'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+
+type InteractionLogItem = {
+  log_id: string
+  created_at: string
+  session_id: string | null
+  requester_id: string | null
+  entry_channel: string | null
+  raw_query: string
+  effective_query: string | null
+  intent_type: string | null
+  intent_type_canonical: string | null
+  primary_capability_id: string | null
+  matched_capability_ids: string[]
+  source_plane: string | null
+  answer_type: string | null
+  success: boolean
+  status_code: number
+  fallback_required: boolean
+  review_required: boolean
+  clarification_required: boolean
+  confidence: number | null
+  summary: string | null
+  query_mode: string | null
+  scope: string | null
+  meta: Record<string, unknown>
+}
+
+function Pill({ children, tone = 'slate' }: { children: React.ReactNode; tone?: 'slate' | 'emerald' | 'amber' | 'rose' | 'sky' }) {
+  const styles = {
+    slate: 'border-slate-200 bg-slate-50 text-slate-700',
+    emerald: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+    amber: 'border-amber-200 bg-amber-50 text-amber-800',
+    rose: 'border-rose-200 bg-rose-50 text-rose-700',
+    sky: 'border-sky-200 bg-sky-50 text-sky-700',
+  }[tone]
+  return <span className={`rounded-full border px-3 py-1 text-xs ${styles}`}>{children}</span>
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-3xl border border-white/70 bg-white/80 px-5 py-4 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
+      <div className="text-[11px] uppercase tracking-[0.22em] text-slate-500">{label}</div>
+      <div className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">{value}</div>
+    </div>
+  )
+}
+
+export function InteractionLogSurface({ source, items }: { source: 'supabase' | 'empty'; items: InteractionLogItem[] }) {
+  const successCount = items.filter((item) => item.success).length
+  const reviewCount = items.filter((item) => item.review_required).length
+  const clarificationCount = items.filter((item) => item.clarification_required).length
+  const planeMix = items.reduce<Record<string, number>>((acc, item) => {
+    const key = item.source_plane || 'unknown'
+    acc[key] = (acc[key] || 0) + 1
+    return acc
+  }, {})
+
+  return (
+    <AuthGuard>
+      <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#e8f3ff_0%,#f8fafc_38%,#eef2ff_100%)] text-slate-950">
+        <header className="border-b border-white/70 bg-white/80 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Interaction Learning Log</h1>
+              <div className="mt-1 text-sm text-slate-500">Runtime-first interaction telemetry for learning, QA, and future memory evolution.</div>
+            </div>
+            <AppNav current="interaction_log" />
+          </div>
+        </header>
+
+        <main className="mx-auto max-w-7xl space-y-6 px-4 py-6">
+          <section className="grid gap-4 md:grid-cols-4">
+            <Metric label="Captured" value={String(items.length)} />
+            <Metric label="Success" value={String(successCount)} />
+            <Metric label="Review" value={String(reviewCount)} />
+            <Metric label="Clarification" value={String(clarificationCount)} />
+          </section>
+
+          <Card className="border-white/70 bg-white/80 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <CardTitle className="text-base font-semibold">Runtime Snapshot</CardTitle>
+                <div className="flex flex-wrap gap-2">
+                  <Pill tone={source === 'supabase' ? 'emerald' : 'amber'}>{`source: ${source}`}</Pill>
+                  {Object.entries(planeMix).map(([plane, count]) => (
+                    <Pill key={plane} tone="sky">{`${plane}: ${count}`}</Pill>
+                  ))}
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4 p-4 sm:p-6">
+              {items.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/80 px-6 py-10 text-center text-sm text-slate-500">
+                  No runtime interaction logs yet. Once chat traffic is captured, records will appear here.
+                </div>
+              ) : (
+                items.map((item) => (
+                  <div key={item.log_id} className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-5 shadow-[0_14px_30px_rgba(15,23,42,0.05)]">
+                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="space-y-3">
+                        <div className="text-[11px] uppercase tracking-[0.22em] text-slate-400">{item.log_id}</div>
+                        <div className="text-xl font-semibold tracking-tight text-slate-950">{item.raw_query}</div>
+                        <div className="flex flex-wrap gap-2">
+                          <Pill tone={item.success ? 'emerald' : 'rose'}>{item.success ? 'success' : 'failure'}</Pill>
+                          <Pill tone="sky">{item.source_plane || 'unknown'}</Pill>
+                          {item.answer_type && <Pill tone={item.answer_type === 'review' ? 'amber' : item.answer_type === 'clarification' ? 'rose' : 'slate'}>{item.answer_type}</Pill>}
+                          {item.primary_capability_id && <Pill>{item.primary_capability_id}</Pill>}
+                          {item.scope && <Pill>{`scope: ${item.scope}`}</Pill>}
+                          {item.query_mode && <Pill>{`mode: ${item.query_mode}`}</Pill>}
+                          {typeof item.confidence === 'number' && <Pill>{`confidence: ${item.confidence.toFixed(2)}`}</Pill>}
+                        </div>
+                      </div>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right text-sm text-slate-600">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">created_at</div>
+                        <div className="mt-1 font-medium text-slate-800">{new Date(item.created_at).toLocaleString('zh-CN', { hour12: false })}</div>
+                        <div className="mt-2 text-xs text-slate-500">status {item.status_code}</div>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                      <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Summary</div>
+                        <div className="text-sm leading-7 text-slate-700">{item.summary || 'No summary captured.'}</div>
+                        {item.effective_query && item.effective_query !== item.raw_query ? (
+                          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                            <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">effective_query</div>
+                            <div className="mt-1">{item.effective_query}</div>
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Learning Signals</div>
+                        <div className="flex flex-wrap gap-2">
+                          {item.review_required && <Pill tone="amber">review_required</Pill>}
+                          {item.fallback_required && <Pill tone="amber">fallback_required</Pill>}
+                          {item.clarification_required && <Pill tone="rose">clarification_required</Pill>}
+                          {item.intent_type && <Pill>{`intent: ${item.intent_type}`}</Pill>}
+                          {item.intent_type_canonical && <Pill>{`canonical: ${item.intent_type_canonical}`}</Pill>}
+                          {item.entry_channel && <Pill>{`channel: ${item.entry_channel}`}</Pill>}
+                          {item.session_id && <Pill>{`session: ${item.session_id}`}</Pill>}
+                        </div>
+                        {item.matched_capability_ids.length > 0 ? (
+                          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                            <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">matched_capability_ids</div>
+                            <div className="mt-1 break-all">{item.matched_capability_ids.join(', ')}</div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    </AuthGuard>
+  )
+}

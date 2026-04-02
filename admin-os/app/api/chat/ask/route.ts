@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { runChatAsk } from '@/lib/chat/chat-ask-service'
 import { normalizeChatEntryEnvelope } from '@/lib/chat/entry-envelope'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
+import { extractInteractionLearningPayload } from '@/lib/interaction-learning/extract'
+import { persistInteractionLearningLog } from '@/lib/interaction-learning/runtime'
 
 export async function POST(req: NextRequest) {
   const readJsonStartedAt = Date.now()
@@ -13,6 +15,17 @@ export async function POST(req: NextRequest) {
     perf.stage('read_json', { stage_duration_ms: Date.now() - readJsonStartedAt })
     perf.stage('normalize_entry')
     const result = await perf.measure('run_chat_ask', () => runChatAsk(entry))
+    const learningPayload = extractInteractionLearningPayload({
+      entry,
+      resultBody: result.body,
+      statusCode: result.status,
+    })
+    await perf.measure('persist_interaction_learning_log', () =>
+      persistInteractionLearningLog(learningPayload).catch((error) => {
+        console.error('interaction_learning_log_failed', error)
+        return null
+      })
+    )
     perf.finish({ status: result.status })
     return NextResponse.json(result.body, { status: result.status })
   } catch (error) {
