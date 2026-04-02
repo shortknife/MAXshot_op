@@ -70,3 +70,13 @@
 - Why: imported FAQ assets were only fully absorbed once the runtime could execute the complete bounded chain `faq_answering -> faq_fallback -> faq_qa_review` alongside isolated `kb_upload_qc`, with focused tests, build, and phase0 regression all passing.
 - Consequence: further work should shift from adding FAQ capabilities to management surfaces, review visibility, and stronger KB source expansion under the current contracts.
 
+
+
+## D-015 FAQ / KB Plane Stage 2 Runtime Wiring Accepted (2026-04-02)
+- Scope: runtime-backed `faq_review_queue_op` and `faq_kb_qc_snapshot_op`
+- Decision: freeze Stage 2 runtime wiring after real database validation
+- Acceptance basis:
+  - low-confidence FAQ path successfully wrote runtime review queue rows
+  - KB QC runtime snapshot successfully resolved from Supabase
+  - natural FAQ grounded path remained non-reviewing
+- Implication: FAQ / KB Plane now has verified runtime persistence for review and QC surfaces; further work should move to workflow completion rather than adding more capability types
