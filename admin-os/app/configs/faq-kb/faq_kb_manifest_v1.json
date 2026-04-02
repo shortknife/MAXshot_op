@@ -44,6 +44,34 @@
         "知识库",
         "人工审核"
       ]
+    },
+    {
+      "id": "security-access",
+      "title": "Security and Access FAQ",
+      "kb_scope": "security",
+      "path": "app/configs/faq-kb/security-and-access.md",
+      "keywords": [
+        "two factor authentication",
+        "2fa",
+        "security",
+        "failed login",
+        "验证",
+        "安全"
+      ]
+    },
+    {
+      "id": "integrations-sync",
+      "title": "Integrations and Sync FAQ",
+      "kb_scope": "integrations",
+      "path": "app/configs/faq-kb/integrations-and-sync.md",
+      "keywords": [
+        "integration",
+        "sync",
+        "import documents",
+        "external system",
+        "同步",
+        "导入"
+      ]
     }
   ]
 }

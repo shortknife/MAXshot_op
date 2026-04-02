@@ -2,15 +2,14 @@ import type { ReactNode } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { AppNav } from '@/components/app-nav'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import kbManifest from '@/app/configs/faq-kb/faq_kb_manifest_v1.json'
-import qcPreview from '@/app/configs/faq-kb/qc_preview_seed_v1.json'
+import { buildKbQcPreview, loadFaqKbManifest } from '@/lib/faq-kb/loaders'
 
 type ManifestDoc = {
   id: string
   title: string
-  kb_scope: string
+  kb_scope?: string | null
   path: string
-  keywords: string[]
+  keywords?: string[]
 }
 
 type QcFlag = {
@@ -58,12 +57,23 @@ function StatPanel({ label, value, note, tone }: { label: string; value: string;
   )
 }
 
-export default function KbManagementPage() {
-  const docs = kbManifest.documents as ManifestDoc[]
+export default async function KbManagementPage() {
+  const manifest = loadFaqKbManifest()
+  const docs = manifest.documents as ManifestDoc[]
+  const qcPreview = await buildKbQcPreview()
   const qcItems = qcPreview.items as QcItem[]
   const acceptedCount = qcItems.filter((item) => item.ingest_status === 'accepted').length
   const reviewCount = qcItems.filter((item) => item.ingest_status === 'needs_review').length
   const totalChunks = qcItems.reduce((sum, item) => sum + item.chunk_count, 0)
+  const scopeCounts = docs.reduce<Record<string, number>>((acc, doc) => {
+    const scope = String(doc.kb_scope || 'unscoped')
+    acc[scope] = (acc[scope] || 0) + 1
+    return acc
+  }, {})
+  const sourceTypeCounts = qcItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item.source_type] = (acc[item.source_type] || 0) + 1
+    return acc
+  }, {})
 
   return (
     <AuthGuard>
@@ -82,13 +92,20 @@ export default function KbManagementPage() {
           <section className="grid gap-4 md:grid-cols-3">
             <StatPanel label="Approved Sources" value={String(acceptedCount)} note="当前已接受的受控 KB 来源。" tone="emerald" />
             <StatPanel label="Needs Review" value={String(reviewCount)} note="仍需人工处理或后续能力支持的来源。" tone="amber" />
-            <StatPanel label="Chunk Inventory" value={String(totalChunks)} note="当前静态 KB 切分出来的内容块总数。" tone="blue" />
+            <StatPanel label="Chunk Inventory" value={String(totalChunks)} note="基于 manifest 实时生成的内容块总数。" tone="blue" />
           </section>
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
             <Card className="overflow-hidden border-white/70 bg-white/82 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
-                <CardTitle className="text-base font-semibold">Manifest Sources</CardTitle>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <CardTitle className="text-base font-semibold">Manifest Sources</CardTitle>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(scopeCounts).map(([scope, count]) => (
+                      <TonePill key={scope} tone="blue">{`${scope}: ${count}`}</TonePill>
+                    ))}
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4 p-4 sm:p-6">
                 {docs.map((doc) => (
@@ -98,13 +115,13 @@ export default function KbManagementPage() {
                         <div className="text-[11px] uppercase tracking-[0.22em] text-slate-400">{doc.id}</div>
                         <div className="text-xl font-semibold tracking-tight text-slate-950">{doc.title}</div>
                         <div className="flex flex-wrap gap-2">
-                          <TonePill tone="blue">{`scope: ${doc.kb_scope}`}</TonePill>
+                          <TonePill tone="blue">{`scope: ${doc.kb_scope || 'unscoped'}`}</TonePill>
                           <TonePill>{doc.path}</TonePill>
                         </div>
                       </div>
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {doc.keywords.map((keyword) => (
+                      {(doc.keywords || []).map((keyword) => (
                         <TonePill key={`${doc.id}-${keyword}`} tone="slate">
                           {keyword}
                         </TonePill>
@@ -117,7 +134,15 @@ export default function KbManagementPage() {
 
             <Card className="overflow-hidden border-white/70 bg-white/82 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-sm">
               <CardHeader className="border-b border-slate-100">
-                <CardTitle className="text-base font-semibold">QC Readiness</CardTitle>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <CardTitle className="text-base font-semibold">QC Readiness</CardTitle>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(sourceTypeCounts).map(([sourceType, count]) => (
+                      <TonePill key={sourceType}>{`${sourceType}: ${count}`}</TonePill>
+                    ))}
+                    <TonePill tone="amber">{`generated: ${new Date(qcPreview.generated_at).toLocaleString('zh-CN', { hour12: false })}`}</TonePill>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className="space-y-4 p-4 sm:p-6">
                 {qcItems.map((item) => {
@@ -147,7 +172,7 @@ export default function KbManagementPage() {
                         </div>
                       ) : (
                         <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
-                          No QC blockers in the current read-only slice.
+                          No QC blockers in the current bounded source slice.
                         </div>
                       )}
                     </div>
