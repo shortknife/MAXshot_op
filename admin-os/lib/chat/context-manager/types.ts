@@ -93,7 +93,7 @@ export type ContextEnvelope = {
     active_capability_ids: string[]
   }
   memory_runtime: {
-    source_policy: 'router_context_only'
+    source_policy: 'router_context_only' | 'hybrid_learning'
     ref_ids: string[]
     memory_ref_count: number
   }

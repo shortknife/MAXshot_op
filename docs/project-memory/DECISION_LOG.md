@@ -108,3 +108,10 @@
 - Why: customer capability exposure alone is insufficient if any operator can still mutate customer-bound state with a valid write token.
 - Accepted scope: operator registry, customer-scope checks for KB register/transition and FAQ review transition, and Customers page operator visibility.
 - Deferred: authenticated operator identity, tenant IAM, role hierarchy, and broader route-wide policy enforcement.
+
+
+## D-020 Stronger Memory Baseline Accepted (2026-04-02)
+- Decision: upgrade the memory system from router-context-only selection to a bounded hybrid model that can incorporate interaction-derived learning refs.
+- Why: the platform already captures structured interaction logs, but without feeding them back into Working Mind selection there is no real bridge from learning data to runtime behavior.
+- Accepted scope: interaction-learning-to-memory transformation, hybrid memory selection, `WorkingMind.learning_ref_count`, and memory runtime policy visibility.
+- Deferred: user preference memory, customer long-term memory, autonomous memory evolution, and prompt/runtime redesign around memory.

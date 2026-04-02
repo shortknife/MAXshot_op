@@ -2,7 +2,7 @@ export const MEMORY_TYPES = ['foundation', 'experience', 'insight'] as const
 
 export type MemoryType = (typeof MEMORY_TYPES)[number]
 
-export type MemorySourcePolicy = 'router_context_only' | 'ref_resolved'
+export type MemorySourcePolicy = 'router_context_only' | 'ref_resolved' | 'hybrid_learning'
 
 export type MemoryRef = {
   type: MemoryType
@@ -36,6 +36,8 @@ export type WorkingMind = {
   memory_refs: unknown[]
   source_policy: MemorySourcePolicy
   memory_ref_count: number
+  learning_ref_count: number
+  summary?: string | null
 }
 
 export function isMemoryType(value: unknown): value is MemoryType {

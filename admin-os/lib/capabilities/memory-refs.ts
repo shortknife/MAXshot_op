@@ -15,7 +15,7 @@ function stableKey(value: unknown): string {
 }
 
 export type MemoryRuntime = {
-  source_policy: 'router_context_only'
+  source_policy: 'router_context_only' | 'hybrid_learning'
   ref_ids: string[]
   memory_ref_count: number
 }
@@ -35,8 +35,9 @@ export function toMemoryRefIds(memoryRefs: unknown[]): string[] {
 
 export function buildMemoryRuntime(memoryRefs: unknown[]): MemoryRuntime {
   const refIds = toMemoryRefIds(memoryRefs)
+  const hasLearningRefs = Array.isArray(memoryRefs) && memoryRefs.some((item) => item && typeof item === 'object' && (item as { memory_origin?: string }).memory_origin === 'interaction_learning')
   return {
-    source_policy: 'router_context_only',
+    source_policy: hasLearningRefs ? 'hybrid_learning' : 'router_context_only',
     ref_ids: refIds,
     memory_ref_count: refIds.length,
   }
@@ -48,9 +49,9 @@ export function resolveInputMemoryRuntime(input: CapabilityInputEnvelope): Memor
   const refIds = Array.isArray(runtime?.ref_ids) ? runtime.ref_ids.map((item) => String(item || '').trim()).filter(Boolean) : null
   const sourcePolicy = typeof runtime?.source_policy === 'string' ? runtime.source_policy : null
   const memoryRefCount = typeof runtime?.memory_ref_count === 'number' ? runtime.memory_ref_count : null
-  if (refIds && sourcePolicy === 'router_context_only' && typeof memoryRefCount === 'number') {
+  if (refIds && (sourcePolicy === 'router_context_only' || sourcePolicy === 'hybrid_learning') && typeof memoryRefCount === 'number') {
     return {
-      source_policy: 'router_context_only',
+      source_policy: sourcePolicy,
       ref_ids: refIds,
       memory_ref_count: memoryRefCount,
     }
