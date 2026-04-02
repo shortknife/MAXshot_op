@@ -115,3 +115,10 @@
 - Why: the platform already captures structured interaction logs, but without feeding them back into Working Mind selection there is no real bridge from learning data to runtime behavior.
 - Accepted scope: interaction-learning-to-memory transformation, hybrid memory selection, `WorkingMind.learning_ref_count`, and memory runtime policy visibility.
 - Deferred: user preference memory, customer long-term memory, autonomous memory evolution, and prompt/runtime redesign around memory.
+
+
+## D-021 Verification Runtime Baseline Accepted (2026-04-02)
+- Decision: introduce a first-class verification stage into the runtime by adding deterministic post-execution verification before final delivery.
+- Why: the platform execution model already claims `Interpret -> Route -> Execute -> Verify -> Deliver -> Learn`, but before this change `Verify` existed only as scattered critics and review paths rather than a formal runtime step.
+- Accepted scope: runtime verification for business and QnA outputs, explicit `verification_decision`, and `verify_and_finalize` stage instrumentation in chat flow.
+- Deferred: verification agents, autonomous repair loops, verification-specific prompts, and customer-specific verification policy.

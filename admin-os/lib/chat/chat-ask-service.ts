@@ -12,6 +12,7 @@ import { buildEarlyGateResponse, resolveMaxClarificationTurns } from '@/lib/chat
 import { dispatchNonBusinessIntent } from '@/lib/chat/handlers/non-business-intent-dispatcher'
 import { ensureCanonicalIntentMeta } from '@/lib/chat/chat-response-normalize'
 import { finalizeDelivery } from '@/lib/chat/delivery-critic'
+import { applyRuntimeVerification } from '@/lib/chat/runtime-verification'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
 
 export type ChatAskServiceResult = {
@@ -25,17 +26,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   const rewriteAction = String(body?.rewrite_action || '').trim()
   const draft = String(body?.draft || '').trim()
   const sessionId = getClarificationSessionId(body?.session_id)
-  const finalize = (payload: Record<string, unknown>) => finalizeDelivery(payload)
-  const normalizeAndFinalize = (payload: unknown) =>
-    finalize(
-      ensureCanonicalIntentMeta(
-        payload,
-        intentType,
-        canonicalIntentType,
-        matchedCapabilityIds,
-        primaryCapabilityId
-      ) as Record<string, unknown>
-    )
+  const finalize = (payload: Record<string, unknown>) => finalizeDelivery(applyRuntimeVerification(payload))
 
   if (rewriteAction) {
     perf.stage('rewrite_action', { rewrite_action: rewriteAction })
@@ -78,6 +69,18 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
     modelNeedClarification,
     followUpContextApplied,
   } = prepared
+  const normalizeAndFinalize = (payload: unknown) =>
+    perf.measure('verify_and_finalize', () =>
+      finalize(
+        ensureCanonicalIntentMeta(
+          payload,
+          intentType,
+          canonicalIntentType,
+          matchedCapabilityIds,
+          primaryCapabilityId
+        ) as Record<string, unknown>
+      )
+    )
   const maxClarificationTurns = resolveMaxClarificationTurns()
   const gateResponse = buildEarlyGateResponse({
     prepared,
@@ -92,7 +95,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
     perf.stage('early_gate_response', { gate_type: String(gateMeta?.exit_type || 'early_gate') })
     return {
       status: 200,
-      body: normalizeAndFinalize(gateResponse.body),
+      body: await normalizeAndFinalize(gateResponse.body),
     }
   }
 
@@ -116,7 +119,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
     perf.finish({ handled: 'business', intent_type: intentType, canonical_intent_type: canonicalIntentType })
     return {
       status: 200,
-      body: normalizeAndFinalize(businessHandled.body),
+      body: await normalizeAndFinalize(businessHandled.body),
     }
   }
 
@@ -131,6 +134,6 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   perf.finish({ handled: 'non_business', intent_type: intentType, canonical_intent_type: canonicalIntentType })
   return {
     status: 200,
-    body: normalizeAndFinalize(nonBusinessBody),
+    body: await normalizeAndFinalize(nonBusinessBody),
   }
 }
