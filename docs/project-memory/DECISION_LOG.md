@@ -87,3 +87,10 @@
   - KB QC runtime snapshot successfully resolved from Supabase
   - natural FAQ grounded path remained non-reviewing
 - Implication: FAQ / KB Plane now has verified runtime persistence for review and QC surfaces; further work should move to workflow completion rather than adding more capability types
+
+
+## D-017 Platform Stage-Next Baseline Accepted (2026-04-02)
+- Decision: accept and freeze the current stage-next baseline after live runtime verification of interaction learning log, KB mutation workflow, and customer-bound runtime persistence.
+- Why: the platform now carries `customer_id` across KB source inventory, FAQ review queue, and interaction learning, which is sufficient to treat customer/tenant modeling as a real runtime baseline rather than a documentation-only construct.
+- Accepted scope: interaction learning log runtime, KB source inventory workflow, FAQ review persistence, customer registry baseline.
+- Deferred: full tenant isolation, IAM, customer-bound capability exposure policy, customer admin suite, billing/provisioning.
