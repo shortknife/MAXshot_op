@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "models": [
+    {
+      "source": "supabase",
+      "prompt_slug": "intent_analyzer",
+      "input_cost_per_1k_tokens_usd": 0.00027,
+      "notes": "Configurable internal estimate for intent analysis path; adjust if provider pricing changes."
+    },
+    {
+      "source": "fallback_csv",
+      "prompt_slug": "intent_analyzer",
+      "input_cost_per_1k_tokens_usd": 0.00027,
+      "notes": "Same estimate bucket as Supabase-backed prompt resolution."
+    },
+    {
+      "source": "local_stub",
+      "prompt_slug": "intent_analyzer",
+      "input_cost_per_1k_tokens_usd": 0.0,
+      "notes": "No external model cost for local stub routing."
+    }
+  ]
+}

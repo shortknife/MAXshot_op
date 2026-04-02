@@ -122,3 +122,10 @@
 - Why: the platform execution model already claims `Interpret -> Route -> Execute -> Verify -> Deliver -> Learn`, but before this change `Verify` existed only as scattered critics and review paths rather than a formal runtime step.
 - Accepted scope: runtime verification for business and QnA outputs, explicit `verification_decision`, and `verify_and_finalize` stage instrumentation in chat flow.
 - Deferred: verification agents, autonomous repair loops, verification-specific prompts, and customer-specific verification policy.
+
+
+## D-022 Runtime Cost Baseline Accepted (2026-04-02)
+- Decision: add runtime token/cost accounting now as a configurable internal estimate, rather than waiting for a full billing or multi-provider accounting system.
+- Why: the platform already has customer boundaries, verification, and interaction learning; without cost visibility there is still no concrete basis for operational tradeoff decisions.
+- Accepted scope: chat-path runtime cost events, pricing config, runtime cost surface, and persistence into `runtime_cost_events_op`.
+- Deferred: invoice-grade billing, tenant billing workflows, background-task accounting, and provider reconciliation.

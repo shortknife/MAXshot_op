@@ -5,10 +5,32 @@ const mocks = vi.hoisted(() => ({
   runChatAsk: vi.fn(async (body: unknown) => ({
     status: 200,
     body: { success: true, echo: body },
+    runtimeMeta: {
+      session_id: 's1',
+      customer_id: null,
+      requester_id: 'u1',
+      entry_channel: 'web_app',
+      intent_type: 'general_qna',
+      intent_type_canonical: 'general_qna',
+      primary_capability_id: 'capability.product_doc_qna',
+      matched_capability_ids: ['capability.product_doc_qna'],
+      source_plane: 'product_docs',
+      step3_tokens_used: 0,
+      model_source: 'local_stub',
+      model_prompt_slug: 'intent_analyzer',
+      verification_outcome: 'pass',
+    },
   })),
+  persistInteractionLearningLog: vi.fn(async () => null),
+  persistRuntimeCostEvent: vi.fn(async () => null),
 }))
 
 vi.mock('@/lib/chat/chat-ask-service', () => ({ runChatAsk: mocks.runChatAsk }))
+vi.mock('@/lib/interaction-learning/runtime', () => ({ persistInteractionLearningLog: mocks.persistInteractionLearningLog }))
+vi.mock('@/lib/runtime-cost/runtime', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/runtime-cost/runtime')>('@/lib/runtime-cost/runtime')
+  return { ...actual, persistRuntimeCostEvent: mocks.persistRuntimeCostEvent }
+})
 
 import { POST } from '@/app/api/chat/ask/route'
 
