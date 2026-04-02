@@ -11,6 +11,14 @@ export type FaqReviewQueueRuntime = {
   items: FaqReviewQueueItem[]
 }
 
+export type FaqReviewQueueAction = 'approve' | 'reject' | 'resolve'
+
+const FAQ_REVIEW_TRANSITIONS: Record<FaqReviewQueueAction, { from: string[]; to: string }> = {
+  approve: { from: ['prepared'], to: 'approved' },
+  reject: { from: ['prepared'], to: 'rejected' },
+  resolve: { from: ['approved'], to: 'resolved' },
+}
+
 type ReviewQueueRow = {
   review_id: string
   question: string
@@ -74,6 +82,10 @@ function toQueueItem(row: ReviewQueueRow): FaqReviewQueueItem {
   }
 }
 
+export function isValidFaqReviewAction(action: string): action is FaqReviewQueueAction {
+  return action === 'approve' || action === 'reject' || action === 'resolve'
+}
+
 export async function loadFaqReviewQueueRuntime(): Promise<FaqReviewQueueRuntime> {
   try {
     const { data, error } = await supabase
@@ -125,6 +137,49 @@ export async function enqueueFaqReviewItem(params: EnqueueParams): Promise<{ rev
     const { error } = await supabase.from(FAQ_REVIEW_QUEUE_TABLE).insert(payload)
     if (error) throw error
     return { review_id: reviewId, queue_source: 'supabase' }
+  } catch (error) {
+    if (!isRecoverableQueueError(error)) throw error
+    return null
+  }
+}
+
+export async function transitionFaqReviewItem(params: {
+  review_id: string
+  action: FaqReviewQueueAction
+  operator_id: string
+}): Promise<{ review_id: string; previous_status: string; queue_status: string; queue_source: 'supabase' } | null> {
+  const transition = FAQ_REVIEW_TRANSITIONS[params.action]
+
+  try {
+    const { data: existing, error: loadError } = await supabase
+      .from(FAQ_REVIEW_QUEUE_TABLE)
+      .select('review_id,queue_status')
+      .eq('review_id', params.review_id)
+      .maybeSingle()
+
+    if (loadError) throw loadError
+    if (!existing) return null
+
+    const previousStatus = String((existing as { queue_status?: string }).queue_status || '')
+    if (!transition.from.includes(previousStatus)) {
+      throw new Error(`invalid_transition:${previousStatus}->${transition.to}`)
+    }
+
+    const { data: updated, error: updateError } = await supabase
+      .from(FAQ_REVIEW_QUEUE_TABLE)
+      .update({ queue_status: transition.to })
+      .eq('review_id', params.review_id)
+      .select('review_id,queue_status')
+      .single()
+
+    if (updateError) throw updateError
+
+    return {
+      review_id: String((updated as { review_id?: string }).review_id || params.review_id),
+      previous_status: previousStatus,
+      queue_status: String((updated as { queue_status?: string }).queue_status || transition.to),
+      queue_source: 'supabase',
+    }
   } catch (error) {
     if (!isRecoverableQueueError(error)) throw error
     return null

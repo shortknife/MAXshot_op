@@ -40,7 +40,7 @@ export default function InsightWritebackPage() {
 function InsightWritebackPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const execId = searchParams.get('exec_id') || ''
+  const execId = searchParams?.get('exec_id') || ''
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [loading, setLoading] = useState(!!execId)
   const [error, setError] = useState<string | null>(null)

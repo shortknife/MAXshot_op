@@ -44,7 +44,7 @@ export default function OutcomeSnapshotPage() {
 function OutcomeSnapshotPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const execIdFromUrl = searchParams.get('exec_id') || ''
+  const execIdFromUrl = searchParams?.get('exec_id') || ''
   const [execIdInput, setExecIdInput] = useState(execIdFromUrl)
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [loading, setLoading] = useState(!!execIdFromUrl)

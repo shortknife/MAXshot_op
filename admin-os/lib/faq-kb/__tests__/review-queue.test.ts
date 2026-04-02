@@ -6,6 +6,12 @@ const mocks = vi.hoisted(() => ({
   order: vi.fn(),
   limit: vi.fn(),
   insert: vi.fn(),
+  eq: vi.fn(),
+  maybeSingle: vi.fn(),
+  update: vi.fn(),
+  updateEq: vi.fn(),
+  updateSelect: vi.fn(),
+  single: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase', () => ({
@@ -14,7 +20,7 @@ vi.mock('@/lib/supabase', () => ({
   },
 }))
 
-import { enqueueFaqReviewItem, loadFaqReviewQueueRuntime } from '@/lib/faq-kb/review-queue'
+import { enqueueFaqReviewItem, loadFaqReviewQueueRuntime, transitionFaqReviewItem } from '@/lib/faq-kb/review-queue'
 
 beforeEach(() => {
   mocks.from.mockReset()
@@ -22,6 +28,12 @@ beforeEach(() => {
   mocks.order.mockReset()
   mocks.limit.mockReset()
   mocks.insert.mockReset()
+  mocks.eq.mockReset()
+  mocks.maybeSingle.mockReset()
+  mocks.update.mockReset()
+  mocks.updateEq.mockReset()
+  mocks.updateSelect.mockReset()
+  mocks.single.mockReset()
 })
 
 describe('faq review queue runtime', () => {
@@ -85,5 +97,48 @@ describe('faq review queue runtime', () => {
     expect(result?.queue_source).toBe('supabase')
     expect(result?.review_id).toContain('faq-review-')
     expect(mocks.insert).toHaveBeenCalledTimes(1)
+  })
+
+  it('transitions prepared review to approved', async () => {
+    mocks.from.mockImplementation((table: string) => {
+      expect(table).toBe('faq_review_queue_op')
+      return {
+        select: mocks.select.mockReturnValue({
+          eq: mocks.eq.mockReturnValue({
+            maybeSingle: mocks.maybeSingle.mockResolvedValue({ data: { review_id: 'faq-review-runtime-1', queue_status: 'prepared' }, error: null }),
+          }),
+        }),
+        update: mocks.update.mockReturnValue({
+          eq: mocks.updateEq.mockReturnValue({
+            select: mocks.updateSelect.mockReturnValue({
+              single: mocks.single.mockResolvedValue({ data: { review_id: 'faq-review-runtime-1', queue_status: 'approved' }, error: null }),
+            }),
+          }),
+        }),
+      }
+    })
+
+    const result = await transitionFaqReviewItem({ review_id: 'faq-review-runtime-1', action: 'approve', operator_id: 'op-1' })
+    expect(result).toEqual({
+      review_id: 'faq-review-runtime-1',
+      previous_status: 'prepared',
+      queue_status: 'approved',
+      queue_source: 'supabase',
+    })
+  })
+
+  it('rejects invalid transitions', async () => {
+    mocks.from.mockImplementation(() => ({
+      select: mocks.select.mockReturnValue({
+        eq: mocks.eq.mockReturnValue({
+          maybeSingle: mocks.maybeSingle.mockResolvedValue({ data: { review_id: 'faq-review-runtime-2', queue_status: 'rejected' }, error: null }),
+        }),
+      }),
+      update: mocks.update,
+    }))
+
+    await expect(transitionFaqReviewItem({ review_id: 'faq-review-runtime-2', action: 'approve', operator_id: 'op-1' })).rejects.toThrow(
+      'invalid_transition:rejected->approved'
+    )
   })
 })

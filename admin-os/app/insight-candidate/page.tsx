@@ -37,7 +37,7 @@ export default function InsightCandidatePage() {
 function InsightCandidatePageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const execIdFromUrl = searchParams.get('exec_id') || ''
+  const execIdFromUrl = searchParams?.get('exec_id') || ''
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null)
   const [loading, setLoading] = useState(!!execIdFromUrl)
   const [error, setError] = useState<string | null>(null)

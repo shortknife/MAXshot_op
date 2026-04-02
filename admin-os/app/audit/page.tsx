@@ -60,7 +60,7 @@ function humanizeFailureReason(code: string): string {
 function AuditContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const execIdFromUrl = searchParams.get('exec_id')
+  const execIdFromUrl = searchParams?.get('exec_id')
   const [execIdInput, setExecIdInput] = useState(execIdFromUrl ?? '')
   const [execution, setExecution] = useState<ExecutionRow | null>(null)
   const [auditSteps, setAuditSteps] = useState<AuditEvent[]>([])
