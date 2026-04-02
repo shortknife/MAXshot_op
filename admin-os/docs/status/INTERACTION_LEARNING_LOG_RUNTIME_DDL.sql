@@ -4,6 +4,7 @@ create table if not exists interaction_learning_log_op (
   session_id text null,
   requester_id text null,
   entry_channel text null,
+  customer_id text null,
   raw_query text not null,
   effective_query text null,
   intent_type text null,
@@ -28,3 +29,8 @@ create index if not exists idx_interaction_learning_log_created_at on interactio
 create index if not exists idx_interaction_learning_log_session_id on interaction_learning_log_op (session_id);
 create index if not exists idx_interaction_learning_log_capability on interaction_learning_log_op (primary_capability_id);
 create index if not exists idx_interaction_learning_log_plane on interaction_learning_log_op (source_plane);
+
+alter table if exists interaction_learning_log_op
+  add column if not exists customer_id text null;
+
+create index if not exists idx_interaction_learning_log_customer on interaction_learning_log_op (customer_id);

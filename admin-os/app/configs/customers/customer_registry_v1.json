@@ -1,0 +1,24 @@
+{
+  "registry_id": "customer_registry_v1",
+  "version": "2026-04-02",
+  "customers": [
+    {
+      "customer_id": "maxshot",
+      "name": "MAXshot",
+      "status": "active",
+      "solution_key": "maxshot-sample",
+      "enabled_planes": ["ops_data", "faq_kb"],
+      "default_kb_scope": "general",
+      "notes": "Reference customer solution and sample deployment."
+    },
+    {
+      "customer_id": "nexa-demo",
+      "name": "Nexa Demo",
+      "status": "active",
+      "solution_key": "nexa-demo",
+      "enabled_planes": ["faq_kb"],
+      "default_kb_scope": "public",
+      "notes": "Demo-only customer shell for FAQ / KB flows."
+    }
+  ]
+}

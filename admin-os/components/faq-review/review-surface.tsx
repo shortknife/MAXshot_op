@@ -17,6 +17,7 @@ type ReviewItem = {
   reason: string
   priority: 'high' | 'normal'
   queue_status: string
+  customer_id?: string | null
   kb_scope: string | null
   channel: string | null
   confidence: number | null
@@ -191,6 +192,7 @@ export function FaqReviewSurface({ queueId, queueSource, items }: ReviewSurfaceP
                             <QueueBadge tone={item.priority === 'high' ? 'amber' : 'slate'}>{item.priority}</QueueBadge>
                             <QueueBadge tone="rose">{item.reason}</QueueBadge>
                             <QueueBadge tone={item.queue_status === 'approved' ? 'emerald' : item.queue_status === 'resolved' ? 'slate' : item.queue_status === 'rejected' ? 'rose' : 'amber'}>{item.queue_status}</QueueBadge>
+                            {item.customer_id && <QueueBadge>{`customer: ${item.customer_id}`}</QueueBadge>}
                             {item.kb_scope && <QueueBadge>{`scope: ${item.kb_scope}`}</QueueBadge>}
                             {item.channel && <QueueBadge>{`channel: ${item.channel}`}</QueueBadge>}
                             {typeof item.confidence === 'number' && <QueueBadge>{`confidence: ${item.confidence.toFixed(2)}`}</QueueBadge>}

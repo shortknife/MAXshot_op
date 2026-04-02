@@ -38,6 +38,7 @@ export async function faqQaReview(input: CapabilityInputEnvelope): Promise<Capab
   }
 
   const draftAnswer = readStringParam(slots, 'draft_answer') || null
+  const customerId = readStringParam(slots, 'customer_id') || null
   const customerContext = readStringParam(slots, 'customer_context') || null
   const channel = readStringParam(slots, 'channel') || null
   const kbScope = readStringParam(slots, 'kb_scope') || null
@@ -51,6 +52,7 @@ export async function faqQaReview(input: CapabilityInputEnvelope): Promise<Capab
     reason,
     citations,
     confidence,
+    customer_id: customerId,
     customer_context: customerContext,
     channel,
     kb_scope: kbScope,

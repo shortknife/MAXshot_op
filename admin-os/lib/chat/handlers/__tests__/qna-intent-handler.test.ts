@@ -114,7 +114,7 @@ describe('qna-intent-handler', () => {
       intentType: 'general_qna',
       matchedCapabilityIds: ['capability.faq_answering'],
       primaryCapabilityId: 'capability.faq_answering',
-      parsed: { intent: { extracted_slots: {} }, prompt_meta: null },
+      parsed: { intent: { extracted_slots: { customer_id: 'maxshot' } }, prompt_meta: null },
       rawQuery: 'What does the Pro plan include?',
     })
 
@@ -126,5 +126,6 @@ describe('qna-intent-handler', () => {
     expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { review_id?: string; queue_source?: string } } } } }).data?.meta?.answer_meta?.review_payload?.review_id).toBe('faq-review-runtime-1')
     expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { queue_source?: string } } } } }).data?.meta?.answer_meta?.review_payload?.queue_source).toBe('supabase')
     expect(mocks.enqueueFaqReviewItem).toHaveBeenCalledTimes(1)
+    expect(mocks.enqueueFaqReviewItem).toHaveBeenCalledWith(expect.objectContaining({ customer_id: 'maxshot' }))
   })
 })

@@ -14,6 +14,7 @@ describe('faqQaReview', () => {
         reason: 'faq_low_confidence',
         confidence: 0.22,
         citations: [{ source_id: 'plans-and-billing' }],
+        customer_id: 'maxshot',
         kb_scope: 'public',
       },
     })
@@ -22,5 +23,6 @@ describe('faqQaReview', () => {
     expect(result.capability_id).toBe('faq_qa_review')
     expect((result.result as { manual_review_required?: boolean }).manual_review_required).toBe(true)
     expect((result.result as { queue_status?: string }).queue_status).toBe('prepared')
+    expect((result.result as { review_payload?: { customer_id?: string } }).review_payload?.customer_id).toBe('maxshot')
   })
 })

@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
 
     if (action === 'register') {
       const title = String(body.title || '').trim()
+      const customerId = String(body.customer_id || '').trim() || null
       const sourceType = String(body.source_type || '').trim() as 'markdown' | 'text' | 'url' | 'pdf'
       const sourceRef = String(body.source_ref || '').trim()
       const kbScope = String(body.kb_scope || '').trim() || null
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
       const registered = await registerKbSourceDraft({
         source_id: sourceId,
         title,
+        customer_id: customerId,
         kb_scope: kbScope,
         source_type: sourceType,
         source_ref: sourceRef,

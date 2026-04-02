@@ -20,6 +20,7 @@ export type ExtractedInteractionLearningPayload = {
   session_id: string | null
   requester_id: string | null
   entry_channel: string | null
+  customer_id: string | null
   raw_query: string
   effective_query: string | null
   intent_type: string | null
@@ -49,6 +50,7 @@ export function extractInteractionLearningPayload(params: {
   const data = asObject(result.data)
   const meta = asObject(data.meta)
   const answerMeta = asObject(meta.answer_meta)
+  const reviewPayload = asObject(answerMeta.review_payload)
   const queryContract = asObject(meta.query_contract)
   const filtersApplied = asObject(meta.filters_applied)
 
@@ -77,6 +79,7 @@ export function extractInteractionLearningPayload(params: {
     session_id: params.entry.session_id || null,
     requester_id: params.entry.requester_id || null,
     entry_channel: params.entry.entry_channel || null,
+    customer_id: asString(meta.customer_id) || asString(reviewPayload.customer_id),
     raw_query: params.entry.raw_query,
     effective_query: asString(meta.effective_query),
     intent_type: asString(meta.intent_type),

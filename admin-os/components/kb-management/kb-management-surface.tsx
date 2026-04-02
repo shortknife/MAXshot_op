@@ -21,9 +21,15 @@ type ManifestDoc = {
   keywords?: string[]
 }
 
+type CustomerItem = {
+  customer_id: string
+  name: string
+}
+
 type InventoryItem = {
   source_id: string
   title: string
+  customer_id: string | null
   kb_scope: string | null
   source_type: 'markdown' | 'text' | 'url' | 'pdf'
   source_ref: string
@@ -78,10 +84,12 @@ function availableActions(status: InventoryItem['source_status']) {
 
 export function KbManagementSurface({
   manifestDocuments,
+  customers,
   inventorySource,
   inventoryItems,
 }: {
   manifestDocuments: ManifestDoc[]
+  customers: CustomerItem[]
   inventorySource: 'supabase' | 'computed'
   inventoryItems: InventoryItem[]
 }) {
@@ -90,6 +98,7 @@ export function KbManagementSurface({
   const [confirmToken, setConfirmToken] = useState('')
   const [approved, setApproved] = useState(false)
   const [title, setTitle] = useState('')
+  const [customerId, setCustomerId] = useState(customers[0]?.customer_id || '')
   const [sourceType, setSourceType] = useState<InventoryItem['source_type']>('markdown')
   const [sourceRef, setSourceRef] = useState('')
   const [kbScope, setKbScope] = useState('general')
@@ -104,6 +113,11 @@ export function KbManagementSurface({
   const scopeCounts = useMemo(() => inventoryItems.reduce<Record<string, number>>((acc, item) => {
     const scope = item.kb_scope || 'unscoped'
     acc[scope] = (acc[scope] || 0) + 1
+    return acc
+  }, {}), [inventoryItems])
+  const customerCounts = useMemo(() => inventoryItems.reduce<Record<string, number>>((acc, item) => {
+    const customer = item.customer_id || 'unbound'
+    acc[customer] = (acc[customer] || 0) + 1
     return acc
   }, {}), [inventoryItems])
 
@@ -190,6 +204,9 @@ export function KbManagementSurface({
                   <CardTitle className="text-base font-semibold">KB Source Inventory</CardTitle>
                   <div className="flex flex-wrap gap-2">
                     <TonePill tone={inventorySource === 'supabase' ? 'emerald' : 'amber'}>{`source: ${inventorySource}`}</TonePill>
+                    {Object.entries(customerCounts).map(([customer, count]) => (
+                      <TonePill key={customer}>{`${customer}: ${count}`}</TonePill>
+                    ))}
                     {Object.entries(scopeCounts).map(([scope, count]) => (
                       <TonePill key={scope} tone="blue">{`${scope}: ${count}`}</TonePill>
                     ))}
@@ -207,6 +224,7 @@ export function KbManagementSurface({
                           <TonePill tone={item.source_status === 'accepted' ? 'emerald' : item.source_status === 'draft' ? 'amber' : 'rose'}>{item.source_status}</TonePill>
                           <TonePill tone={item.qc_status === 'accepted' ? 'emerald' : item.qc_status === 'needs_review' ? 'amber' : 'rose'}>{`qc: ${item.qc_status}`}</TonePill>
                           <TonePill>{`type: ${item.source_type}`}</TonePill>
+                          <TonePill>{`customer: ${item.customer_id || 'unbound'}`}</TonePill>
                           <TonePill>{`scope: ${item.kb_scope || 'unscoped'}`}</TonePill>
                           <TonePill>{`docs: ${item.document_count}`}</TonePill>
                           <TonePill>{`chunks: ${item.chunk_count}`}</TonePill>
@@ -266,6 +284,22 @@ export function KbManagementSurface({
                       <Input id="kb-source-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="New KB Source" className="mt-2" />
                     </div>
                     <div>
+                      <Label>Customer</Label>
+                      <div className="mt-2">
+                        <Select value={customerId || '__none__'} onValueChange={(value) => setCustomerId(value === '__none__' ? '' : value)}>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select customer" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">unbound</SelectItem>
+                            {customers.map((customer) => (
+                              <SelectItem key={customer.customer_id} value={customer.customer_id}>{customer.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div>
                       <Label>Source Type</Label>
                       <div className="mt-2">
                         <Select value={sourceType} onValueChange={(value) => setSourceType(value as InventoryItem['source_type'])}>
@@ -309,7 +343,7 @@ export function KbManagementSurface({
                   </div>
 
                   <Button
-                    onClick={() => void mutate('register', { title, source_type: sourceType, source_ref: sourceRef, kb_scope: kbScope, customer_context: customerContext })}
+                    onClick={() => void mutate('register', { title, customer_id: customerId || null, source_type: sourceType, source_ref: sourceRef, kb_scope: kbScope, customer_context: customerContext })}
                     disabled={submittingKey === 'register'}
                   >
                     {submittingKey === 'register' ? 'Creating Draft...' : 'Register Draft Source'}

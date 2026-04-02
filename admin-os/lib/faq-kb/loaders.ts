@@ -23,6 +23,7 @@ export type FaqReviewQueueItem = {
   reason: string
   priority: 'high' | 'normal'
   queue_status: string
+  customer_id?: string | null
   kb_scope: string | null
   channel: string | null
   confidence: number | null

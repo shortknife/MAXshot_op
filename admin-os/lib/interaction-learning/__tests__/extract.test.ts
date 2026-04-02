@@ -55,7 +55,7 @@ describe('extractInteractionLearningPayload', () => {
               confidence: 0.24,
               fallback_required: true,
               review_required: true,
-              review_payload: { review_id: 'faq-review-1' },
+              review_payload: { review_id: 'faq-review-1', customer_id: 'maxshot' },
             },
           },
         },
@@ -67,5 +67,6 @@ describe('extractInteractionLearningPayload', () => {
     expect(payload.answer_type).toBe('review')
     expect(payload.review_required).toBe(true)
     expect(payload.fallback_required).toBe(true)
+    expect(payload.customer_id).toBe('maxshot')
   })
 })

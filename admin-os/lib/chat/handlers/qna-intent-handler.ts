@@ -61,6 +61,7 @@ export async function handleQnaIntent(params: {
         reason: fallbackReason,
         citations: Array.isArray(qnaResult.citations) ? qnaResult.citations : [],
         confidence: typeof qnaResult.confidence === 'number' ? qnaResult.confidence : null,
+        customer_id: typeof qnaSlots.customer_id === 'string' ? qnaSlots.customer_id : null,
         customer_context: typeof qnaSlots.customer_context === 'string' ? qnaSlots.customer_context : null,
         channel: typeof qnaSlots.channel === 'string' ? qnaSlots.channel : null,
         kb_scope: typeof qna.metadata?.kb_scope === 'string' ? qna.metadata.kb_scope : null,
@@ -76,6 +77,12 @@ export async function handleQnaIntent(params: {
         kb_scope: typeof reviewPayload.kb_scope === 'string' ? reviewPayload.kb_scope : null,
         channel: typeof reviewPayload.channel === 'string' ? reviewPayload.channel : null,
         confidence: typeof reviewPayload.confidence === 'number' ? reviewPayload.confidence : null,
+        customer_id:
+          typeof reviewPayload.customer_id === 'string'
+            ? reviewPayload.customer_id
+            : typeof qnaSlots.customer_id === 'string'
+              ? qnaSlots.customer_id
+              : null,
         draft_answer: typeof reviewPayload.draft_answer === 'string' ? reviewPayload.draft_answer : null,
         citations: Array.isArray(reviewPayload.citations) ? (reviewPayload.citations as Array<{ source_id?: string; title?: string; snippet?: string }>) : [],
         customer_context: typeof reviewPayload.customer_context === 'string' ? reviewPayload.customer_context : null,

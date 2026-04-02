@@ -4,6 +4,7 @@ create table if not exists public.faq_review_queue_op (
   reason text not null,
   priority text not null check (priority in ('high', 'normal')),
   queue_status text not null default 'prepared',
+  customer_id text null,
   kb_scope text null,
   channel text null,
   confidence numeric null,
@@ -22,3 +23,9 @@ create index if not exists faq_review_queue_op_reason_idx
 
 create index if not exists faq_review_queue_op_scope_idx
   on public.faq_review_queue_op (kb_scope);
+
+alter table if exists public.faq_review_queue_op
+  add column if not exists customer_id text null;
+
+create index if not exists faq_review_queue_op_customer_idx
+  on public.faq_review_queue_op (customer_id);

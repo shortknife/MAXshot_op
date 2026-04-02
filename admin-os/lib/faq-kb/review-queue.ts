@@ -25,6 +25,7 @@ type ReviewQueueRow = {
   reason: string
   priority: 'high' | 'normal'
   queue_status: string
+  customer_id: string | null
   kb_scope: string | null
   channel: string | null
   confidence: number | null
@@ -43,6 +44,7 @@ type EnqueueParams = {
   confidence?: number | null
   draft_answer?: string | null
   citations?: Array<{ source_id?: string; title?: string; snippet?: string }>
+  customer_id?: string | null
   customer_context?: string | null
   source_capability?: string | null
 }
@@ -73,6 +75,7 @@ function toQueueItem(row: ReviewQueueRow): FaqReviewQueueItem {
     reason: row.reason,
     priority: row.priority,
     queue_status: row.queue_status,
+    customer_id: row.customer_id,
     kb_scope: row.kb_scope,
     channel: row.channel,
     confidence: typeof row.confidence === 'number' ? row.confidence : null,
@@ -90,7 +93,7 @@ export async function loadFaqReviewQueueRuntime(): Promise<FaqReviewQueueRuntime
   try {
     const { data, error } = await supabase
       .from(FAQ_REVIEW_QUEUE_TABLE)
-      .select('review_id,question,reason,priority,queue_status,kb_scope,channel,confidence,created_at,draft_answer,citations')
+      .select('review_id,question,reason,priority,queue_status,customer_id,kb_scope,channel,confidence,created_at,draft_answer,citations')
       .order('created_at', { ascending: false })
       .limit(FAQ_REVIEW_QUEUE_LIMIT)
 
@@ -123,6 +126,7 @@ export async function enqueueFaqReviewItem(params: EnqueueParams): Promise<{ rev
     reason: params.reason,
     priority: params.priority,
     queue_status: params.queue_status || 'prepared',
+    customer_id: params.customer_id || null,
     kb_scope: params.kb_scope || null,
     channel: params.channel || null,
     confidence: typeof params.confidence === 'number' ? params.confidence : null,

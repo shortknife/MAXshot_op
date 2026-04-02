@@ -12,6 +12,7 @@ export type KbSourceType = 'markdown' | 'text' | 'url' | 'pdf'
 export type KbSourceInventoryItem = {
   source_id: string
   title: string
+  customer_id: string | null
   kb_scope: string | null
   source_type: KbSourceType
   source_ref: string
@@ -34,6 +35,7 @@ export type KbSourceInventoryRuntime = {
 type KbSourceRow = {
   source_id: string
   title: string
+  customer_id: string | null
   kb_scope: string | null
   source_type: KbSourceType
   source_ref: string
@@ -51,6 +53,7 @@ type KbSourceRow = {
 type RegisterKbSourceDraftParams = {
   source_id?: string | null
   title: string
+  customer_id?: string | null
   kb_scope?: string | null
   source_type: KbSourceType
   source_ref: string
@@ -99,6 +102,7 @@ function toInventoryItem(row: KbSourceRow): KbSourceInventoryItem {
   return {
     source_id: row.source_id,
     title: row.title,
+    customer_id: row.customer_id,
     kb_scope: row.kb_scope,
     source_type: row.source_type,
     source_ref: row.source_ref,
@@ -125,6 +129,7 @@ async function computeInventoryFallback(): Promise<KbSourceInventoryItem[]> {
     return {
       source_id: doc.id,
       title: doc.title,
+      customer_id: null,
       kb_scope: doc.kb_scope || null,
       source_type: 'markdown',
       source_ref: doc.path,
@@ -145,7 +150,7 @@ export async function loadKbSourceInventoryRuntime(): Promise<KbSourceInventoryR
   try {
     const { data, error } = await supabase
       .from(KB_SOURCE_TABLE)
-      .select('source_id,title,kb_scope,source_type,source_ref,source_status,qc_status,document_count,chunk_count,qc_flags,uploaded_by,customer_context,created_at,updated_at')
+      .select('source_id,title,customer_id,kb_scope,source_type,source_ref,source_status,qc_status,document_count,chunk_count,qc_flags,uploaded_by,customer_context,created_at,updated_at')
       .order('updated_at', { ascending: false })
       .limit(KB_SOURCE_LIMIT)
 
@@ -174,9 +179,10 @@ export async function registerKbSourceDraft(params: RegisterKbSourceDraftParams)
     execution_id: `kb-source-${sourceId}`,
     intent: { type: 'task_management', extracted_slots: {} },
     slots: {
-      source_type: params.source_type,
-      source_ref: params.source_ref,
-      kb_scope: params.kb_scope || null,
+        source_type: params.source_type,
+        source_ref: params.source_ref,
+        customer_id: params.customer_id || null,
+        kb_scope: params.kb_scope || null,
       customer_context: params.customer_context || null,
       uploaded_by: params.uploaded_by,
     },
@@ -192,6 +198,7 @@ export async function registerKbSourceDraft(params: RegisterKbSourceDraftParams)
   const payload = {
     source_id: sourceId,
     title: params.title,
+    customer_id: params.customer_id || null,
     kb_scope: params.kb_scope || null,
     source_type: params.source_type,
     source_ref: params.source_ref,

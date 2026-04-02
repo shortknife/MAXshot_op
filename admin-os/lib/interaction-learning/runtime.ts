@@ -9,6 +9,7 @@ export type InteractionLearningLogRow = {
   session_id: string | null
   requester_id: string | null
   entry_channel: string | null
+  customer_id: string | null
   raw_query: string
   effective_query: string | null
   intent_type: string | null
@@ -38,6 +39,7 @@ export type PersistInteractionLearningParams = {
   session_id?: string | null
   requester_id?: string | null
   entry_channel?: string | null
+  customer_id?: string | null
   raw_query: string
   effective_query?: string | null
   intent_type?: string | null
@@ -84,6 +86,7 @@ function normalizeRows(rows: unknown[]): InteractionLearningLogRow[] {
         session_id: typeof value.session_id === 'string' ? value.session_id : null,
         requester_id: typeof value.requester_id === 'string' ? value.requester_id : null,
         entry_channel: typeof value.entry_channel === 'string' ? value.entry_channel : null,
+        customer_id: typeof value.customer_id === 'string' ? value.customer_id : null,
         raw_query: String(value.raw_query || ''),
         effective_query: typeof value.effective_query === 'string' ? value.effective_query : null,
         intent_type: typeof value.intent_type === 'string' ? value.intent_type : null,
@@ -115,6 +118,7 @@ export async function persistInteractionLearningLog(params: PersistInteractionLe
     session_id: params.session_id || null,
     requester_id: params.requester_id || null,
     entry_channel: params.entry_channel || null,
+    customer_id: params.customer_id || null,
     raw_query: params.raw_query,
     effective_query: params.effective_query || null,
     intent_type: params.intent_type || null,
@@ -149,7 +153,7 @@ export async function loadInteractionLearningLogRuntime(): Promise<InteractionLe
   try {
     const { data, error } = await supabase
       .from(INTERACTION_LOG_TABLE)
-      .select('log_id,created_at,session_id,requester_id,entry_channel,raw_query,effective_query,intent_type,intent_type_canonical,primary_capability_id,matched_capability_ids,source_plane,answer_type,success,status_code,fallback_required,review_required,clarification_required,confidence,summary,query_mode,scope,meta')
+      .select('log_id,created_at,session_id,requester_id,entry_channel,customer_id,raw_query,effective_query,intent_type,intent_type_canonical,primary_capability_id,matched_capability_ids,source_plane,answer_type,success,status_code,fallback_required,review_required,clarification_required,confidence,summary,query_mode,scope,meta')
       .order('created_at', { ascending: false })
       .limit(INTERACTION_LOG_LIMIT)
 

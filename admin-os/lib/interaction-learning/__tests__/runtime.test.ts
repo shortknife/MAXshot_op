@@ -54,6 +54,7 @@ describe('interaction learning runtime', () => {
                 session_id: 'sess-1',
                 requester_id: 'user-1',
                 entry_channel: 'web_app',
+                customer_id: 'maxshot',
                 raw_query: '最近7天按链 APY 排名',
                 effective_query: '最近7天按链 APY 排名',
                 intent_type: 'ops_query',
@@ -82,6 +83,7 @@ describe('interaction learning runtime', () => {
     const runtime = await loadInteractionLearningLogRuntime()
     expect(runtime.source).toBe('supabase')
     expect(runtime.items[0]?.log_id).toBe('ilog-1')
+    expect(runtime.items[0]?.customer_id).toBe('maxshot')
   })
 
   it('returns empty source when runtime store missing', async () => {
