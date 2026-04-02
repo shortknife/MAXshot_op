@@ -72,6 +72,13 @@
 
 
 
+
+## D-016 Nexa v5.3 Delta Design Direction (2026-04-02)
+
+- Decision: do not rewrite the full FSD immediately; create a v5.3 delta design on top of the accepted MVP baseline.
+- Core upgrade themes: platform topology, plane model, verification-aware execution, three-layer memory model, and learning/mutation roadmap.
+- Immediate documentation priority: one-pager/platform framing, layer model, execution model, and Working Mind.
+- Deferred implementation priority: interaction learning log, KB mutation workflow, customer/tenant model, stronger memory, and runtime evolution work.
 ## D-015 FAQ / KB Plane Stage 2 Runtime Wiring Accepted (2026-04-02)
 - Scope: runtime-backed `faq_review_queue_op` and `faq_kb_qc_snapshot_op`
 - Decision: freeze Stage 2 runtime wiring after real database validation
