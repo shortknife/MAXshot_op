@@ -3,6 +3,7 @@ import { faqAnswering } from '@/lib/capabilities/faq-answering'
 import { faqFallback } from '@/lib/capabilities/faq-fallback'
 import { faqQaReview } from '@/lib/capabilities/faq-qa-review'
 import { buildQnaSuccessResponse } from '@/lib/chat/non-business-response'
+import { enqueueFaqReviewItem } from '@/lib/faq-kb/review-queue'
 import { buildChatEnvelope } from '@/lib/chat/chat-route-helpers'
 import { toCanonicalIntentType } from '@/lib/intent-analyzer/intent-taxonomy'
 
@@ -66,6 +67,28 @@ export async function handleQnaIntent(params: {
       })
     )
     reviewPayload = ((reviewOutput.result as { review_payload?: Record<string, unknown> } | null)?.review_payload) || null
+    if (reviewPayload) {
+      const persistedReview = await enqueueFaqReviewItem({
+        question: String(reviewPayload.question || qnaSlots.question || ''),
+        reason: String(reviewPayload.reason || fallbackReason),
+        priority: reviewPayload.priority === 'normal' ? 'normal' : 'high',
+        queue_status: 'prepared',
+        kb_scope: typeof reviewPayload.kb_scope === 'string' ? reviewPayload.kb_scope : null,
+        channel: typeof reviewPayload.channel === 'string' ? reviewPayload.channel : null,
+        confidence: typeof reviewPayload.confidence === 'number' ? reviewPayload.confidence : null,
+        draft_answer: typeof reviewPayload.draft_answer === 'string' ? reviewPayload.draft_answer : null,
+        citations: Array.isArray(reviewPayload.citations) ? (reviewPayload.citations as Array<{ source_id?: string; title?: string; snippet?: string }>) : [],
+        customer_context: typeof reviewPayload.customer_context === 'string' ? reviewPayload.customer_context : null,
+        source_capability: 'capability.faq_qa_review',
+      })
+      if (persistedReview) {
+        reviewPayload = {
+          ...reviewPayload,
+          review_id: persistedReview.review_id,
+          queue_source: persistedReview.queue_source,
+        }
+      }
+    }
     qnaResult = {
       ...qnaResult,
       fallback_message: (fallbackOutput.result as { fallback_message?: string } | null)?.fallback_message,

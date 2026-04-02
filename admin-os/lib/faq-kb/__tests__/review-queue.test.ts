@@ -1,0 +1,89 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const mocks = vi.hoisted(() => ({
+  from: vi.fn(),
+  select: vi.fn(),
+  order: vi.fn(),
+  limit: vi.fn(),
+  insert: vi.fn(),
+}))
+
+vi.mock('@/lib/supabase', () => ({
+  supabase: {
+    from: mocks.from,
+  },
+}))
+
+import { enqueueFaqReviewItem, loadFaqReviewQueueRuntime } from '@/lib/faq-kb/review-queue'
+
+beforeEach(() => {
+  mocks.from.mockReset()
+  mocks.select.mockReset()
+  mocks.order.mockReset()
+  mocks.limit.mockReset()
+  mocks.insert.mockReset()
+})
+
+describe('faq review queue runtime', () => {
+  it('falls back to seed queue when runtime store is unavailable', async () => {
+    mocks.from.mockReturnValue({
+      select: mocks.select.mockReturnValue({
+        order: mocks.order.mockReturnValue({
+          limit: mocks.limit.mockResolvedValue({ data: null, error: new Error('relation faq_review_queue_op does not exist') }),
+        }),
+      }),
+    })
+
+    const queue = await loadFaqReviewQueueRuntime()
+    expect(queue.source).toBe('seed')
+    expect(queue.items.length).toBeGreaterThan(0)
+  })
+
+  it('uses supabase rows when available', async () => {
+    mocks.from.mockReturnValue({
+      select: mocks.select.mockReturnValue({
+        order: mocks.order.mockReturnValue({
+          limit: mocks.limit.mockResolvedValue({
+            data: [
+              {
+                review_id: 'faq-review-runtime-1',
+                question: 'How do I reset my password?',
+                reason: 'faq_low_confidence',
+                priority: 'high',
+                queue_status: 'prepared',
+                kb_scope: 'general',
+                channel: 'web',
+                confidence: 0.31,
+                created_at: '2026-04-02T10:00:00.000Z',
+                draft_answer: 'Use the password reset flow.',
+                citations: [{ source_id: 'account-access' }],
+              },
+            ],
+            error: null,
+          }),
+        }),
+      }),
+    })
+
+    const queue = await loadFaqReviewQueueRuntime()
+    expect(queue.source).toBe('supabase')
+    expect(queue.items[0]?.review_id).toBe('faq-review-runtime-1')
+  })
+
+  it('persists review item when runtime store is available', async () => {
+    mocks.from.mockReturnValue({
+      insert: mocks.insert.mockResolvedValue({ error: null }),
+    })
+
+    const result = await enqueueFaqReviewItem({
+      question: 'What does the Pro plan include?',
+      reason: 'faq_low_confidence',
+      priority: 'high',
+      citations: [{ source_id: 'plans-billing' }],
+    })
+
+    expect(result?.queue_source).toBe('supabase')
+    expect(result?.review_id).toContain('faq-review-')
+    expect(mocks.insert).toHaveBeenCalledTimes(1)
+  })
+})

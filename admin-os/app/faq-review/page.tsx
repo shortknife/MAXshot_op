@@ -2,7 +2,9 @@ import type { ReactNode } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { AppNav } from '@/components/app-nav'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { loadFaqReviewQueue } from '@/lib/faq-kb/loaders'
+import { loadFaqReviewQueueRuntime } from '@/lib/faq-kb/review-queue'
+
+export const dynamic = 'force-dynamic'
 
 type ReviewItem = {
   review_id: string
@@ -45,7 +47,7 @@ function QueueBadge({ children, tone = 'slate' }: { children: ReactNode; tone?: 
 }
 
 export default async function FaqReviewPage() {
-  const reviewQueue = loadFaqReviewQueue()
+  const reviewQueue = await loadFaqReviewQueueRuntime()
   const items = reviewQueue.items as ReviewItem[]
   const highPriority = items.filter((item) => item.priority === 'high').length
   const withEvidence = items.filter((item) => item.citations.length > 0).length
@@ -86,7 +88,10 @@ export default async function FaqReviewPage() {
               <CardHeader className="border-b border-slate-100">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <CardTitle className="text-base font-semibold">Queue Snapshot</CardTitle>
-                  <QueueBadge tone="slate">{reviewQueue.queue_id}</QueueBadge>
+                  <div className="flex flex-wrap gap-2">
+                    <QueueBadge tone="slate">{reviewQueue.queue_id}</QueueBadge>
+                    <QueueBadge tone={reviewQueue.source === 'supabase' ? 'emerald' : 'amber'}>{`source: ${reviewQueue.source}`}</QueueBadge>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 p-4 sm:p-6">
@@ -161,7 +166,7 @@ export default async function FaqReviewPage() {
                 <div className="rounded-3xl border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.95),rgba(241,245,249,0.92))] p-4">
                   <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Readiness</div>
                   <div className="mt-3 text-sm leading-7 text-slate-700">
-                    当前 review queue 仍是 bounded seed 驱动，但统计、时间戳与原因维度已经按运行态页面组织，后续可以直接切到真实持久化来源。
+                    review queue 优先读取运行态持久化来源；仅当运行态表不可用或为空时，才回退到 bounded seed。
                   </div>
                 </div>
               </CardContent>

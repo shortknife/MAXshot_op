@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   faqAnswering: vi.fn(),
   faqFallback: vi.fn(),
   faqQaReview: vi.fn(),
+  enqueueFaqReviewItem: vi.fn(),
 }))
 
 vi.mock('@/lib/capabilities/product-doc-qna', () => ({
@@ -23,10 +24,15 @@ vi.mock('@/lib/capabilities/faq-qa-review', () => ({
   faqQaReview: mocks.faqQaReview,
 }))
 
+vi.mock('@/lib/faq-kb/review-queue', () => ({
+  enqueueFaqReviewItem: mocks.enqueueFaqReviewItem,
+}))
+
 import { handleQnaIntent } from '@/lib/chat/handlers/qna-intent-handler'
 
 describe('qna-intent-handler', () => {
   it('uses faq capability when faq capability is primary', async () => {
+    mocks.enqueueFaqReviewItem.mockReset()
     mocks.faqAnswering.mockResolvedValue({
       capability_id: 'faq_answering',
       capability_version: '1.0',
@@ -59,6 +65,7 @@ describe('qna-intent-handler', () => {
   })
 
   it('routes low-confidence faq answers through fallback and review packaging', async () => {
+    mocks.enqueueFaqReviewItem.mockResolvedValue({ review_id: 'faq-review-runtime-1', queue_source: 'supabase' })
     mocks.faqAnswering.mockResolvedValue({
       capability_id: 'faq_answering',
       capability_version: '1.0',
@@ -115,6 +122,9 @@ describe('qna-intent-handler', () => {
     expect(mocks.faqQaReview).toHaveBeenCalledTimes(1)
     expect((result.body as { data?: { summary?: string; meta?: { answer_meta?: { capability_id?: string; review_required?: boolean; review_payload?: { priority?: string } } } } }).data?.summary).toContain('confidence is too low')
     expect((result.body as { data?: { meta?: { answer_meta?: { capability_id?: string } } } }).data?.meta?.answer_meta?.capability_id).toBe('faq_qa_review')
-    expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { priority?: string } } } } }).data?.meta?.answer_meta?.review_payload?.priority).toBe('high')
+    expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { priority?: string; review_id?: string; queue_source?: string } } } } }).data?.meta?.answer_meta?.review_payload?.priority).toBe('high')
+    expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { review_id?: string; queue_source?: string } } } } }).data?.meta?.answer_meta?.review_payload?.review_id).toBe('faq-review-runtime-1')
+    expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { queue_source?: string } } } } }).data?.meta?.answer_meta?.review_payload?.queue_source).toBe('supabase')
+    expect(mocks.enqueueFaqReviewItem).toHaveBeenCalledTimes(1)
   })
 })

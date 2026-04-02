@@ -51,6 +51,8 @@ type ChatMeta = {
       priority?: string
       kb_scope?: string | null
       channel?: string | null
+      review_id?: string
+      queue_source?: string
     } | null
   } | null
 }
@@ -496,6 +498,18 @@ export default function ChatPage() {
                                   <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-700">
                                     <div className="text-xs text-slate-500">channel</div>
                                     <div className="mt-1 font-medium text-slate-900">{meta.answer_meta.review_payload.channel}</div>
+                                  </div>
+                                )}
+                                {meta.answer_meta.review_payload.review_id && (
+                                  <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                    <div className="text-xs text-slate-500">review id</div>
+                                    <div className="mt-1 font-medium text-slate-900">{meta.answer_meta.review_payload.review_id}</div>
+                                  </div>
+                                )}
+                                {meta.answer_meta.review_payload.queue_source && (
+                                  <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-700">
+                                    <div className="text-xs text-slate-500">queue source</div>
+                                    <div className="mt-1 font-medium text-slate-900">{meta.answer_meta.review_payload.queue_source}</div>
                                   </div>
                                 )}
                               </div>
