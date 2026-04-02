@@ -75,6 +75,22 @@ describe('kb source action route', () => {
     expect(body.source_status).toBe('draft')
   })
 
+  it('rejects transition when operator is outside customer scope', async () => {
+    mocks.transitionKbSourceItem.mockRejectedValue(new Error('operator_customer_scope_not_allowed'))
+
+    const res = await POST(buildRequest({
+      action: 'accept',
+      approved: true,
+      operator_id: 'demo-reviewer',
+      confirm_token: 'token',
+      source_id: 'src-1',
+    }))
+    const body = await res.json()
+
+    expect(res.status).toBe(403)
+    expect(body.error).toBe('operator_customer_scope_not_allowed')
+  })
+
   it('transitions draft source', async () => {
     mocks.transitionKbSourceItem.mockResolvedValue({ source_id: 'src-1', previous_status: 'draft', source_status: 'accepted', inventory_source: 'supabase' })
 

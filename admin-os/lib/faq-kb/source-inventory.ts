@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { kbUploadQc } from '@/lib/capabilities/kb-upload-qc'
 import { loadFaqKbManifest } from '@/lib/faq-kb/loaders'
 import { isMutationAllowedForCustomer } from '@/lib/customers/runtime'
+import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 import { loadKbQcRuntimePreview } from '@/lib/faq-kb/qc-runtime'
 
 const KB_SOURCE_TABLE = 'faq_kb_source_inventory_op'
@@ -242,6 +243,7 @@ export async function transitionKbSourceItem(params: TransitionKbSourceParams): 
     if (customerId && !isMutationAllowedForCustomer(customerId, 'capability.kb_upload_qc')) {
       throw new Error('customer_capability_not_allowed')
     }
+    assertOperatorCustomerAccess({ operatorId: params.operator_id, customerId })
     if (!transition.from.includes(previousStatus)) {
       throw new Error(`invalid_transition:${previousStatus}->${transition.to}`)
     }

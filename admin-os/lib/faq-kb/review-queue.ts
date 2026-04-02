@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { loadFaqReviewQueue, type FaqReviewQueueItem } from '@/lib/faq-kb/loaders'
+import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 
 const FAQ_REVIEW_QUEUE_TABLE = 'faq_review_queue_op'
 const FAQ_REVIEW_QUEUE_ID = 'faq_review_queue_runtime_v1'
@@ -157,7 +158,7 @@ export async function transitionFaqReviewItem(params: {
   try {
     const { data: existing, error: loadError } = await supabase
       .from(FAQ_REVIEW_QUEUE_TABLE)
-      .select('review_id,queue_status')
+.select('review_id,queue_status,customer_id')
       .eq('review_id', params.review_id)
       .maybeSingle()
 
@@ -165,6 +166,8 @@ export async function transitionFaqReviewItem(params: {
     if (!existing) return null
 
     const previousStatus = String((existing as { queue_status?: string }).queue_status || '')
+    const customerId = typeof (existing as { customer_id?: string | null }).customer_id === 'string' ? (existing as { customer_id?: string | null }).customer_id : null
+    assertOperatorCustomerAccess({ operatorId: params.operator_id, customerId })
     if (!transition.from.includes(previousStatus)) {
       throw new Error(`invalid_transition:${previousStatus}->${transition.to}`)
     }
@@ -173,7 +176,7 @@ export async function transitionFaqReviewItem(params: {
       .from(FAQ_REVIEW_QUEUE_TABLE)
       .update({ queue_status: transition.to })
       .eq('review_id', params.review_id)
-      .select('review_id,queue_status')
+.select('review_id,queue_status,customer_id')
       .single()
 
     if (updateError) throw updateError

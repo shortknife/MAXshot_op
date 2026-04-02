@@ -1,0 +1,38 @@
+{
+  "registry_id": "operator_registry_v1",
+  "version": "2026-04-02",
+  "operators": [
+    {
+      "operator_id": "platform-admin",
+      "role": "platform_admin",
+      "allowed_customers": [
+        "*"
+      ],
+      "notes": "Platform-level operator with customer-wide write authority."
+    },
+    {
+      "operator_id": "maxshot-ops",
+      "role": "solution_operator",
+      "allowed_customers": [
+        "maxshot"
+      ],
+      "notes": "Customer-scoped operator for MAXshot FAQ / KB workflows."
+    },
+    {
+      "operator_id": "demo-reviewer",
+      "role": "demo_reviewer",
+      "allowed_customers": [
+        "nexa-demo"
+      ],
+      "notes": "Demo-only operator for FAQ review visibility and bounded actions."
+    },
+    {
+      "operator_id": "ops-auditor",
+      "role": "auditor",
+      "allowed_customers": [
+        "ops-observer"
+      ],
+      "notes": "Read-oriented customer shell; no mutation capabilities should pass customer policy."
+    }
+  ]
+}

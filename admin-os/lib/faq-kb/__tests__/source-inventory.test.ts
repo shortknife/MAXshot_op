@@ -91,7 +91,7 @@ describe('kb source inventory runtime', () => {
       update: mocks.update,
     }))
 
-    await expect(transitionKbSourceItem({ source_id: 'src-2', action: 'accept', operator_id: 'op-1' })).rejects.toThrow('customer_capability_not_allowed')
+    await expect(transitionKbSourceItem({ source_id: 'src-2', action: 'accept', operator_id: 'maxshot-ops' })).rejects.toThrow('customer_capability_not_allowed')
   })
 
   it('transitions draft source to accepted', async () => {
@@ -110,7 +110,7 @@ describe('kb source inventory runtime', () => {
       }),
     }))
 
-    const result = await transitionKbSourceItem({ source_id: 'src-1', action: 'accept', operator_id: 'op-1' })
+    const result = await transitionKbSourceItem({ source_id: 'src-1', action: 'accept', operator_id: 'maxshot-ops' })
     expect(result).toEqual({
       source_id: 'src-1',
       previous_status: 'draft',

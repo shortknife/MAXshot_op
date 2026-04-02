@@ -74,6 +74,22 @@ describe('faq review action route', () => {
     })
   })
 
+  it('rejects operator outside customer scope', async () => {
+    mocks.transitionFaqReviewItem.mockRejectedValue(new Error('operator_customer_scope_not_allowed'))
+
+    const res = await POST(buildRequest({
+      review_id: 'faq-review-runtime-1',
+      action: 'approve',
+      approved_by: 'ops-auditor',
+      approved: true,
+      confirm_token: 'token',
+    }))
+    const body = await res.json()
+
+    expect(res.status).toBe(403)
+    expect(body.error).toBe('operator_customer_scope_not_allowed')
+  })
+
   it('returns conflict for invalid transition', async () => {
     mocks.transitionFaqReviewItem.mockRejectedValue(new Error('invalid_transition:rejected->approved'))
 

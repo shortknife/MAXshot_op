@@ -99,13 +99,26 @@ describe('faq review queue runtime', () => {
     expect(mocks.insert).toHaveBeenCalledTimes(1)
   })
 
+  it('blocks operator transitions outside customer scope', async () => {
+    mocks.from.mockImplementation(() => ({
+      select: mocks.select.mockReturnValue({
+        eq: mocks.eq.mockReturnValue({
+          maybeSingle: mocks.maybeSingle.mockResolvedValue({ data: { review_id: 'faq-review-runtime-3', queue_status: 'prepared', customer_id: 'maxshot' }, error: null }),
+        }),
+      }),
+      update: mocks.update,
+    }))
+
+    await expect(transitionFaqReviewItem({ review_id: 'faq-review-runtime-3', action: 'approve', operator_id: 'demo-reviewer' })).rejects.toThrow('operator_customer_scope_not_allowed')
+  })
+
   it('transitions prepared review to approved', async () => {
     mocks.from.mockImplementation((table: string) => {
       expect(table).toBe('faq_review_queue_op')
       return {
         select: mocks.select.mockReturnValue({
           eq: mocks.eq.mockReturnValue({
-            maybeSingle: mocks.maybeSingle.mockResolvedValue({ data: { review_id: 'faq-review-runtime-1', queue_status: 'prepared' }, error: null }),
+            maybeSingle: mocks.maybeSingle.mockResolvedValue({ data: { review_id: 'faq-review-runtime-1', queue_status: 'prepared', customer_id: 'maxshot' }, error: null }),
           }),
         }),
         update: mocks.update.mockReturnValue({
@@ -118,7 +131,7 @@ describe('faq review queue runtime', () => {
       }
     })
 
-    const result = await transitionFaqReviewItem({ review_id: 'faq-review-runtime-1', action: 'approve', operator_id: 'op-1' })
+    const result = await transitionFaqReviewItem({ review_id: 'faq-review-runtime-1', action: 'approve', operator_id: 'maxshot-ops' })
     expect(result).toEqual({
       review_id: 'faq-review-runtime-1',
       previous_status: 'prepared',
@@ -137,7 +150,7 @@ describe('faq review queue runtime', () => {
       update: mocks.update,
     }))
 
-    await expect(transitionFaqReviewItem({ review_id: 'faq-review-runtime-2', action: 'approve', operator_id: 'op-1' })).rejects.toThrow(
+    await expect(transitionFaqReviewItem({ review_id: 'faq-review-runtime-2', action: 'approve', operator_id: 'maxshot-ops' })).rejects.toThrow(
       'invalid_transition:rejected->approved'
     )
   })

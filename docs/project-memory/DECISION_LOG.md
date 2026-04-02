@@ -101,3 +101,10 @@
 - Why: the platform already carries `customer_id`, but without capability exposure rules it still behaves like a customer-labeled single-tenant system.
 - Accepted scope: customer registry policy fields, FAQ access blocking, KB mutation blocking, and Customers page policy visibility.
 - Deferred: router-wide policy enforcement, IAM, billing/provisioning, and tenant-isolated storage.
+
+
+## D-019 Operator Boundary Baseline Accepted (2026-04-02)
+- Decision: add a runtime operator registry and enforce operator-to-customer scope at current FAQ review and KB mutation write paths.
+- Why: customer capability exposure alone is insufficient if any operator can still mutate customer-bound state with a valid write token.
+- Accepted scope: operator registry, customer-scope checks for KB register/transition and FAQ review transition, and Customers page operator visibility.
+- Deferred: authenticated operator identity, tenant IAM, role hierarchy, and broader route-wide policy enforcement.

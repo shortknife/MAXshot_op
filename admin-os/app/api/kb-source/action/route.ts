@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { assertWriteEnabled } from '@/lib/utils'
 import { registerKbSourceDraft, transitionKbSourceItem } from '@/lib/faq-kb/source-inventory'
 import { isMutationAllowedForCustomer } from '@/lib/customers/runtime'
+import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 
 type KbSourceAction = 'register' | 'accept' | 'reject'
 
@@ -41,6 +42,11 @@ export async function POST(req: NextRequest) {
       if (customerId && !isMutationAllowedForCustomer(customerId, 'capability.kb_upload_qc')) {
         return NextResponse.json({ error: 'customer_capability_not_allowed' }, { status: 403 })
       }
+      try {
+        assertOperatorCustomerAccess({ operatorId, customerId })
+      } catch (error) {
+        return NextResponse.json({ error: error instanceof Error ? error.message : 'operator_customer_scope_not_allowed' }, { status: 403 })
+      }
 
       const registered = await registerKbSourceDraft({
         source_id: sourceId,
@@ -75,6 +81,9 @@ export async function POST(req: NextRequest) {
       const message = error instanceof Error ? error.message : 'kb_source_transition_failed'
       if (message.startsWith('invalid_transition:')) {
         return NextResponse.json({ error: message }, { status: 409 })
+      }
+      if (message === 'operator_customer_scope_not_allowed') {
+        return NextResponse.json({ error: message }, { status: 403 })
       }
       throw error
     }

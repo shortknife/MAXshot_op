@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { getCustomerCapabilityPolicy, isCapabilityAllowedForCustomer, isMutationAllowedForCustomer, resolveCustomer } from '@/lib/customers/runtime'
+import { assertOperatorCustomerAccess, canOperatorAccessCustomer, resolveOperator } from '@/lib/customers/access'
 
 describe('customer runtime policy', () => {
   it('resolves configured customers', () => {
@@ -17,6 +18,14 @@ describe('customer runtime policy', () => {
   it('enforces mutation capability policy', () => {
     expect(isMutationAllowedForCustomer('maxshot', 'capability.kb_upload_qc')).toBe(true)
     expect(isMutationAllowedForCustomer('nexa-demo', 'capability.kb_upload_qc')).toBe(false)
+  })
+
+  it('enforces operator access scope', () => {
+    expect(resolveOperator('platform-admin')?.role).toBe('platform_admin')
+    expect(canOperatorAccessCustomer('platform-admin', 'maxshot')).toBe(true)
+    expect(canOperatorAccessCustomer('maxshot-ops', 'maxshot')).toBe(true)
+    expect(canOperatorAccessCustomer('maxshot-ops', 'nexa-demo')).toBe(false)
+    expect(() => assertOperatorCustomerAccess({ operatorId: 'maxshot-ops', customerId: 'nexa-demo' })).toThrow('operator_customer_scope_not_allowed')
   })
 
   it('returns normalized capability policy', () => {
