@@ -94,3 +94,10 @@
 - Why: the platform now carries `customer_id` across KB source inventory, FAQ review queue, and interaction learning, which is sufficient to treat customer/tenant modeling as a real runtime baseline rather than a documentation-only construct.
 - Accepted scope: interaction learning log runtime, KB source inventory workflow, FAQ review persistence, customer registry baseline.
 - Deferred: full tenant isolation, IAM, customer-bound capability exposure policy, customer admin suite, billing/provisioning.
+
+
+## D-018 Customer Capability Exposure Baseline Accepted (2026-04-02)
+- Decision: enforce customer-bound capability exposure and mutation policy at the current FAQ / KB entry points before expanding deeper tenant features.
+- Why: the platform already carries `customer_id`, but without capability exposure rules it still behaves like a customer-labeled single-tenant system.
+- Accepted scope: customer registry policy fields, FAQ access blocking, KB mutation blocking, and Customers page policy visibility.
+- Deferred: router-wide policy enforcement, IAM, billing/provisioning, and tenant-isolated storage.

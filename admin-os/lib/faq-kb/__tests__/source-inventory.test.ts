@@ -80,11 +80,25 @@ describe('kb source inventory runtime', () => {
     expect(result?.source_id).toContain('new-faq-source')
   })
 
+
+  it('blocks transitions for customers without mutation policy', async () => {
+    mocks.from.mockImplementation(() => ({
+      select: mocks.select.mockReturnValue({
+        eq: mocks.eq.mockReturnValue({
+          maybeSingle: mocks.maybeSingle.mockResolvedValue({ data: { source_id: 'src-2', source_status: 'draft', customer_id: 'nexa-demo' }, error: null }),
+        }),
+      }),
+      update: mocks.update,
+    }))
+
+    await expect(transitionKbSourceItem({ source_id: 'src-2', action: 'accept', operator_id: 'op-1' })).rejects.toThrow('customer_capability_not_allowed')
+  })
+
   it('transitions draft source to accepted', async () => {
     mocks.from.mockImplementation(() => ({
       select: mocks.select.mockReturnValue({
         eq: mocks.eq.mockReturnValue({
-          maybeSingle: mocks.maybeSingle.mockResolvedValue({ data: { source_id: 'src-1', source_status: 'draft' }, error: null }),
+          maybeSingle: mocks.maybeSingle.mockResolvedValue({ data: { source_id: 'src-1', source_status: 'draft', customer_id: 'maxshot' }, error: null }),
         }),
       }),
       update: mocks.update.mockReturnValue({

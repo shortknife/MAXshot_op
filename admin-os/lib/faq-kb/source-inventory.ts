@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { kbUploadQc } from '@/lib/capabilities/kb-upload-qc'
 import { loadFaqKbManifest } from '@/lib/faq-kb/loaders'
+import { isMutationAllowedForCustomer } from '@/lib/customers/runtime'
 import { loadKbQcRuntimePreview } from '@/lib/faq-kb/qc-runtime'
 
 const KB_SOURCE_TABLE = 'faq_kb_source_inventory_op'
@@ -229,7 +230,7 @@ export async function transitionKbSourceItem(params: TransitionKbSourceParams): 
   try {
     const { data: existing, error: loadError } = await supabase
       .from(KB_SOURCE_TABLE)
-      .select('source_id,source_status')
+.select('source_id,source_status,customer_id')
       .eq('source_id', params.source_id)
       .maybeSingle()
 
@@ -237,6 +238,10 @@ export async function transitionKbSourceItem(params: TransitionKbSourceParams): 
     if (!existing) return null
 
     const previousStatus = String((existing as { source_status?: string }).source_status || '') as KbSourceStatus
+    const customerId = typeof (existing as { customer_id?: string | null }).customer_id === 'string' ? (existing as { customer_id?: string | null }).customer_id : null
+    if (customerId && !isMutationAllowedForCustomer(customerId, 'capability.kb_upload_qc')) {
+      throw new Error('customer_capability_not_allowed')
+    }
     if (!transition.from.includes(previousStatus)) {
       throw new Error(`invalid_transition:${previousStatus}->${transition.to}`)
     }
@@ -245,7 +250,7 @@ export async function transitionKbSourceItem(params: TransitionKbSourceParams): 
       .from(KB_SOURCE_TABLE)
       .update({ source_status: transition.to, updated_at: new Date().toISOString() })
       .eq('source_id', params.source_id)
-      .select('source_id,source_status')
+.select('source_id,source_status,customer_id')
       .single()
 
     if (updateError) throw updateError

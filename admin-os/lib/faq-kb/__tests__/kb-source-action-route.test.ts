@@ -37,6 +37,25 @@ describe('kb source action route', () => {
     expect(body.error).toBe('approval_required')
   })
 
+  it('rejects register when customer mutation policy does not allow it', async () => {
+    const res = await POST(buildRequest({
+      action: 'register',
+      approved: true,
+      operator_id: 'op-1',
+      confirm_token: 'token',
+      title: 'Source',
+      customer_id: 'nexa-demo',
+      source_type: 'text',
+      source_ref: 'hello world',
+      kb_scope: 'general',
+    }))
+    const body = await res.json()
+
+    expect(res.status).toBe(403)
+    expect(body.error).toBe('customer_capability_not_allowed')
+    expect(mocks.registerKbSourceDraft).not.toHaveBeenCalled()
+  })
+
   it('registers draft source', async () => {
     mocks.registerKbSourceDraft.mockResolvedValue({ source_id: 'src-1', inventory_source: 'supabase' })
 

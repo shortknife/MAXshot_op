@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { assertWriteEnabled } from '@/lib/utils'
 import { registerKbSourceDraft, transitionKbSourceItem } from '@/lib/faq-kb/source-inventory'
+import { isMutationAllowedForCustomer } from '@/lib/customers/runtime'
 
 type KbSourceAction = 'register' | 'accept' | 'reject'
 
@@ -36,6 +37,9 @@ export async function POST(req: NextRequest) {
 
       if (!title || !sourceRef || !['markdown', 'text', 'url', 'pdf'].includes(sourceType)) {
         return NextResponse.json({ error: 'invalid_register_payload' }, { status: 400 })
+      }
+      if (customerId && !isMutationAllowedForCustomer(customerId, 'capability.kb_upload_qc')) {
+        return NextResponse.json({ error: 'customer_capability_not_allowed' }, { status: 403 })
       }
 
       const registered = await registerKbSourceDraft({

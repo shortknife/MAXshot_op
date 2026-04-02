@@ -7,18 +7,57 @@
       "name": "MAXshot",
       "status": "active",
       "solution_key": "maxshot-sample",
-      "enabled_planes": ["ops_data", "faq_kb"],
+      "enabled_planes": [
+        "ops_data",
+        "faq_kb"
+      ],
       "default_kb_scope": "general",
-      "notes": "Reference customer solution and sample deployment."
+      "notes": "Reference customer solution and sample deployment.",
+      "allowed_capabilities": [
+        "capability.data_fact_query",
+        "capability.product_doc_qna",
+        "capability.faq_answering",
+        "capability.faq_fallback",
+        "capability.faq_qa_review",
+        "capability.kb_upload_qc"
+      ],
+      "mutation_capabilities": [
+        "capability.kb_upload_qc",
+        "capability.faq_qa_review"
+      ]
     },
     {
       "customer_id": "nexa-demo",
       "name": "Nexa Demo",
       "status": "active",
       "solution_key": "nexa-demo",
-      "enabled_planes": ["faq_kb"],
+      "enabled_planes": [
+        "faq_kb"
+      ],
       "default_kb_scope": "public",
-      "notes": "Demo-only customer shell for FAQ / KB flows."
+      "notes": "Demo-only customer shell for FAQ / KB flows.",
+      "allowed_capabilities": [
+        "capability.faq_answering",
+        "capability.faq_fallback",
+        "capability.faq_qa_review"
+      ],
+      "mutation_capabilities": []
+    },
+    {
+      "customer_id": "ops-observer",
+      "name": "Ops Observer",
+      "status": "active",
+      "solution_key": "ops-observer",
+      "enabled_planes": [
+        "ops_data"
+      ],
+      "allowed_capabilities": [
+        "capability.data_fact_query",
+        "capability.product_doc_qna"
+      ],
+      "mutation_capabilities": [],
+      "default_kb_scope": null,
+      "notes": "Read-only customer profile for ops/data access without FAQ or mutation workflows."
     }
   ]
 }

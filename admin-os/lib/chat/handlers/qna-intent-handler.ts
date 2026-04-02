@@ -6,6 +6,7 @@ import { buildQnaSuccessResponse } from '@/lib/chat/non-business-response'
 import { enqueueFaqReviewItem } from '@/lib/faq-kb/review-queue'
 import { buildChatEnvelope } from '@/lib/chat/chat-route-helpers'
 import { toCanonicalIntentType } from '@/lib/intent-analyzer/intent-taxonomy'
+import { isCapabilityAllowedForCustomer } from '@/lib/customers/runtime'
 
 type ParsedLike = {
   intent: {
@@ -28,6 +29,28 @@ export async function handleQnaIntent(params: {
   }
   const useFaqCapability =
     primaryCapabilityId === 'capability.faq_answering' || (matchedCapabilityIds || []).includes('capability.faq_answering')
+  const customerId = typeof qnaSlots.customer_id === 'string' ? qnaSlots.customer_id : null
+
+  if (useFaqCapability && customerId && !isCapabilityAllowedForCustomer(customerId, 'capability.faq_answering')) {
+    return {
+      body: buildQnaSuccessResponse({
+        intentType,
+        canonicalIntentType: toCanonicalIntentType(intentType),
+        matchedCapabilityIds,
+        primaryCapabilityId,
+        promptMeta: parsed.prompt_meta || null,
+        qnaPromptMeta: null,
+        answer: '该客户当前未开放 FAQ / KB 问答能力，请切换到已授权客户，或联系平台管理员开通。',
+        answerMeta: {
+          capability_id: 'capability.faq_answering',
+          capability_allowed: false,
+          customer_id: customerId,
+          reason: 'customer_capability_not_allowed',
+        },
+      }),
+    }
+  }
+
   const qna = useFaqCapability
     ? await faqAnswering(buildChatEnvelope(intentType, qnaSlots))
     : await productDocQnA(buildChatEnvelope(intentType, qnaSlots))

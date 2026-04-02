@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   productDocQnA: vi.fn(),
@@ -31,6 +31,31 @@ vi.mock('@/lib/faq-kb/review-queue', () => ({
 import { handleQnaIntent } from '@/lib/chat/handlers/qna-intent-handler'
 
 describe('qna-intent-handler', () => {
+  beforeEach(() => {
+    mocks.productDocQnA.mockReset()
+    mocks.faqAnswering.mockReset()
+    mocks.faqFallback.mockReset()
+    mocks.faqQaReview.mockReset()
+    mocks.enqueueFaqReviewItem.mockReset()
+  })
+  it('blocks faq capability when the customer policy does not allow it', async () => {
+    const result = await handleQnaIntent({
+      intentType: 'general_qna',
+      matchedCapabilityIds: ['capability.faq_answering'],
+      primaryCapabilityId: 'capability.faq_answering',
+      parsed: { intent: { extracted_slots: { customer_id: 'ops-observer' } }, prompt_meta: null },
+      rawQuery: 'How do I reset my password?',
+    })
+
+    expect(mocks.faqAnswering).not.toHaveBeenCalled()
+    expect((result.body as { data?: { summary?: string; meta?: { answer_meta?: { capability_allowed?: boolean; reason?: string; customer_id?: string } } } }).data?.summary).toContain('未开放 FAQ / KB 问答能力')
+    expect((result.body as { data?: { meta?: { answer_meta?: { capability_allowed?: boolean; reason?: string; customer_id?: string } } } }).data?.meta?.answer_meta).toEqual(expect.objectContaining({
+      capability_allowed: false,
+      reason: 'customer_capability_not_allowed',
+      customer_id: 'ops-observer',
+    }))
+  })
+
   it('uses faq capability when faq capability is primary', async () => {
     mocks.enqueueFaqReviewItem.mockReset()
     mocks.faqAnswering.mockResolvedValue({
