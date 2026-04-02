@@ -2,7 +2,10 @@ import type { ReactNode } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { AppNav } from '@/components/app-nav'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { buildKbQcPreview, loadFaqKbManifest } from '@/lib/faq-kb/loaders'
+import { loadFaqKbManifest } from '@/lib/faq-kb/loaders'
+import { loadKbQcRuntimePreview } from '@/lib/faq-kb/qc-runtime'
+
+export const dynamic = 'force-dynamic'
 
 type ManifestDoc = {
   id: string
@@ -60,7 +63,7 @@ function StatPanel({ label, value, note, tone }: { label: string; value: string;
 export default async function KbManagementPage() {
   const manifest = loadFaqKbManifest()
   const docs = manifest.documents as ManifestDoc[]
-  const qcPreview = await buildKbQcPreview()
+  const qcPreview = await loadKbQcRuntimePreview()
   const qcItems = qcPreview.items as QcItem[]
   const acceptedCount = qcItems.filter((item) => item.ingest_status === 'accepted').length
   const reviewCount = qcItems.filter((item) => item.ingest_status === 'needs_review').length
@@ -92,7 +95,7 @@ export default async function KbManagementPage() {
           <section className="grid gap-4 md:grid-cols-3">
             <StatPanel label="Approved Sources" value={String(acceptedCount)} note="当前已接受的受控 KB 来源。" tone="emerald" />
             <StatPanel label="Needs Review" value={String(reviewCount)} note="仍需人工处理或后续能力支持的来源。" tone="amber" />
-            <StatPanel label="Chunk Inventory" value={String(totalChunks)} note="基于 manifest 实时生成的内容块总数。" tone="blue" />
+            <StatPanel label="Chunk Inventory" value={String(totalChunks)} note="运行态快照优先，必要时回退到即时计算的内容块总数。" tone="blue" />
           </section>
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
@@ -141,6 +144,7 @@ export default async function KbManagementPage() {
                       <TonePill key={sourceType}>{`${sourceType}: ${count}`}</TonePill>
                     ))}
                     <TonePill tone="amber">{`generated: ${new Date(qcPreview.generated_at).toLocaleString('zh-CN', { hour12: false })}`}</TonePill>
+                    <TonePill tone={qcPreview.source === 'supabase' ? 'emerald' : 'amber'}>{`source: ${qcPreview.source}`}</TonePill>
                   </div>
                 </div>
               </CardHeader>
