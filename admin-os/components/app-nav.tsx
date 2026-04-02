@@ -3,11 +3,12 @@
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 
-type NavKey = 'chat' | 'faq_review' | 'ops' | 'marketing' | 'operations' | 'outcome' | 'audit'
+type NavKey = 'chat' | 'kb_management' | 'faq_review' | 'ops' | 'marketing' | 'operations' | 'outcome' | 'audit'
 
 const NAV_ITEMS: Array<{ key: NavKey; label: string; path: string }> = [
   { key: 'chat', label: 'User Chat', path: '/chat' },
   { key: 'faq_review', label: 'FAQ Review', path: '/faq-review' },
+  { key: 'kb_management', label: 'KB Management', path: '/kb-management' },
   { key: 'ops', label: 'Ops', path: '/ops' },
   { key: 'marketing', label: 'Marketing', path: '/marketing' },
   { key: 'operations', label: 'Operations', path: '/operations' },

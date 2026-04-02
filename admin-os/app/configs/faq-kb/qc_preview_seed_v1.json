@@ -1,0 +1,51 @@
+{
+  "generated_at": "2026-04-02T10:00:00+08:00",
+  "items": [
+    {
+      "source_id": "account-access",
+      "title": "Account Access FAQ",
+      "kb_scope": "general",
+      "source_type": "markdown",
+      "ingest_status": "accepted",
+      "document_count": 1,
+      "chunk_count": 4,
+      "qc_flags": []
+    },
+    {
+      "source_id": "plans-billing",
+      "title": "Plans and Billing FAQ",
+      "kb_scope": "billing",
+      "source_type": "markdown",
+      "ingest_status": "accepted",
+      "document_count": 1,
+      "chunk_count": 4,
+      "qc_flags": []
+    },
+    {
+      "source_id": "knowledge-base",
+      "title": "Knowledge Base FAQ",
+      "kb_scope": "kb",
+      "source_type": "markdown",
+      "ingest_status": "accepted",
+      "document_count": 1,
+      "chunk_count": 4,
+      "qc_flags": []
+    },
+    {
+      "source_id": "billing-invoice-upload-url",
+      "title": "Billing Invoice Upload URL",
+      "kb_scope": "billing",
+      "source_type": "url",
+      "ingest_status": "needs_review",
+      "document_count": 1,
+      "chunk_count": 0,
+      "qc_flags": [
+        {
+          "code": "url_fetch_not_implemented",
+          "severity": "warning",
+          "message": "URL sources are recognized but remote fetching is not enabled in this slice"
+        }
+      ]
+    }
+  ]
+}
