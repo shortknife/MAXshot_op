@@ -439,3 +439,116 @@ The best way to use it as reference is:
 - focus on the execution kernel, not the shell surface
 
 That is the highest-signal interpretation of its architecture.
+
+
+## 7. Additional Notes from Secondary Article Analysis (2026-04-02)
+
+A later secondary article about the Claude Code source leak added some useful emphasis, but most of its high-level claims were already covered by direct source inspection.
+
+The incremental value from that article is concentrated in six points.
+
+### 7.1 Prompt runtimeization is a real system layer
+
+The article correctly emphasizes that Claude Code does not treat prompts as static strings.
+
+The useful takeaway is not “write larger prompts.” It is:
+
+- static policy prompt
+- runtime context prompt
+- capability/tool-specific prompt additions
+- host/session-state prompt contributions
+
+should be treated as a real runtime assembly layer.
+
+This is worth keeping as an explicit adoption note because it reinforces that prompt management belongs in runtime design, not only in prompt writing practice.
+
+### 7.2 Verification should be modeled as a first-class stage
+
+The article’s discussion of a verification role is directionally valuable.
+
+The useful idea is not necessarily a separate verification model immediately. The deeper point is:
+
+- execution success
+- response plausibility
+- system correctness
+
+are different things.
+
+A mature agent runtime should expose verification as a formal stage or pass, rather than leaving validation as scattered tests or ad hoc human review.
+
+### 7.3 Concurrency safety metadata is worth formalizing
+
+The article calls out tool-level concurrency declarations such as `isConcurrencySafe(...)`.
+
+This is a strong adoption candidate.
+
+The principle is:
+
+- runtime should own serial vs parallel execution policy
+- tools/capabilities should declare concurrency safety
+- mutation scopes should be explicit
+
+This point was not as visible in the earlier high-level writeups and is worth recording as a concrete future contract idea.
+
+### 7.4 Lifecycle management deserves more emphasis than feature count
+
+The article overstates some product details, but it is right about one thing:
+
+- resume
+- compaction
+- long-running task handling
+- suspended/background work cleanup
+
+are not optional polish for an agent runtime. They are part of the actual reliability model.
+
+This reinforces the earlier conclusion that long-lived lifecycle management is one of the highest-value runtime lessons to borrow.
+
+### 7.5 Cost tracking should be treated as core infrastructure
+
+The article’s point about token/cost tracking is operationally important.
+
+A platform runtime should be able to answer:
+
+- which capability consumed cost
+- which path is expensive
+- which customer/tenant/workflow is consuming resources
+
+This is worth elevating as a platform-grade concern rather than leaving it as an observability afterthought.
+
+### 7.6 Compile-time vs runtime feature boundaries matter
+
+The article highlights heavy feature-flag use, including compile-time removal patterns.
+
+The exact density is not something to imitate. The useful takeaway is the distinction itself:
+
+- compile-time exclusion
+- runtime activation
+- tenant/customer exposure
+
+should be separate concerns in a real platform.
+
+## 8. What Not to Over-Index On from Secondary Commentary
+
+The secondary article also includes several classes of claims that should not materially affect adoption judgment:
+
+- large file/line/chunk counts
+- novelty framing around the leak itself
+- colorful labels such as “YOLO classifier” as if naming were the insight
+- anti-distillation / undercover / spinner-count anecdotes
+
+These may be true or partially true, but they do not change the architectural adoption decision in a meaningful way.
+
+## 9. Updated Adoption Delta
+
+After incorporating both direct source reading and secondary article commentary, the highest-value Claude Code ideas still reduce to a narrow set:
+
+1. session kernel
+2. formal turn state machine
+3. first-class task runtime
+4. structured host/runtime boundary
+5. prompt runtimeization
+6. verification as a stage
+7. concurrency-safety metadata
+8. built-in cost accounting
+
+Everything else should remain secondary.
