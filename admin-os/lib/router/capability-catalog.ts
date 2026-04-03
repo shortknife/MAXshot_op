@@ -2,6 +2,7 @@ import capabilityRegistrySource from '@/app/configs/capability-registry/capabili
 
 export type CapabilityRiskClass = 'read_only' | 'side_effect'
 export type CapabilityLifecycle = 'active' | 'inactive'
+export type CapabilityExecutionMode = 'read' | 'review' | 'mutation'
 
 export type CapabilityDefinition = {
   capability_id: string
@@ -15,6 +16,11 @@ export type CapabilityDefinition = {
   prompt_slot_schema?: Record<string, unknown>
   runtime_slot_schema?: Record<string, unknown>
   clarification_policy?: Record<string, unknown>
+  execution_mode?: CapabilityExecutionMode
+  mutation_scope?: string | null
+  concurrency_safe?: boolean
+  requires_confirmation?: boolean
+  requires_verification?: boolean
 }
 
 type CapabilityRegistrySource = {
@@ -48,6 +54,20 @@ export function getCapabilityDefinition(inputCapabilityId: string): CapabilityDe
     if (Array.isArray(item.aliases) && item.aliases.includes(normalized)) return item
   }
   return null
+}
+
+export function getCapabilityExecutionPolicy(inputCapabilityId: string) {
+  const definition = getCapabilityDefinition(inputCapabilityId)
+  if (!definition) return null
+  return {
+    capability_id: definition.capability_id,
+    risk_class: definition.risk_class,
+    execution_mode: definition.execution_mode || (definition.risk_class === 'side_effect' ? 'mutation' : 'read'),
+    mutation_scope: definition.mutation_scope || null,
+    concurrency_safe: definition.concurrency_safe !== false,
+    requires_confirmation: definition.requires_confirmation === true || definition.risk_class === 'side_effect',
+    requires_verification: definition.requires_verification !== false,
+  }
 }
 
 export function resolveCapabilityIds(inputs: unknown[], limit = MAX_MATCHED_CAPABILITIES): string[] {

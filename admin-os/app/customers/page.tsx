@@ -3,6 +3,7 @@ import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { listActiveCustomers } from '@/lib/customers/runtime'
 import { loadOperatorRegistry } from '@/lib/customers/access'
+import { getCapabilityExecutionPolicy } from '@/lib/router/capability-catalog'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,6 +13,10 @@ export default function CustomersPage() {
   const mutationCustomers = customers.filter((customer) => customer.mutation_capabilities.length > 0).length
   const operators = loadOperatorRegistry().operators
   const wildcardOperators = operators.filter((operator) => operator.allowed_customers.includes('*')).length
+  const mutationPolicies = customers
+    .flatMap((customer) => customer.mutation_capabilities)
+    .map((capabilityId) => getCapabilityExecutionPolicy(capabilityId))
+    .filter((policy): policy is NonNullable<typeof policy> => Boolean(policy))
 
   return (
     <AuthGuard>
@@ -79,9 +84,16 @@ export default function CustomersPage() {
                       <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                         <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Mutation Controls</div>
                         <div className="mt-2 flex flex-wrap gap-2">
-                          {customer.mutation_capabilities.length > 0 ? customer.mutation_capabilities.map((capabilityId) => (
-                            <span key={`${customer.customer_id}-${capabilityId}`} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-700">{capabilityId.replace('capability.', '')}</span>
-                          )) : <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">read-only customer</span>}
+                          {customer.mutation_capabilities.length > 0 ? customer.mutation_capabilities.map((capabilityId) => {
+                            const policy = getCapabilityExecutionPolicy(capabilityId)
+                            return (
+                              <span key={`${customer.customer_id}-${capabilityId}`} className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs text-emerald-700">
+                                {capabilityId.replace('capability.', '')}
+                                {policy?.mutation_scope ? ` · ${policy.mutation_scope}` : ''}
+                                {policy?.concurrency_safe === false ? ' · serialized' : ''}
+                              </span>
+                            )
+                          }) : <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500">read-only customer</span>}
                         </div>
                       </div>
                     </div>
@@ -122,6 +134,25 @@ export default function CustomersPage() {
                     </div>
                   </div>
                   {operator.notes ? <div className="mt-3 text-sm text-slate-600">{operator.notes}</div> : null}
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden border-white/70 bg-white/82 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-sm">
+            <CardHeader className="border-b border-slate-100">
+              <CardTitle className="text-base font-semibold">Mutation Policy Surface</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 p-4 sm:p-6 md:grid-cols-2">
+              {mutationPolicies.map((policy) => (
+                <div key={policy.capability_id} className="rounded-[22px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.92))] p-4 shadow-[0_10px_24px_rgba(15,23,42,0.05)]">
+                  <div className="text-sm font-semibold text-slate-950">{policy.capability_id.replace('capability.', '')}</div>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-slate-700">mode: {policy.execution_mode}</span>
+                    <span className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1 text-violet-700">scope: {policy.mutation_scope || 'none'}</span>
+                    <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-amber-700">{policy.requires_confirmation ? 'confirmation required' : 'no confirmation'}</span>
+                    <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-rose-700">{policy.concurrency_safe ? 'concurrency safe' : 'serialized'}</span>
+                  </div>
                 </div>
               ))}
             </CardContent>

@@ -129,3 +129,10 @@
 - Why: the platform already has customer boundaries, verification, and interaction learning; without cost visibility there is still no concrete basis for operational tradeoff decisions.
 - Accepted scope: chat-path runtime cost events, pricing config, runtime cost surface, and persistence into `runtime_cost_events_op`.
 - Deferred: invoice-grade billing, tenant billing workflows, background-task accounting, and provider reconciliation.
+
+## D-023 Capability Execution Policy Baseline Accepted (2026-04-03)
+- Decision: standardize write-side capability metadata and enforce mutation policy through registry-backed execution rules rather than route-local hardcoded checks.
+- Why: customer exposure and operator scope existed, but mutation semantics were still scattered across FAQ / KB routes and runtime helpers.
+- Accepted scope: `execution_mode`, `mutation_scope`, `concurrency_safe`, `requires_confirmation`, and `requires_verification` metadata; runtime mutation policy enforcement for KB source inventory and FAQ review queue; policy visibility in Customers page.
+- Deferred: router-wide serialization queues, async task runtime, global capability scheduler constraints, and richer IAM.
+

@@ -56,6 +56,9 @@ export async function POST(req: Request) {
     if (message === 'operator_customer_scope_not_allowed') {
       return NextResponse.json({ error: message }, { status: 403 })
     }
+    if (message === 'customer_capability_not_allowed') {
+      return NextResponse.json({ error: message }, { status: 403 })
+    }
     return NextResponse.json({ error: 'faq_review_action_failed' }, { status: 500 })
   }
 }

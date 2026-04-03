@@ -79,3 +79,13 @@ export function getCustomerCapabilityPolicy(customerId: string | null | undefine
     enabled_planes: customer.enabled_planes,
   }
 }
+
+export function assertCustomerCapabilityMutationAccess(params: {
+  customerId?: string | null
+  capabilityId: string
+}) {
+  if (!params.customerId) return
+  if (!isMutationAllowedForCustomer(params.customerId, params.capabilityId)) {
+    throw new Error('customer_capability_not_allowed')
+  }
+}

@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { loadFaqReviewQueue, type FaqReviewQueueItem } from '@/lib/faq-kb/loaders'
 import { assertOperatorCustomerAccess } from '@/lib/customers/access'
+import { assertCapabilityMutationPolicy } from '@/lib/router/capability-policy'
 
 const FAQ_REVIEW_QUEUE_TABLE = 'faq_review_queue_op'
 const FAQ_REVIEW_QUEUE_ID = 'faq_review_queue_runtime_v1'
@@ -167,6 +168,7 @@ export async function transitionFaqReviewItem(params: {
 
     const previousStatus = String((existing as { queue_status?: string }).queue_status || '')
     const customerId = typeof (existing as { customer_id?: string | null }).customer_id === 'string' ? (existing as { customer_id?: string | null }).customer_id : null
+    assertCapabilityMutationPolicy({ capabilityId: 'capability.faq_qa_review', customerId })
     assertOperatorCustomerAccess({ operatorId: params.operator_id, customerId })
     if (!transition.from.includes(previousStatus)) {
       throw new Error(`invalid_transition:${previousStatus}->${transition.to}`)

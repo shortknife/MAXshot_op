@@ -216,7 +216,12 @@
         "rebalance",
         "allocation",
         "sql"
-      ]
+      ],
+      "execution_mode": "read",
+      "mutation_scope": null,
+      "concurrency_safe": true,
+      "requires_confirmation": false,
+      "requires_verification": true
     },
     {
       "capability_id": "capability.product_doc_qna",
@@ -307,7 +312,12 @@
         "read_only",
         "maxshot",
         "fsd"
-      ]
+      ],
+      "execution_mode": "read",
+      "mutation_scope": null,
+      "concurrency_safe": true,
+      "requires_confirmation": false,
+      "requires_verification": true
     },
     {
       "capability_id": "capability.faq_answering",
@@ -432,7 +442,12 @@
         "kb",
         "customer_support",
         "read_only"
-      ]
+      ],
+      "execution_mode": "read",
+      "mutation_scope": null,
+      "concurrency_safe": true,
+      "requires_confirmation": false,
+      "requires_verification": true
     },
     {
       "capability_id": "capability.faq_fallback",
@@ -530,7 +545,12 @@
         "fallback",
         "customer_support",
         "read_only"
-      ]
+      ],
+      "execution_mode": "review",
+      "mutation_scope": "faq_review_queue",
+      "concurrency_safe": true,
+      "requires_confirmation": false,
+      "requires_verification": true
     },
     {
       "capability_id": "capability.faq_qa_review",
@@ -635,7 +655,12 @@
         "review",
         "ops_support",
         "read_only"
-      ]
+      ],
+      "execution_mode": "mutation",
+      "mutation_scope": "faq_review_queue",
+      "concurrency_safe": false,
+      "requires_confirmation": true,
+      "requires_verification": true
     },
     {
       "capability_id": "capability.kb_upload_qc",
@@ -742,7 +767,12 @@
         "ingest",
         "qc",
         "side_effect"
-      ]
+      ],
+      "execution_mode": "mutation",
+      "mutation_scope": "kb_source_inventory",
+      "concurrency_safe": false,
+      "requires_confirmation": true,
+      "requires_verification": true
     },
     {
       "capability_id": "capability.content_generator",
@@ -878,7 +908,12 @@
         "rewrite",
         "draft",
         "social"
-      ]
+      ],
+      "execution_mode": "read",
+      "mutation_scope": null,
+      "concurrency_safe": true,
+      "requires_confirmation": false,
+      "requires_verification": true
     },
     {
       "capability_id": "capability.context_assembler",
@@ -958,7 +993,12 @@
         "memory",
         "router",
         "orchestration"
-      ]
+      ],
+      "execution_mode": "read",
+      "mutation_scope": null,
+      "concurrency_safe": true,
+      "requires_confirmation": false,
+      "requires_verification": true
     },
     {
       "capability_id": "capability.publisher",
@@ -1043,7 +1083,12 @@
         "side_effect",
         "approval",
         "delivery"
-      ]
+      ],
+      "execution_mode": "mutation",
+      "mutation_scope": "publisher",
+      "concurrency_safe": false,
+      "requires_confirmation": true,
+      "requires_verification": true
     }
   ]
 }

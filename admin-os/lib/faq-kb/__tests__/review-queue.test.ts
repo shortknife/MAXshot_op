@@ -112,6 +112,19 @@ describe('faq review queue runtime', () => {
     await expect(transitionFaqReviewItem({ review_id: 'faq-review-runtime-3', action: 'approve', operator_id: 'demo-reviewer' })).rejects.toThrow('operator_customer_scope_not_allowed')
   })
 
+  it('blocks review transitions when customer mutation policy does not allow review writes', async () => {
+    mocks.from.mockImplementation(() => ({
+      select: mocks.select.mockReturnValue({
+        eq: mocks.eq.mockReturnValue({
+          maybeSingle: mocks.maybeSingle.mockResolvedValue({ data: { review_id: 'faq-review-runtime-4', queue_status: 'prepared', customer_id: 'nexa-demo' }, error: null }),
+        }),
+      }),
+      update: mocks.update,
+    }))
+
+    await expect(transitionFaqReviewItem({ review_id: 'faq-review-runtime-4', action: 'approve', operator_id: 'demo-reviewer' })).rejects.toThrow('customer_capability_not_allowed')
+  })
+
   it('transitions prepared review to approved', async () => {
     mocks.from.mockImplementation((table: string) => {
       expect(table).toBe('faq_review_queue_op')
