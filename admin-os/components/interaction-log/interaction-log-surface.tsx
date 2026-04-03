@@ -4,12 +4,26 @@ import { AppNav } from '@/components/app-nav'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+type SessionKernelSummary = {
+  kernel_id?: string | null
+  thread_action?: string | null
+  turn_relation_type?: string | null
+  previous_turns?: number | null
+  memory_policy?: string | null
+  memory_ref_count?: number | null
+  learning_ref_count?: number | null
+  recall_triggered?: boolean
+  verification_outcome?: string | null
+  source_plane?: string | null
+}
+
 type InteractionLogItem = {
   log_id: string
   created_at: string
   session_id: string | null
   requester_id: string | null
   entry_channel: string | null
+  customer_id: string | null
   raw_query: string
   effective_query: string | null
   intent_type: string | null
@@ -39,6 +53,12 @@ function Pill({ children, tone = 'slate' }: { children: React.ReactNode; tone?: 
     sky: 'border-sky-200 bg-sky-50 text-sky-700',
   }[tone]
   return <span className={`rounded-full border px-3 py-1 text-xs ${styles}`}>{children}</span>
+}
+
+
+function asSessionKernelSummary(meta: Record<string, unknown>): SessionKernelSummary | null {
+  const value = meta.session_kernel
+  return value && typeof value === 'object' ? (value as SessionKernelSummary) : null
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
@@ -142,8 +162,30 @@ export function InteractionLogSurface({ source, items }: { source: 'supabase' | 
                           {item.intent_type && <Pill>{`intent: ${item.intent_type}`}</Pill>}
                           {item.intent_type_canonical && <Pill>{`canonical: ${item.intent_type_canonical}`}</Pill>}
                           {item.entry_channel && <Pill>{`channel: ${item.entry_channel}`}</Pill>}
+                          {item.customer_id && <Pill>{`customer: ${item.customer_id}`}</Pill>}
+                          {item.requester_id && <Pill>{`requester: ${item.requester_id}`}</Pill>}
                           {item.session_id && <Pill>{`session: ${item.session_id}`}</Pill>}
                         </div>
+                        {(() => {
+                          const sessionKernel = asSessionKernelSummary(item.meta)
+                          if (!sessionKernel) return null
+                          return (
+                            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                              <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">session_kernel</div>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {sessionKernel.thread_action && <Pill tone="sky">{`thread: ${sessionKernel.thread_action}`}</Pill>}
+                                {sessionKernel.turn_relation_type && <Pill>{`relation: ${sessionKernel.turn_relation_type}`}</Pill>}
+                                {typeof sessionKernel.previous_turns === 'number' && <Pill>{`previous_turns: ${sessionKernel.previous_turns}`}</Pill>}
+                                {sessionKernel.memory_policy && <Pill>{`memory: ${sessionKernel.memory_policy}`}</Pill>}
+                                {typeof sessionKernel.memory_ref_count === 'number' && <Pill>{`refs: ${sessionKernel.memory_ref_count}`}</Pill>}
+                                {typeof sessionKernel.learning_ref_count === 'number' && <Pill>{`learning_refs: ${sessionKernel.learning_ref_count}`}</Pill>}
+                                {sessionKernel.recall_triggered && <Pill tone="emerald">recall_triggered</Pill>}
+                                {sessionKernel.verification_outcome && <Pill tone={sessionKernel.verification_outcome === 'pass' ? 'emerald' : sessionKernel.verification_outcome === 'review' ? 'amber' : 'rose'}>{`verify: ${sessionKernel.verification_outcome}`}</Pill>}
+                              </div>
+                              {sessionKernel.kernel_id ? <div className="mt-2 break-all text-xs text-slate-400">{sessionKernel.kernel_id}</div> : null}
+                            </div>
+                          )
+                        })()}
                         {item.matched_capability_ids.length > 0 ? (
                           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
                             <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">matched_capability_ids</div>

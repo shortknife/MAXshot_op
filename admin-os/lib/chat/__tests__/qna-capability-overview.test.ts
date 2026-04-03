@@ -10,5 +10,7 @@ describe('qna capability overview', () => {
     expect(String(body?.data?.summary || '')).toContain('我当前支持的业务能力主要有')
     expect(String(body?.data?.summary || '')).not.toContain('No document specified')
     expect(body?.data?.meta?.intent_type).toBe('general_qna')
+    expect(body?.data?.meta?.session_kernel?.kernel_id).toMatch(/^sk-/)
+    expect(body?.data?.meta?.session_kernel?.verification_outcome).toBeTruthy()
   }, 45000)
 })

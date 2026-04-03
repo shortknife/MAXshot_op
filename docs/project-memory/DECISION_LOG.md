@@ -148,3 +148,9 @@
 - Accepted scope: real runtime contention handling, post-release success path, and lane cleanup verification for FAQ / KB mutation families.
 - Deferred: lease expiry, queue takeover, and router-wide generalized execution lanes.
 
+## D-026 Session Kernel Baseline Accepted
+- Date: 2026-04-03
+- Decision: Add a formal per-turn `session_kernel` snapshot into chat runtime metadata instead of continuing to rely on scattered session, recall, verification, and working-mind fields.
+- Why: The platform now has customer boundary, verification, cost, learning log, and memory baselines. A session kernel is required to make runtime state auditable and reusable without introducing a heavier orchestration runtime too early.
+- Scope: Prepared kernel build, post-verification finalization, interaction-log extraction, and UI visibility.
+- Consequence: Future runtime evolution can build on one stable session snapshot contract rather than re-deriving state from multiple meta fragments.

@@ -18,6 +18,8 @@ export type MemoryRuntime = {
   source_policy: 'router_context_only' | 'hybrid_learning'
   ref_ids: string[]
   memory_ref_count: number
+  learning_ref_count: number
+  summary: string | null
 }
 
 export function toMemoryRefIds(memoryRefs: unknown[]): string[] {
@@ -35,11 +37,16 @@ export function toMemoryRefIds(memoryRefs: unknown[]): string[] {
 
 export function buildMemoryRuntime(memoryRefs: unknown[]): MemoryRuntime {
   const refIds = toMemoryRefIds(memoryRefs)
-  const hasLearningRefs = Array.isArray(memoryRefs) && memoryRefs.some((item) => item && typeof item === 'object' && (item as { memory_origin?: string }).memory_origin === 'interaction_learning')
+  const learningRefCount = Array.isArray(memoryRefs)
+    ? memoryRefs.filter((item) => item && typeof item === 'object' && (item as { memory_origin?: string }).memory_origin === 'interaction_learning').length
+    : 0
+  const hasLearningRefs = learningRefCount > 0
   return {
     source_policy: hasLearningRefs ? 'hybrid_learning' : 'router_context_only',
     ref_ids: refIds,
     memory_ref_count: refIds.length,
+    learning_ref_count: learningRefCount,
+    summary: hasLearningRefs ? `working mind includes ${learningRefCount} interaction-derived learning memories` : null,
   }
 }
 
@@ -49,11 +56,15 @@ export function resolveInputMemoryRuntime(input: CapabilityInputEnvelope): Memor
   const refIds = Array.isArray(runtime?.ref_ids) ? runtime.ref_ids.map((item) => String(item || '').trim()).filter(Boolean) : null
   const sourcePolicy = typeof runtime?.source_policy === 'string' ? runtime.source_policy : null
   const memoryRefCount = typeof runtime?.memory_ref_count === 'number' ? runtime.memory_ref_count : null
+  const learningRefCount = typeof runtime?.learning_ref_count === 'number' ? runtime.learning_ref_count : 0
+  const summary = typeof runtime?.summary === 'string' ? runtime.summary : null
   if (refIds && (sourcePolicy === 'router_context_only' || sourcePolicy === 'hybrid_learning') && typeof memoryRefCount === 'number') {
     return {
       source_policy: sourcePolicy,
       ref_ids: refIds,
       memory_ref_count: memoryRefCount,
+      learning_ref_count: learningRefCount,
+      summary,
     }
   }
   return buildMemoryRuntime(resolveInputMemoryRefs(input))

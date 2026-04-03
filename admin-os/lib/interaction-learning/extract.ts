@@ -53,6 +53,7 @@ export function extractInteractionLearningPayload(params: {
   const reviewPayload = asObject(answerMeta.review_payload)
   const queryContract = asObject(meta.query_contract)
   const filtersApplied = asObject(meta.filters_applied)
+  const sessionKernel = asObject(meta.session_kernel)
 
   const matchedCapabilityIds = asStringArray(meta.matched_capability_ids)
   const primaryCapabilityId =
@@ -107,6 +108,18 @@ export function extractInteractionLearningPayload(params: {
       review_payload_present: answerMeta.review_payload && typeof answerMeta.review_payload === 'object',
       confidence: asNumber(answerMeta.confidence),
       prompt_meta_slug: meta.intent_prompt && typeof meta.intent_prompt === 'object' ? asString((meta.intent_prompt as Record<string, unknown>).slug) : null,
+      session_kernel: {
+        kernel_id: asString(sessionKernel.kernel_id),
+        thread_action: asString(sessionKernel.thread_action),
+        turn_relation_type: asString(sessionKernel.turn_relation_type),
+        previous_turns: asNumber(sessionKernel.previous_turns),
+        memory_policy: asString(sessionKernel.memory_policy),
+        memory_ref_count: asNumber(sessionKernel.memory_ref_count),
+        learning_ref_count: asNumber(sessionKernel.learning_ref_count),
+        recall_triggered: sessionKernel.recall_triggered === true,
+        verification_outcome: asString(sessionKernel.verification_outcome),
+        source_plane: asString(sessionKernel.source_plane),
+      },
     },
   }
 }

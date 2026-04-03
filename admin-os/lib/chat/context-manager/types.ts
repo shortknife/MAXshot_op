@@ -96,6 +96,8 @@ export type ContextEnvelope = {
     source_policy: 'router_context_only' | 'hybrid_learning'
     ref_ids: string[]
     memory_ref_count: number
+    learning_ref_count: number
+    summary: string | null
   }
   effective_query: string
   policy_decision: PolicyDecision

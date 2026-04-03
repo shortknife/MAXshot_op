@@ -13,6 +13,7 @@ import { dispatchNonBusinessIntent } from '@/lib/chat/handlers/non-business-inte
 import { ensureCanonicalIntentMeta } from '@/lib/chat/chat-response-normalize'
 import { finalizeDelivery } from '@/lib/chat/delivery-critic'
 import { applyRuntimeVerification } from '@/lib/chat/runtime-verification'
+import { attachSessionKernel, buildPreparedSessionKernel, finalizeSessionKernel, type SessionKernelSnapshot } from '@/lib/chat/session-kernel'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
 
 export type ChatAskRuntimeMeta = {
@@ -29,6 +30,7 @@ export type ChatAskRuntimeMeta = {
   model_source: string | null
   model_prompt_slug: string | null
   verification_outcome?: string | null
+  session_kernel?: SessionKernelSnapshot | null
 }
 
 export type ChatAskServiceResult = {
@@ -119,6 +121,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
     modelNeedClarification,
     followUpContextApplied,
   } = prepared
+  const preparedKernel = buildPreparedSessionKernel({ prepared, body })
 
   const buildRuntimeMeta = (payload: Record<string, unknown>): ChatAskRuntimeMeta => {
     const data = payload.data && typeof payload.data === 'object' ? (payload.data as Record<string, unknown>) : {}
@@ -158,20 +161,34 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
       model_source: typeof prepared.step3?.trace?.source === 'string' ? prepared.step3.trace.source : null,
       model_prompt_slug: typeof prepared.step3?.trace?.prompt_slug === 'string' ? prepared.step3.trace.prompt_slug : null,
       verification_outcome: typeof verificationDecision.outcome === 'string' ? String(verificationDecision.outcome) : null,
+      session_kernel: asSessionKernel(meta.session_kernel),
     }
   }
 
+  const asSessionKernel = (value: unknown): SessionKernelSnapshot | null =>
+    value && typeof value === 'object' ? (value as SessionKernelSnapshot) : null
+
   const normalizeAndFinalize = (payload: unknown) =>
     perf.measure('verify_and_finalize', () =>
-      finalize(
-        ensureCanonicalIntentMeta(
-          payload,
-          intentType,
-          canonicalIntentType,
-          matchedCapabilityIds,
-          primaryCapabilityId
-        ) as Record<string, unknown>
-      )
+      {
+        const finalized = finalize(
+          ensureCanonicalIntentMeta(
+            payload,
+            intentType,
+            canonicalIntentType,
+            matchedCapabilityIds,
+            primaryCapabilityId
+          ) as Record<string, unknown>
+        )
+        const kernel = finalizeSessionKernel({
+          kernel: preparedKernel,
+          payload: finalized,
+        })
+        return attachSessionKernel({
+          payload: finalized,
+          kernel,
+        })
+      }
     )
 
   const maxClarificationTurns = resolveMaxClarificationTurns()
