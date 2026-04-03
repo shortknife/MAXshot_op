@@ -56,3 +56,10 @@ export function assertOperatorCustomerAccess(params: { operatorId?: string | nul
     throw new Error('operator_customer_scope_not_allowed')
   }
 }
+
+export function assertOperatorPlatformAccess(operatorId: string | null | undefined) {
+  const operator = resolveOperator(operatorId)
+  if (!operator || !operator.allowed_customers.includes('*')) {
+    throw new Error('operator_platform_scope_not_allowed')
+  }
+}

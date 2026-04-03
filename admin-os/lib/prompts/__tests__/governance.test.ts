@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => {
   const loadInteractionLearningLogRuntime = vi.fn()
   const listActiveCustomers = vi.fn()
   const getPromptPolicyForCustomer = vi.fn()
+  const loadPromptVersionHistory = vi.fn()
+  const loadPromptReleaseEvents = vi.fn()
   return {
     eq,
     order,
@@ -16,6 +18,8 @@ const mocks = vi.hoisted(() => {
     loadInteractionLearningLogRuntime,
     listActiveCustomers,
     getPromptPolicyForCustomer,
+    loadPromptVersionHistory,
+    loadPromptReleaseEvents,
   }
 })
 
@@ -37,6 +41,11 @@ vi.mock('@/lib/chat/prompt-policy', () => ({
   getPromptPolicyForCustomer: mocks.getPromptPolicyForCustomer,
 }))
 
+vi.mock('@/lib/prompts/release', () => ({
+  loadPromptVersionHistory: mocks.loadPromptVersionHistory,
+  loadPromptReleaseEvents: mocks.loadPromptReleaseEvents,
+}))
+
 import { loadPromptGovernanceSnapshot } from '@/lib/prompts/governance'
 
 describe('prompt governance snapshot', () => {
@@ -48,6 +57,8 @@ describe('prompt governance snapshot', () => {
     mocks.loadInteractionLearningLogRuntime.mockReset()
     mocks.listActiveCustomers.mockReset()
     mocks.getPromptPolicyForCustomer.mockReset()
+    mocks.loadPromptVersionHistory.mockReset()
+    mocks.loadPromptReleaseEvents.mockReset()
 
     mocks.eq.mockReturnValue({ order: mocks.order })
     mocks.select.mockReturnValue({ eq: mocks.eq })
@@ -64,6 +75,9 @@ describe('prompt governance snapshot', () => {
       allowed_execution_sources: ['supabase', 'fallback_csv'],
       execution_prompt_required_capabilities: ['capability.product_doc_qna'],
     }))
+
+    mocks.loadPromptVersionHistory.mockResolvedValue({})
+    mocks.loadPromptReleaseEvents.mockResolvedValue([])
   })
 
   it('builds snapshot from supabase inventory and runtime rollups', async () => {
@@ -113,6 +127,44 @@ describe('prompt governance snapshot', () => {
       ],
     })
 
+    mocks.loadPromptVersionHistory.mockResolvedValue({
+      product_doc_qna: [
+        {
+          slug: 'product_doc_qna',
+          name: 'Product Doc QnA',
+          version: '7',
+          is_active: true,
+          updated_at: '2026-04-03T10:00:00.000Z',
+          updated_by: 'platform-admin',
+          editable: true,
+          action_hint: 'none',
+        },
+        {
+          slug: 'product_doc_qna',
+          name: 'Product Doc QnA',
+          version: '6',
+          is_active: false,
+          updated_at: '2026-04-02T10:00:00.000Z',
+          updated_by: 'platform-admin',
+          editable: true,
+          action_hint: 'rollback',
+        },
+      ],
+    })
+
+    mocks.loadPromptReleaseEvents.mockResolvedValue([
+      {
+        event_id: 'release-1',
+        slug: 'product_doc_qna',
+        action: 'release',
+        target_version: '7',
+        previous_version: '6',
+        operator_id: 'platform-admin',
+        release_note: 'Promote v7',
+        created_at: '2026-04-03T10:10:00.000Z',
+      },
+    ])
+
     const snapshot = await loadPromptGovernanceSnapshot()
 
     expect(snapshot.source).toBe('supabase')
@@ -124,6 +176,8 @@ describe('prompt governance snapshot', () => {
     expect(snapshot.runtime.local_stub_intent_count).toBe(1)
     expect(snapshot.runtime.primary_prompt_mix[0]).toEqual({ slug: 'product_doc_qna', count: 2 })
     expect(snapshot.runtime.policy_reason_mix[0]).toEqual({ reason: 'intent_prompt_source_not_allowed', count: 1 })
+    expect(snapshot.histories.product_doc_qna?.[1]).toMatchObject({ version: '6', action_hint: 'rollback' })
+    expect(snapshot.release_events).toHaveLength(1)
     expect(snapshot.policy[1]).toMatchObject({
       customer_id: 'ops-observer',
       allow_local_stub_intent: false,
@@ -140,5 +194,7 @@ describe('prompt governance snapshot', () => {
     expect(snapshot.source).toBe('local_config')
     expect(snapshot.prompts.length).toBeGreaterThan(0)
     expect(snapshot.prompts.every((prompt) => prompt.editable === false)).toBe(true)
+    expect(snapshot.release_events).toEqual([])
+    expect(Object.values(snapshot.histories).every((items) => items[0]?.editable === false)).toBe(true)
   })
 })

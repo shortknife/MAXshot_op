@@ -1089,6 +1089,103 @@
       "concurrency_safe": false,
       "requires_confirmation": true,
       "requires_verification": true
+    },
+    {
+      "capability_id": "capability.prompt_governance_mutation",
+      "aliases": [
+        "prompt_governance_mutation"
+      ],
+      "name": "Prompt Governance Mutation",
+      "description": "Platform-governed prompt release and rollback actions over the active prompt library.",
+      "lifecycle": "active",
+      "risk_class": "side_effect",
+      "examples": [
+        "Release prompt version v8 for product_doc_qna",
+        "Rollback intent analyzer to the previous approved version"
+      ],
+      "prompt_slot_schema": {
+        "description": "Internal prompt-governance mutation contract.",
+        "fields": [
+          {
+            "name": "slug",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "target_version",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "action",
+            "type": "enum",
+            "required": true,
+            "values": [
+              "release",
+              "rollback"
+            ]
+          },
+          {
+            "name": "release_note",
+            "type": "natural_language",
+            "required": false
+          }
+        ]
+      },
+      "runtime_slot_schema": {
+        "type": "object",
+        "required": [
+          "slug",
+          "target_version",
+          "action"
+        ],
+        "properties": {
+          "slug": {
+            "type": "string"
+          },
+          "target_version": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "release",
+              "rollback"
+            ]
+          },
+          "release_note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "clarification_policy": {
+        "max_turns": 0,
+        "ui_mode": "operator_form",
+        "allow_multi_match": false,
+        "max_multi_match": 1,
+        "ask_for": [
+          "slug",
+          "target_version",
+          "action"
+        ],
+        "prefer_examples_over_buttons": false
+      },
+      "tags": [
+        "prompt",
+        "governance",
+        "release",
+        "rollback",
+        "platform"
+      ],
+      "execution_mode": "mutation",
+      "mutation_scope": "prompt_library",
+      "concurrency_safe": false,
+      "requires_confirmation": true,
+      "requires_verification": true
     }
   ]
 }

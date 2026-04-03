@@ -1,10 +1,11 @@
 import fs from 'fs'
 import path from 'path'
 
-import { supabase } from '@/lib/supabase'
-import { loadInteractionLearningLogRuntime } from '@/lib/interaction-learning/runtime'
 import { getPromptPolicyForCustomer } from '@/lib/chat/prompt-policy'
 import { listActiveCustomers } from '@/lib/customers/runtime'
+import { loadInteractionLearningLogRuntime } from '@/lib/interaction-learning/runtime'
+import { loadPromptReleaseEvents, loadPromptVersionHistory, type PromptReleaseEvent, type PromptVersionRecord } from '@/lib/prompts/release'
+import { supabase } from '@/lib/supabase'
 
 type PromptInventoryItem = {
   slug: string
@@ -41,6 +42,8 @@ export type PromptGovernanceSnapshot = {
   prompts: PromptInventoryItem[]
   policy: PromptPolicyCustomerSummary[]
   runtime: PromptRuntimeRollup
+  histories: Record<string, PromptVersionRecord[]>
+  release_events: PromptReleaseEvent[]
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -160,16 +163,39 @@ function loadPromptPolicySummary(): PromptPolicyCustomerSummary[] {
   })
 }
 
+function buildLocalPromptHistories(prompts: PromptInventoryItem[]): Record<string, PromptVersionRecord[]> {
+  return Object.fromEntries(
+    prompts.map((prompt) => [
+      prompt.slug,
+      [{
+        slug: prompt.slug,
+        name: prompt.name,
+        version: prompt.version,
+        is_active: true,
+        updated_at: prompt.updated_at,
+        updated_by: null,
+        editable: false,
+        action_hint: 'none' as const,
+      }],
+    ]),
+  )
+}
+
 export async function loadPromptGovernanceSnapshot(): Promise<PromptGovernanceSnapshot> {
   const supabaseInventory = await loadPromptInventoryFromSupabase()
   const prompts = supabaseInventory && supabaseInventory.length > 0
     ? supabaseInventory
     : loadPromptInventoryFromLocalConfig()
+  const histories = supabaseInventory && supabaseInventory.length > 0
+    ? await loadPromptVersionHistory()
+    : buildLocalPromptHistories(prompts)
 
   return {
     source: supabaseInventory && supabaseInventory.length > 0 ? 'supabase' : 'local_config',
     prompts,
     policy: loadPromptPolicySummary(),
     runtime: await loadPromptRuntimeRollup(),
+    histories,
+    release_events: supabaseInventory && supabaseInventory.length > 0 ? await loadPromptReleaseEvents() : [],
   }
 }

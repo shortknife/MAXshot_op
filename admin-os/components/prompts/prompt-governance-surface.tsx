@@ -13,6 +13,8 @@ import { supabase } from '@/lib/supabase'
 import type { PromptGovernanceSnapshot } from '@/lib/prompts/governance'
 
 type PromptGovernancePrompt = PromptGovernanceSnapshot['prompts'][number]
+type PromptVersionRecord = PromptGovernanceSnapshot['histories'][string][number]
+type PromptReleaseEvent = PromptGovernanceSnapshot['release_events'][number]
 
 function Pill({ children, tone = 'slate' }: { children: ReactNode; tone?: 'slate' | 'emerald' | 'amber' | 'sky' | 'rose' }) {
   const styles = {
@@ -40,12 +42,27 @@ function Metric({ label, value, tone = 'slate' }: { label: string; value: string
   )
 }
 
+function formatTimestamp(value: string | null | undefined) {
+  if (!value) return 'n/a'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString('zh-CN', { hour12: false })
+}
+
 export function PromptGovernanceSurface({ snapshot }: { snapshot: PromptGovernanceSnapshot }) {
   const router = useRouter()
   const [prompts, setPrompts] = useState(snapshot.prompts)
   const [selectedSlug, setSelectedSlug] = useState(snapshot.prompts[0]?.slug || '')
   const [saving, setSaving] = useState(false)
+  const [releasing, setReleasing] = useState(false)
+  const [operatorId, setOperatorId] = useState('platform-admin')
+  const [confirmToken, setConfirmToken] = useState('CONFIRM')
+  const [releaseNote, setReleaseNote] = useState('')
+  const [actionMessage, setActionMessage] = useState<string | null>(null)
+
   const selectedPrompt = useMemo(() => prompts.find((prompt) => prompt.slug === selectedSlug) || null, [prompts, selectedSlug])
+  const selectedHistory = useMemo(() => snapshot.histories[selectedSlug] || [], [snapshot.histories, selectedSlug])
+  const activeVersion = selectedHistory.find((item) => item.is_active) || null
   const [editSystemPrompt, setEditSystemPrompt] = useState(selectedPrompt?.system_prompt || '')
   const [editUserPrompt, setEditUserPrompt] = useState(selectedPrompt?.user_prompt_template || '')
 
@@ -57,8 +74,7 @@ export function PromptGovernanceSurface({ snapshot }: { snapshot: PromptGovernan
 
   const refreshSelection = (prompt: PromptGovernancePrompt) => {
     setSelectedSlug(prompt.slug)
-    setEditSystemPrompt(prompt.system_prompt)
-    setEditUserPrompt(prompt.user_prompt_template || '')
+    setActionMessage(null)
   }
 
   const handleSave = async () => {
@@ -73,11 +89,13 @@ export function PromptGovernanceSurface({ snapshot }: { snapshot: PromptGovernan
         })
         .eq('slug', selectedPrompt.slug)
       if (error) throw error
-      setPrompts((current) => current.map((prompt) => prompt.slug === selectedPrompt.slug ? {
-        ...prompt,
-        system_prompt: editSystemPrompt,
-        user_prompt_template: editUserPrompt || null,
-      } : prompt))
+      setPrompts((current) => current.map((prompt) => prompt.slug === selectedPrompt.slug
+        ? {
+            ...prompt,
+            system_prompt: editSystemPrompt,
+            user_prompt_template: editUserPrompt || null,
+          }
+        : prompt))
       router.refresh()
     } catch (error) {
       console.error('Error saving prompt:', error)
@@ -87,6 +105,58 @@ export function PromptGovernanceSurface({ snapshot }: { snapshot: PromptGovernan
     }
   }
 
+  const handlePromptRelease = async (action: 'release' | 'rollback', targetVersion: string) => {
+    if (!selectedPrompt?.editable) return
+    try {
+      setReleasing(true)
+      setActionMessage(null)
+      const response = await fetch('/api/prompt/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          slug: selectedPrompt.slug,
+          target_version: targetVersion,
+          operator_id: operatorId,
+          confirm_token: confirmToken,
+          release_note: releaseNote,
+          approved: true,
+        }),
+      })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        setActionMessage(`action failed: ${String(payload?.error || 'unknown_error')}`)
+        return
+      }
+      setActionMessage(`${action} -> ${targetVersion} accepted`)
+      router.refresh()
+    } catch (error) {
+      console.error('Prompt release action failed:', error)
+      setActionMessage('action failed: runtime_error')
+    } finally {
+      setReleasing(false)
+    }
+  }
+
+  const renderVersionAction = (version: PromptVersionRecord) => {
+    if (!selectedPrompt?.editable || version.is_active || version.action_hint === 'none') {
+      return <Pill tone={version.is_active ? 'emerald' : 'slate'}>{version.is_active ? 'active' : 'history_only'}</Pill>
+    }
+
+    const action = version.action_hint === 'rollback' ? 'rollback' : 'release'
+    const label = action === 'rollback' ? `Rollback to v${version.version}` : `Release v${version.version}`
+    return (
+      <Button
+        size="sm"
+        variant="outline"
+        disabled={releasing}
+        onClick={() => handlePromptRelease(action, version.version)}
+      >
+        {label}
+      </Button>
+    )
+  }
+
   return (
     <AuthGuard>
       <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ecfeff_0%,#f8fafc_40%,#eef2ff_100%)] text-slate-950">
@@ -94,7 +164,7 @@ export function PromptGovernanceSurface({ snapshot }: { snapshot: PromptGovernan
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Prompt Governance</h1>
-              <div className="mt-1 text-sm text-slate-500">Inventory, policy, runtime evidence, and bounded editing for the Nexa prompt layer.</div>
+              <div className="mt-1 text-sm text-slate-500">Inventory, policy, runtime evidence, bounded editing, and release/rollback control for the Nexa prompt layer.</div>
             </div>
             <AppNav current="prompts" />
           </div>
@@ -105,14 +175,14 @@ export function PromptGovernanceSurface({ snapshot }: { snapshot: PromptGovernan
             <Metric label="Inventory" value={String(prompts.length)} tone="sky" />
             <Metric label="Source" value={snapshot.source} tone={snapshot.source === 'supabase' ? 'emerald' : 'amber'} />
             <Metric label="Recent Reviews" value={String(snapshot.runtime.policy_review)} tone="amber" />
-            <Metric label="Local Stub Turns" value={String(snapshot.runtime.local_stub_intent_count)} tone="slate" />
+            <Metric label="Release Events" value={String(snapshot.release_events.length)} tone="slate" />
           </section>
 
-          <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
             <Card className="border-white/70 bg-white/80 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-sm">
               <CardHeader>
                 <CardTitle>Prompt Inventory</CardTitle>
-                <CardDescription>Active prompt stock with source, edit boundary, and current model payload.</CardDescription>
+                <CardDescription>Active prompt stock with source, edit boundary, model payload, and version lane.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
                 <div className="space-y-3">
@@ -144,6 +214,7 @@ export function PromptGovernanceSurface({ snapshot }: { snapshot: PromptGovernan
                       <div className="flex flex-wrap gap-2">
                         <Pill tone={selectedPrompt.source === 'supabase' ? 'emerald' : 'amber'}>{selectedPrompt.source}</Pill>
                         <Pill tone={selectedPrompt.editable ? 'sky' : 'rose'}>{selectedPrompt.editable ? 'editable_in_supabase' : 'config_locked'}</Pill>
+                        {activeVersion ? <Pill tone="emerald">{`active:v${activeVersion.version}`}</Pill> : null}
                       </div>
                     </div>
 
@@ -152,8 +223,8 @@ export function PromptGovernanceSurface({ snapshot }: { snapshot: PromptGovernan
                         <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Edit Boundary</div>
                         <div className="mt-2 text-sm leading-7 text-slate-700">
                           {selectedPrompt.editable
-                            ? 'This prompt is currently backed by Supabase and can be edited from this surface.'
-                            : 'This prompt is currently sourced from local config fallback. It is visible here for governance, but not editable from the UI.'}
+                            ? 'Supabase-backed prompt. Edit is available now, and release or rollback can move the active version.'
+                            : 'Local-config fallback prompt. It is visible for governance, but not editable or releasable from the UI.'}
                         </div>
                       </div>
                       <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
@@ -188,13 +259,53 @@ export function PromptGovernanceSurface({ snapshot }: { snapshot: PromptGovernan
                       <Button onClick={handleSave} disabled={!selectedPrompt.editable || saving}>
                         {saving ? 'Saving...' : 'Save Prompt'}
                       </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => refreshSelection(selectedPrompt)}
-                        disabled={saving}
-                      >
+                      <Button variant="outline" onClick={() => refreshSelection(selectedPrompt)} disabled={saving}>
                         Reset
                       </Button>
+                    </div>
+
+                    <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-semibold text-slate-950">Release Control</div>
+                          <div className="mt-1 text-xs text-slate-500">Platform-operator gated release and rollback for prompt versions.</div>
+                        </div>
+                        <Pill tone={selectedPrompt.editable ? 'sky' : 'rose'}>{selectedPrompt.editable ? 'mutation_enabled' : 'mutation_blocked'}</Pill>
+                      </div>
+
+                      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="operator-id">Operator</Label>
+                          <Textarea id="operator-id" value={operatorId} onChange={(event) => setOperatorId(event.target.value)} className="min-h-[56px] text-sm" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="confirm-token">Confirm Token</Label>
+                          <Textarea id="confirm-token" value={confirmToken} onChange={(event) => setConfirmToken(event.target.value)} className="min-h-[56px] text-sm" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="release-note">Release Note</Label>
+                          <Textarea id="release-note" value={releaseNote} onChange={(event) => setReleaseNote(event.target.value)} className="min-h-[56px] text-sm" />
+                        </div>
+                      </div>
+
+                      {actionMessage ? (
+                        <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">{actionMessage}</div>
+                      ) : null}
+
+                      <div className="mt-4 space-y-3">
+                        {selectedHistory.length > 0 ? selectedHistory.map((version) => (
+                          <div key={`${version.slug}:${version.version}`} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3">
+                            <div>
+                              <div className="text-sm font-semibold text-slate-950">{`v${version.version}`}</div>
+                              <div className="mt-1 text-xs text-slate-500">{`updated ${formatTimestamp(version.updated_at)}${version.updated_by ? ` by ${version.updated_by}` : ''}`}</div>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {version.action_hint !== 'none' ? <Pill tone={version.action_hint === 'rollback' ? 'amber' : 'sky'}>{version.action_hint}</Pill> : null}
+                              {renderVersionAction(version)}
+                            </div>
+                          </div>
+                        )) : <div className="text-sm text-slate-500">No version history available.</div>}
+                      </div>
                     </div>
                   </div>
                 ) : null}
@@ -263,6 +374,32 @@ export function PromptGovernanceSurface({ snapshot }: { snapshot: PromptGovernan
                       </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-white/70 bg-white/80 shadow-[0_22px_70px_rgba(15,23,42,0.10)] backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle>Release Ledger</CardTitle>
+                  <CardDescription>Latest release and rollback events recorded for the prompt layer.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {snapshot.release_events.length > 0 ? snapshot.release_events.map((event: PromptReleaseEvent) => (
+                    <div key={event.event_id} className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="text-sm font-semibold text-slate-950">{event.slug}</div>
+                        <Pill tone={event.action === 'rollback' ? 'amber' : 'sky'}>{event.action}</Pill>
+                      </div>
+                      <div className="mt-2 text-xs text-slate-500">{formatTimestamp(event.created_at)}</div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <Pill>{`target:v${event.target_version}`}</Pill>
+                        {event.previous_version ? <Pill tone="slate">{`previous:v${event.previous_version}`}</Pill> : null}
+                        <Pill tone="emerald">{event.operator_id}</Pill>
+                      </div>
+                      {event.release_note ? (
+                        <div className="mt-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">{event.release_note}</div>
+                      ) : null}
+                    </div>
+                  )) : <div className="text-sm text-slate-500">No prompt release events recorded yet.</div>}
                 </CardContent>
               </Card>
             </div>

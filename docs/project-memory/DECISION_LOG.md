@@ -175,3 +175,10 @@
 - Why: Prompt runtime and prompt policy baselines are now in place. The product needs a management surface that reflects those controls instead of exposing only a raw edit form.
 - Scope: Governance snapshot loader, prompt surface redesign, main navigation entry, and runtime/policy rollups.
 - Consequence: Future prompt approval, rollback, and release workflows can be added on top of an already structured product surface.
+
+## D-030 Prompt Release / Rollback Baseline Accepted
+- Date: 2026-04-03
+- Decision: Add a bounded prompt release and rollback path before introducing richer prompt approval workflow.
+- Why: Prompt governance is now visible, but active prompt changes still need explicit runtime controls, serialized mutation, and operator-attributed release logging.
+- Scope: prompt mutation capability metadata, prompt release runtime, prompt action API, version history in `/prompts`, and release event logging.
+- Consequence: Future prompt approval, staged rollout, and rollback safety checks can build on an already governed mutation baseline.
