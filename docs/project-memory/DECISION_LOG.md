@@ -142,3 +142,9 @@
 - Accepted scope: write-lane runtime, `write_lane_busy` contract, KB source mutation serialization, and FAQ review mutation serialization.
 - Deferred: lease expiry/takeover, durable queues, workflow orchestration, and router-wide task lanes.
 
+## D-025 Runtime Write-Lane Acceptance Completed (2026-04-03)
+- Decision: accept and freeze the runtime write-lane baseline after live Supabase validation.
+- Why: both KB source mutation and FAQ review mutation now return `409 write_lane_busy` under an active lease and succeed after lease release, with no residual active lane rows left behind.
+- Accepted scope: real runtime contention handling, post-release success path, and lane cleanup verification for FAQ / KB mutation families.
+- Deferred: lease expiry, queue takeover, and router-wide generalized execution lanes.
+
