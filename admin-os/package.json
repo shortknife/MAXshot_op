@@ -26,6 +26,7 @@
     "test:prompt:intent:report": "node ./scripts/prompt-intent-10case-report.mjs",
     "test:main-flow:9step:report": "node ./scripts/main-flow-9step-acceptance-report.mjs",
     "build:business-schema": "node ./scripts/build-business-schema.mjs",
+    "env:exec": "./scripts/run-with-local-env.sh",
     "release:preflight": "node ./scripts/release-preflight.mjs",
     "uat:pack": "node ./scripts/uat-pack.mjs"
   },
