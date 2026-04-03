@@ -31,6 +31,7 @@ export function evaluateRuntimeVerification(body: Record<string, unknown>): Veri
   const meta = asRecord(data.meta)
   const answerMeta = asRecord(meta.answer_meta)
   const criticDecision = asRecord(meta.critic_decision)
+  const promptPolicy = asRecord(meta.prompt_policy)
   const intentType = String(meta.intent_type_canonical || meta.intent_type || '')
   const exitType = String(meta.exit_type || '')
   const dataType = String(data.type || '')
@@ -40,6 +41,11 @@ export function evaluateRuntimeVerification(body: Record<string, unknown>): Veri
   if (exitType === 'needs_clarification' || String(data.error || '') === 'missing_required_clarification') {
     checks.push('clarification_flow')
     return buildDecision('clarify', 'needs_clarification', checks)
+  }
+
+  if (promptPolicy.outcome === 'review') {
+    checks.push('prompt_policy')
+    return buildDecision('review', String(promptPolicy.reason || 'prompt_policy_review') || 'prompt_policy_review', checks)
   }
 
   if (body.success !== true) {

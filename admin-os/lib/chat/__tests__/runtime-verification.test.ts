@@ -53,6 +53,29 @@ describe('runtime verification', () => {
     expect(((body as { data: { meta: { verification: { outcome: string } } } }).data.meta.verification.outcome)).toBe('pass')
   })
 
+
+  it('marks prompt policy review as verification review', () => {
+    const decision = evaluateRuntimeVerification({
+      success: true,
+      data: {
+        type: 'qna',
+        summary: 'Answer',
+        meta: {
+          intent_type: 'general_qna',
+          intent_type_canonical: 'general_qna',
+          exit_type: 'answered',
+          prompt_policy: {
+            outcome: 'review',
+            reason: 'intent_local_stub_not_allowed',
+          },
+        },
+      },
+    })
+
+    expect(decision.outcome).toBe('review')
+    expect(decision.reason).toBe('intent_local_stub_not_allowed')
+  })
+
   it('preserves clarification as a verification outcome', () => {
     const decision = evaluateRuntimeVerification({
       success: false,

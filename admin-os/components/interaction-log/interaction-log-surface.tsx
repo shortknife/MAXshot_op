@@ -4,6 +4,12 @@ import { AppNav } from '@/components/app-nav'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+type PromptPolicySummary = {
+  outcome?: string | null
+  reason?: string | null
+  checks?: string[] | null
+}
+
 type PromptRuntimeSummary = {
   assembly_mode?: string | null
   primary_prompt_slug?: string | null
@@ -62,6 +68,11 @@ function Pill({ children, tone = 'slate' }: { children: React.ReactNode; tone?: 
   return <span className={`rounded-full border px-3 py-1 text-xs ${styles}`}>{children}</span>
 }
 
+
+function asPromptPolicySummary(meta: Record<string, unknown>): PromptPolicySummary | null {
+  const value = meta.prompt_policy
+  return value && typeof value === 'object' ? (value as PromptPolicySummary) : null
+}
 
 function asPromptRuntimeSummary(meta: Record<string, unknown>): PromptRuntimeSummary | null {
   const value = meta.prompt_runtime
@@ -178,6 +189,22 @@ export function InteractionLogSurface({ source, items }: { source: 'supabase' | 
                           {item.requester_id && <Pill>{`requester: ${item.requester_id}`}</Pill>}
                           {item.session_id && <Pill>{`session: ${item.session_id}`}</Pill>}
                         </div>
+                        {(() => {
+                          const promptPolicy = asPromptPolicySummary(item.meta)
+                          if (!promptPolicy) return null
+                          return (
+                            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                              <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">prompt_policy</div>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {promptPolicy.outcome && <Pill tone={promptPolicy.outcome === 'allow' ? 'emerald' : 'amber'}>{`policy: ${promptPolicy.outcome}`}</Pill>}
+                                {promptPolicy.reason && <Pill tone="amber">{promptPolicy.reason}</Pill>}
+                                {Array.isArray(promptPolicy.checks)
+                                  ? promptPolicy.checks.map((check) => <Pill key={check}>{check}</Pill>)
+                                  : null}
+                              </div>
+                            </div>
+                          )
+                        })()}
                         {(() => {
                           const promptRuntime = asPromptRuntimeSummary(item.meta)
                           if (!promptRuntime) return null

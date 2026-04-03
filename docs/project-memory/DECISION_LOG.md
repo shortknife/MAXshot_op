@@ -161,3 +161,10 @@
 - Why: The platform now has session kernel, verification, cost, and learning baselines. Prompt source and assembly state must be normalized before stronger prompt policy or runtime prompt orchestration can be introduced.
 - Scope: Prompt runtime normalization, chat metadata attachment, interaction-log extraction, and UI visibility.
 - Consequence: Future prompt-policy, prompt replay, and prompt observability work can build on one runtime contract.
+
+## D-028 Prompt Policy Baseline Accepted
+- Date: 2026-04-03
+- Decision: Add a runtime prompt policy layer that checks prompt source eligibility and execution prompt requirements per customer and capability.
+- Why: Prompt runtime is now visible, but visibility alone is insufficient. Prompt usage must become governable and verification-aware before prompt editing and override workflows expand.
+- Scope: Prompt policy registry, per-turn prompt policy evaluation, verification integration, interaction-log extraction, and UI visibility.
+- Consequence: Future prompt governance can build on an enforceable source-policy baseline instead of relying on conventions only.

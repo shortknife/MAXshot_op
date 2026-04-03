@@ -14,6 +14,7 @@ import { ensureCanonicalIntentMeta } from '@/lib/chat/chat-response-normalize'
 import { finalizeDelivery } from '@/lib/chat/delivery-critic'
 import { applyRuntimeVerification } from '@/lib/chat/runtime-verification'
 import { attachPromptRuntime, buildPromptRuntime, type PromptRuntimeSnapshot } from '@/lib/chat/prompt-runtime'
+import { attachPromptPolicy, evaluatePromptPolicy, type PromptPolicyDecision } from '@/lib/chat/prompt-policy'
 import { attachSessionKernel, buildPreparedSessionKernel, finalizeSessionKernel, type SessionKernelSnapshot } from '@/lib/chat/session-kernel'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
 
@@ -33,6 +34,7 @@ export type ChatAskRuntimeMeta = {
   verification_outcome?: string | null
   session_kernel?: SessionKernelSnapshot | null
   prompt_runtime?: PromptRuntimeSnapshot | null
+  prompt_policy?: PromptPolicyDecision | null
 }
 
 export type ChatAskServiceResult = {
@@ -165,6 +167,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
       verification_outcome: typeof verificationDecision.outcome === 'string' ? String(verificationDecision.outcome) : null,
       session_kernel: asSessionKernel(meta.session_kernel),
       prompt_runtime: asPromptRuntime(meta.prompt_runtime),
+      prompt_policy: asPromptPolicy(meta.prompt_policy),
     }
   }
 
@@ -174,30 +177,40 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   const asPromptRuntime = (value: unknown): PromptRuntimeSnapshot | null =>
     value && typeof value === 'object' ? (value as PromptRuntimeSnapshot) : null
 
+  const asPromptPolicy = (value: unknown): PromptPolicyDecision | null =>
+    value && typeof value === 'object' ? (value as PromptPolicyDecision) : null
+
   const normalizeAndFinalize = (payload: unknown) =>
     perf.measure('verify_and_finalize', () =>
       {
-        const finalized = finalize(
-          ensureCanonicalIntentMeta(
-            payload,
-            intentType,
-            canonicalIntentType,
-            matchedCapabilityIds,
-            primaryCapabilityId
-          ) as Record<string, unknown>
-        )
+        const canonicalized = ensureCanonicalIntentMeta(
+          payload,
+          intentType,
+          canonicalIntentType,
+          matchedCapabilityIds,
+          primaryCapabilityId
+        ) as Record<string, unknown>
+        const promptRuntime = buildPromptRuntime(canonicalized)
+        const withPromptRuntime = attachPromptRuntime({
+          payload: canonicalized,
+          promptRuntime,
+        })
+        const promptPolicy = evaluatePromptPolicy({
+          customerId: typeof body.customer_id === 'string' ? String(body.customer_id) : null,
+          primaryCapabilityId,
+          promptRuntime,
+        })
+        const verified = finalizeDelivery(applyRuntimeVerification(attachPromptPolicy({
+          payload: withPromptRuntime,
+          promptPolicy,
+        })))
         const kernel = finalizeSessionKernel({
           kernel: preparedKernel,
-          payload: finalized,
+          payload: verified,
         })
-        const withKernel = attachSessionKernel({
-          payload: finalized,
+        return attachSessionKernel({
+          payload: verified,
           kernel,
-        })
-        const promptRuntime = buildPromptRuntime(withKernel)
-        return attachPromptRuntime({
-          payload: withKernel,
-          promptRuntime,
         })
       }
     )

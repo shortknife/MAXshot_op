@@ -55,6 +55,7 @@ export function extractInteractionLearningPayload(params: {
   const filtersApplied = asObject(meta.filters_applied)
   const sessionKernel = asObject(meta.session_kernel)
   const promptRuntime = asObject(meta.prompt_runtime)
+  const promptPolicy = asObject(meta.prompt_policy)
 
   const matchedCapabilityIds = asStringArray(meta.matched_capability_ids)
   const primaryCapabilityId =
@@ -114,6 +115,11 @@ export function extractInteractionLearningPayload(params: {
         primary_prompt_slug: asString(promptRuntime.primary_prompt_slug),
         prompt_count: asNumber(promptRuntime.prompt_count),
         prompt_sources: asStringArray(promptRuntime.prompt_sources),
+      },
+      prompt_policy: {
+        outcome: asString(promptPolicy.outcome),
+        reason: asString(promptPolicy.reason),
+        checks: asStringArray(promptPolicy.checks),
       },
       session_kernel: {
         kernel_id: asString(sessionKernel.kernel_id),
