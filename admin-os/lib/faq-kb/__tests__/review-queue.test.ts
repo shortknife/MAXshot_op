@@ -12,12 +12,19 @@ const mocks = vi.hoisted(() => ({
   updateEq: vi.fn(),
   updateSelect: vi.fn(),
   single: vi.fn(),
+  acquireWriteLane: vi.fn(),
+  releaseWriteLane: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase', () => ({
   supabase: {
     from: mocks.from,
   },
+}))
+
+vi.mock('@/lib/router/write-lane', () => ({
+  acquireWriteLane: mocks.acquireWriteLane,
+  releaseWriteLane: mocks.releaseWriteLane,
 }))
 
 import { enqueueFaqReviewItem, loadFaqReviewQueueRuntime, transitionFaqReviewItem } from '@/lib/faq-kb/review-queue'
@@ -34,6 +41,17 @@ beforeEach(() => {
   mocks.updateEq.mockReset()
   mocks.updateSelect.mockReset()
   mocks.single.mockReset()
+  mocks.acquireWriteLane.mockReset()
+  mocks.releaseWriteLane.mockReset()
+  mocks.acquireWriteLane.mockResolvedValue({
+    lane_key: 'faq_review_queue:maxshot',
+    lease_id: 'lane-1',
+    capability_id: 'capability.faq_qa_review',
+    mutation_scope: 'faq_review_queue',
+    customer_id: 'maxshot',
+    operator_id: 'maxshot-ops',
+  })
+  mocks.releaseWriteLane.mockResolvedValue(undefined)
 })
 
 describe('faq review queue runtime', () => {

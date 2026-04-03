@@ -13,6 +13,8 @@ const mocks = vi.hoisted(() => ({
   updateSelect: vi.fn(),
   single: vi.fn(),
   kbUploadQc: vi.fn(),
+  acquireWriteLane: vi.fn(),
+  releaseWriteLane: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase', () => ({
@@ -23,10 +25,24 @@ vi.mock('@/lib/capabilities/kb-upload-qc', () => ({
   kbUploadQc: mocks.kbUploadQc,
 }))
 
+vi.mock('@/lib/router/write-lane', () => ({
+  acquireWriteLane: mocks.acquireWriteLane,
+  releaseWriteLane: mocks.releaseWriteLane,
+}))
+
 import { loadKbSourceInventoryRuntime, registerKbSourceDraft, transitionKbSourceItem } from '@/lib/faq-kb/source-inventory'
 
 beforeEach(() => {
   for (const key of Object.keys(mocks) as Array<keyof typeof mocks>) mocks[key].mockReset()
+  mocks.acquireWriteLane.mockResolvedValue({
+    lane_key: 'kb_source_inventory:maxshot',
+    lease_id: 'lane-1',
+    capability_id: 'capability.kb_upload_qc',
+    mutation_scope: 'kb_source_inventory',
+    customer_id: 'maxshot',
+    operator_id: 'maxshot-ops',
+  })
+  mocks.releaseWriteLane.mockResolvedValue(undefined)
 })
 
 describe('kb source inventory runtime', () => {

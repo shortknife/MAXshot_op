@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase'
 import { loadFaqReviewQueue, type FaqReviewQueueItem } from '@/lib/faq-kb/loaders'
 import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 import { assertCapabilityMutationPolicy } from '@/lib/router/capability-policy'
+import { acquireWriteLane, releaseWriteLane } from '@/lib/router/write-lane'
 
 const FAQ_REVIEW_QUEUE_TABLE = 'faq_review_queue_op'
 const FAQ_REVIEW_QUEUE_ID = 'faq_review_queue_runtime_v1'
@@ -170,24 +171,32 @@ export async function transitionFaqReviewItem(params: {
     const customerId = typeof (existing as { customer_id?: string | null }).customer_id === 'string' ? (existing as { customer_id?: string | null }).customer_id : null
     assertCapabilityMutationPolicy({ capabilityId: 'capability.faq_qa_review', customerId })
     assertOperatorCustomerAccess({ operatorId: params.operator_id, customerId })
+    const lease = await acquireWriteLane({
+      capabilityId: 'capability.faq_qa_review',
+      customerId,
+      operatorId: params.operator_id,
+    })
     if (!transition.from.includes(previousStatus)) {
       throw new Error(`invalid_transition:${previousStatus}->${transition.to}`)
     }
+    try {
+      const { data: updated, error: updateError } = await supabase
+        .from(FAQ_REVIEW_QUEUE_TABLE)
+        .update({ queue_status: transition.to })
+        .eq('review_id', params.review_id)
+  .select('review_id,queue_status,customer_id')
+        .single()
 
-    const { data: updated, error: updateError } = await supabase
-      .from(FAQ_REVIEW_QUEUE_TABLE)
-      .update({ queue_status: transition.to })
-      .eq('review_id', params.review_id)
-.select('review_id,queue_status,customer_id')
-      .single()
+      if (updateError) throw updateError
 
-    if (updateError) throw updateError
-
-    return {
-      review_id: String((updated as { review_id?: string }).review_id || params.review_id),
-      previous_status: previousStatus,
-      queue_status: String((updated as { queue_status?: string }).queue_status || transition.to),
-      queue_source: 'supabase',
+      return {
+        review_id: String((updated as { review_id?: string }).review_id || params.review_id),
+        previous_status: previousStatus,
+        queue_status: String((updated as { queue_status?: string }).queue_status || transition.to),
+        queue_source: 'supabase',
+      }
+    } finally {
+      await releaseWriteLane(lease)
     }
   } catch (error) {
     if (!isRecoverableQueueError(error)) throw error

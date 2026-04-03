@@ -106,4 +106,20 @@ describe('kb source action route', () => {
     expect(res.status).toBe(200)
     expect(body.source_status).toBe('accepted')
   })
+
+  it('returns 409 when serialized write lane is busy', async () => {
+    mocks.transitionKbSourceItem.mockRejectedValue(new Error('write_lane_busy'))
+
+    const res = await POST(buildRequest({
+      action: 'accept',
+      approved: true,
+      operator_id: 'op-1',
+      confirm_token: 'token',
+      source_id: 'src-1',
+    }))
+    const body = await res.json()
+
+    expect(res.status).toBe(409)
+    expect(body.error).toBe('write_lane_busy')
+  })
 })

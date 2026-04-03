@@ -3,6 +3,7 @@ import { kbUploadQc } from '@/lib/capabilities/kb-upload-qc'
 import { loadFaqKbManifest } from '@/lib/faq-kb/loaders'
 import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 import { assertCapabilityMutationPolicy } from '@/lib/router/capability-policy'
+import { acquireWriteLane, releaseWriteLane } from '@/lib/router/write-lane'
 import { loadKbQcRuntimePreview } from '@/lib/faq-kb/qc-runtime'
 
 const KB_SOURCE_TABLE = 'faq_kb_source_inventory_op'
@@ -242,24 +243,32 @@ export async function transitionKbSourceItem(params: TransitionKbSourceParams): 
     const customerId = typeof (existing as { customer_id?: string | null }).customer_id === 'string' ? (existing as { customer_id?: string | null }).customer_id : null
     assertCapabilityMutationPolicy({ capabilityId: 'capability.kb_upload_qc', customerId })
     assertOperatorCustomerAccess({ operatorId: params.operator_id, customerId })
+    const lease = await acquireWriteLane({
+      capabilityId: 'capability.kb_upload_qc',
+      customerId,
+      operatorId: params.operator_id,
+    })
     if (!transition.from.includes(previousStatus)) {
       throw new Error(`invalid_transition:${previousStatus}->${transition.to}`)
     }
+    try {
+      const { data: updated, error: updateError } = await supabase
+        .from(KB_SOURCE_TABLE)
+        .update({ source_status: transition.to, updated_at: new Date().toISOString() })
+        .eq('source_id', params.source_id)
+  .select('source_id,source_status,customer_id')
+        .single()
 
-    const { data: updated, error: updateError } = await supabase
-      .from(KB_SOURCE_TABLE)
-      .update({ source_status: transition.to, updated_at: new Date().toISOString() })
-      .eq('source_id', params.source_id)
-.select('source_id,source_status,customer_id')
-      .single()
+      if (updateError) throw updateError
 
-    if (updateError) throw updateError
-
-    return {
-      source_id: String((updated as { source_id?: string }).source_id || params.source_id),
-      previous_status: previousStatus,
-      source_status: String((updated as { source_status?: string }).source_status || transition.to) as KbSourceStatus,
-      inventory_source: 'supabase',
+      return {
+        source_id: String((updated as { source_id?: string }).source_id || params.source_id),
+        previous_status: previousStatus,
+        source_status: String((updated as { source_status?: string }).source_status || transition.to) as KbSourceStatus,
+        inventory_source: 'supabase',
+      }
+    } finally {
+      await releaseWriteLane(lease)
     }
   } catch (error) {
     if (!isRecoverableError(error)) throw error

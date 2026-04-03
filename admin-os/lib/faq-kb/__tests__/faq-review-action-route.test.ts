@@ -121,4 +121,20 @@ describe('faq review action route', () => {
     expect(res.status).toBe(409)
     expect(body.error).toBe('invalid_transition:rejected->approved')
   })
+
+  it('returns conflict when serialized review lane is busy', async () => {
+    mocks.transitionFaqReviewItem.mockRejectedValue(new Error('write_lane_busy'))
+
+    const res = await POST(buildRequest({
+      review_id: 'faq-review-runtime-1',
+      action: 'approve',
+      approved_by: 'op-1',
+      approved: true,
+      confirm_token: 'token',
+    }))
+    const body = await res.json()
+
+    expect(res.status).toBe(409)
+    expect(body.error).toBe('write_lane_busy')
+  })
 })

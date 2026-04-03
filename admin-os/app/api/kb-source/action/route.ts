@@ -3,6 +3,7 @@ import { assertWriteEnabled } from '@/lib/utils'
 import { registerKbSourceDraft, transitionKbSourceItem } from '@/lib/faq-kb/source-inventory'
 import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 import { assertCapabilityMutationPolicy } from '@/lib/router/capability-policy'
+import { acquireWriteLane, releaseWriteLane } from '@/lib/router/write-lane'
 
 type KbSourceAction = 'register' | 'accept' | 'reject'
 
@@ -45,23 +46,36 @@ export async function POST(req: NextRequest) {
       } catch (error) {
         return NextResponse.json({ error: error instanceof Error ? error.message : 'customer_capability_not_allowed' }, { status: 403 })
       }
-
-      const registered = await registerKbSourceDraft({
-        source_id: sourceId,
-        title,
-        customer_id: customerId,
-        kb_scope: kbScope,
-        source_type: sourceType,
-        source_ref: sourceRef,
-        uploaded_by: operatorId,
-        customer_context: customerContext,
-      })
-
-      if (!registered) {
-        return NextResponse.json({ error: 'kb_source_inventory_unavailable' }, { status: 503 })
+      let lease = null
+      try {
+        lease = await acquireWriteLane({ capabilityId: 'capability.kb_upload_qc', customerId, operatorId })
+      } catch (error) {
+        if (error instanceof Error && error.message === 'write_lane_busy') {
+          return NextResponse.json({ error: 'write_lane_busy' }, { status: 409 })
+        }
+        throw error
       }
 
-      return NextResponse.json({ source_id: registered.source_id, source_status: 'draft', inventory_source: registered.inventory_source })
+      try {
+        const registered = await registerKbSourceDraft({
+          source_id: sourceId,
+          title,
+          customer_id: customerId,
+          kb_scope: kbScope,
+          source_type: sourceType,
+          source_ref: sourceRef,
+          uploaded_by: operatorId,
+          customer_context: customerContext,
+        })
+
+        if (!registered) {
+          return NextResponse.json({ error: 'kb_source_inventory_unavailable' }, { status: 503 })
+        }
+
+        return NextResponse.json({ source_id: registered.source_id, source_status: 'draft', inventory_source: registered.inventory_source })
+      } finally {
+        await releaseWriteLane(lease)
+      }
     }
 
     const sourceId = String(body.source_id || '').trim()
@@ -82,6 +96,9 @@ export async function POST(req: NextRequest) {
       }
       if (message === 'customer_capability_not_allowed') {
         return NextResponse.json({ error: message }, { status: 403 })
+      }
+      if (message === 'write_lane_busy') {
+        return NextResponse.json({ error: message }, { status: 409 })
       }
       if (message === 'operator_customer_scope_not_allowed') {
         return NextResponse.json({ error: message }, { status: 403 })

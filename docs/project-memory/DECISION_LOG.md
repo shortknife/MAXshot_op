@@ -136,3 +136,9 @@
 - Accepted scope: `execution_mode`, `mutation_scope`, `concurrency_safe`, `requires_confirmation`, and `requires_verification` metadata; runtime mutation policy enforcement for KB source inventory and FAQ review queue; policy visibility in Customers page.
 - Deferred: router-wide serialization queues, async task runtime, global capability scheduler constraints, and richer IAM.
 
+## D-024 Runtime Write-Lane Baseline Accepted (2026-04-03)
+- Decision: enforce serialized write lanes for non-concurrency-safe mutation capabilities using a runtime lease table keyed by `mutation_scope:customer_id`.
+- Why: capability policy metadata already declared serialized mutation scopes, but runtime behavior still allowed concurrent conflicting writes.
+- Accepted scope: write-lane runtime, `write_lane_busy` contract, KB source mutation serialization, and FAQ review mutation serialization.
+- Deferred: lease expiry/takeover, durable queues, workflow orchestration, and router-wide task lanes.
+

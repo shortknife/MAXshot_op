@@ -53,6 +53,9 @@ export async function POST(req: Request) {
     if (message.startsWith('invalid_transition:')) {
       return NextResponse.json({ error: message }, { status: 409 })
     }
+    if (message === 'write_lane_busy') {
+      return NextResponse.json({ error: message }, { status: 409 })
+    }
     if (message === 'operator_customer_scope_not_allowed') {
       return NextResponse.json({ error: message }, { status: 403 })
     }
