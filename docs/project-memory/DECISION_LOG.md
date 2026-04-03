@@ -168,3 +168,10 @@
 - Why: Prompt runtime is now visible, but visibility alone is insufficient. Prompt usage must become governable and verification-aware before prompt editing and override workflows expand.
 - Scope: Prompt policy registry, per-turn prompt policy evaluation, verification integration, interaction-log extraction, and UI visibility.
 - Consequence: Future prompt governance can build on an enforceable source-policy baseline instead of relying on conventions only.
+
+## D-029 Prompt Governance Surface Baseline Accepted
+- Date: 2026-04-03
+- Decision: Upgrade `/prompts` into a governance surface that combines prompt inventory, policy summary, runtime evidence, and bounded editing.
+- Why: Prompt runtime and prompt policy baselines are now in place. The product needs a management surface that reflects those controls instead of exposing only a raw edit form.
+- Scope: Governance snapshot loader, prompt surface redesign, main navigation entry, and runtime/policy rollups.
+- Consequence: Future prompt approval, rollback, and release workflows can be added on top of an already structured product surface.
