@@ -62,9 +62,9 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
       body: finalized,
       runtimeMeta: {
         session_id: sessionId,
-        customer_id: null,
-        requester_id: null,
-        entry_channel: 'web',
+        customer_id: typeof body.customer_id === 'string' ? String(body.customer_id) : null,
+        requester_id: typeof body.requester_id === 'string' ? String(body.requester_id) : null,
+        entry_channel: typeof body.entry_channel === 'string' ? String(body.entry_channel) : 'web',
         intent_type: 'marketing_gen',
         intent_type_canonical: 'marketing_gen',
         primary_capability_id: null,
@@ -139,14 +139,21 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
               : null
     return {
       session_id: sessionId,
-      customer_id: typeof parsed.intent.extracted_slots?.customer_id === 'string' ? String(parsed.intent.extracted_slots.customer_id) : null,
-      requester_id: typeof parsed.intent.extracted_slots?.requester_id === 'string' ? String(parsed.intent.extracted_slots.requester_id) : null,
-      entry_channel: typeof parsed.intent.extracted_slots?.channel === 'string' ? String(parsed.intent.extracted_slots.channel) : 'web',
+      customer_id: typeof body.customer_id === 'string' ? String(body.customer_id) : typeof parsed.intent.extracted_slots?.customer_id === 'string' ? String(parsed.intent.extracted_slots.customer_id) : null,
+      requester_id: typeof body.requester_id === 'string' ? String(body.requester_id) : typeof parsed.intent.extracted_slots?.requester_id === 'string' ? String(parsed.intent.extracted_slots.requester_id) : null,
+      entry_channel: typeof body.entry_channel === 'string' ? String(body.entry_channel) : typeof parsed.intent.extracted_slots?.channel === 'string' ? String(parsed.intent.extracted_slots.channel) : 'web_app',
       intent_type: intentType,
       intent_type_canonical: canonicalIntentType,
       primary_capability_id: primaryCapabilityId,
       matched_capability_ids: matchedCapabilityIds,
-      source_plane: resolvedPlane,
+      source_plane:
+        primaryCapabilityId === 'capability.data_fact_query'
+          ? 'ops_data'
+          : primaryCapabilityId === 'capability.product_doc_qna'
+            ? 'product_docs'
+            : typeof primaryCapabilityId === 'string' && primaryCapabilityId.startsWith('capability.faq_')
+              ? 'faq_kb'
+              : resolvedPlane,
       step3_tokens_used: Number(prepared.step3?.trace?.tokens_used || 0),
       model_source: typeof prepared.step3?.trace?.source === 'string' ? prepared.step3.trace.source : null,
       model_prompt_slug: typeof prepared.step3?.trace?.prompt_slug === 'string' ? prepared.step3.trace.prompt_slug : null,

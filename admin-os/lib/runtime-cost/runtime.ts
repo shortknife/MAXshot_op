@@ -97,7 +97,12 @@ export function estimateRuntimeCostUsd(params: {
   tokens_used: number
 }): number {
   const table = Array.isArray((pricing as { models?: CostPricingRow[] }).models) ? (pricing as { models: CostPricingRow[] }).models : []
-  const row = table.find((item) => item.source === (params.model_source || 'local_stub') && item.prompt_slug === (params.model_prompt_slug || 'intent_analyzer'))
+  const modelSource = params.model_source || 'local_stub'
+  const promptSlug = params.model_prompt_slug || 'intent_analyzer'
+  const row =
+    table.find((item) => item.source === modelSource && item.prompt_slug === promptSlug) ||
+    table.find((item) => item.source === modelSource && promptSlug.startsWith(`${item.prompt_slug}_`)) ||
+    table.find((item) => item.source === modelSource && item.prompt_slug === 'intent_analyzer')
   if (!row) return 0
   const tokens = Number.isFinite(params.tokens_used) ? params.tokens_used : 0
   return Number(((tokens / 1000) * row.input_cost_per_1k_tokens_usd).toFixed(6))

@@ -79,7 +79,7 @@ export function extractInteractionLearningPayload(params: {
     session_id: params.entry.session_id || null,
     requester_id: params.entry.requester_id || null,
     entry_channel: params.entry.entry_channel || null,
-    customer_id: asString(meta.customer_id) || asString(reviewPayload.customer_id),
+    customer_id: params.entry.customer_id || asString(meta.customer_id) || asString(reviewPayload.customer_id),
     raw_query: params.entry.raw_query,
     effective_query: asString(meta.effective_query),
     intent_type: asString(meta.intent_type),

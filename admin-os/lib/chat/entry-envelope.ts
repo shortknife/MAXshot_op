@@ -5,6 +5,7 @@ export type ChatEntryEnvelope = {
   session_id?: string
   entry_channel?: string
   requester_id?: string | null
+  customer_id?: string | null
 }
 
 function cleanString(value: unknown): string | undefined {
@@ -22,5 +23,6 @@ export function normalizeChatEntryEnvelope(body: unknown): ChatEntryEnvelope {
     session_id: cleanString(input.session_id),
     entry_channel: cleanString(input.entry_channel) || 'web_app',
     requester_id: cleanString(input.requester_id) || null,
+    customer_id: cleanString(input.customer_id) || null,
   }
 }

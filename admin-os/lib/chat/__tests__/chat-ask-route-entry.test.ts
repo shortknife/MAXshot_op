@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
     body: { success: true, echo: body },
     runtimeMeta: {
       session_id: 's1',
-      customer_id: null,
+      customer_id: 'maxshot',
       requester_id: 'u1',
       entry_channel: 'web_app',
       intent_type: 'general_qna',
@@ -38,7 +38,7 @@ describe('/api/chat/ask entry envelope', () => {
   it('normalizes the request into an entry envelope before dispatch', async () => {
     const req = new NextRequest('http://localhost/api/chat/ask', {
       method: 'POST',
-      body: JSON.stringify({ raw_query: '  你好  ', session_id: ' s1 ', requester_id: ' u1 ' }),
+      body: JSON.stringify({ raw_query: '  你好  ', session_id: ' s1 ', requester_id: ' u1 ', customer_id: ' maxshot ' }),
       headers: { 'content-type': 'application/json' },
     })
 
@@ -53,6 +53,7 @@ describe('/api/chat/ask entry envelope', () => {
       session_id: 's1',
       entry_channel: 'web_app',
       requester_id: 'u1',
+      customer_id: 'maxshot',
     })
     expect(body.success).toBe(true)
   })

@@ -44,5 +44,6 @@ describe('runtime cost extract', () => {
     expect(event.estimated_cost_usd).toBeGreaterThan(0)
     expect(event.verification_outcome).toBe('pass')
     expect(event.source_plane).toBe('product_docs')
+    expect(event.customer_id).toBe('maxshot')
   })
 })

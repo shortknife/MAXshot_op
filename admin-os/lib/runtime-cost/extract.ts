@@ -25,7 +25,7 @@ export function extractRuntimeCostEvent(params: {
   })
   return {
     session_id: params.runtimeMeta?.session_id || null,
-    customer_id: params.runtimeMeta?.customer_id || null,
+    customer_id: params.runtimeMeta?.customer_id || (typeof params.entry.customer_id === 'string' ? params.entry.customer_id : null),
     requester_id: params.runtimeMeta?.requester_id || null,
     entry_channel: params.runtimeMeta?.entry_channel || 'web',
     raw_query: String(params.entry.raw_query || ''),
@@ -33,7 +33,7 @@ export function extractRuntimeCostEvent(params: {
     intent_type_canonical: params.runtimeMeta?.intent_type_canonical || null,
     primary_capability_id: params.runtimeMeta?.primary_capability_id || null,
     matched_capability_ids: params.runtimeMeta?.matched_capability_ids || [],
-    source_plane: params.runtimeMeta?.source_plane || null,
+    source_plane: params.runtimeMeta?.source_plane || (params.runtimeMeta?.primary_capability_id === 'capability.data_fact_query' ? 'ops_data' : params.runtimeMeta?.primary_capability_id === 'capability.product_doc_qna' ? 'product_doc' : typeof params.runtimeMeta?.primary_capability_id === 'string' && params.runtimeMeta.primary_capability_id.startsWith('capability.faq_') ? 'faq_kb' : null),
     answer_type: typeof data.type === 'string' ? data.type : null,
     verification_outcome: params.runtimeMeta?.verification_outcome || (typeof verification.outcome === 'string' ? String(verification.outcome) : null),
     fallback_required: answerMeta.fallback_required === true,
