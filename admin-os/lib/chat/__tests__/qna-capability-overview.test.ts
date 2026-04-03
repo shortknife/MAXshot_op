@@ -12,5 +12,7 @@ describe('qna capability overview', () => {
     expect(body?.data?.meta?.intent_type).toBe('general_qna')
     expect(body?.data?.meta?.session_kernel?.kernel_id).toMatch(/^sk-/)
     expect(body?.data?.meta?.session_kernel?.verification_outcome).toBeTruthy()
+    expect(body?.data?.meta?.prompt_runtime?.assembly_mode).toBeTruthy()
+    expect(body?.data?.meta?.prompt_runtime?.primary_prompt_slug).toBeTruthy()
   }, 45000)
 })

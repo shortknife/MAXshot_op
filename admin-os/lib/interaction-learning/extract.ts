@@ -54,6 +54,7 @@ export function extractInteractionLearningPayload(params: {
   const queryContract = asObject(meta.query_contract)
   const filtersApplied = asObject(meta.filters_applied)
   const sessionKernel = asObject(meta.session_kernel)
+  const promptRuntime = asObject(meta.prompt_runtime)
 
   const matchedCapabilityIds = asStringArray(meta.matched_capability_ids)
   const primaryCapabilityId =
@@ -108,6 +109,12 @@ export function extractInteractionLearningPayload(params: {
       review_payload_present: answerMeta.review_payload && typeof answerMeta.review_payload === 'object',
       confidence: asNumber(answerMeta.confidence),
       prompt_meta_slug: meta.intent_prompt && typeof meta.intent_prompt === 'object' ? asString((meta.intent_prompt as Record<string, unknown>).slug) : null,
+      prompt_runtime: {
+        assembly_mode: asString(promptRuntime.assembly_mode),
+        primary_prompt_slug: asString(promptRuntime.primary_prompt_slug),
+        prompt_count: asNumber(promptRuntime.prompt_count),
+        prompt_sources: asStringArray(promptRuntime.prompt_sources),
+      },
       session_kernel: {
         kernel_id: asString(sessionKernel.kernel_id),
         thread_action: asString(sessionKernel.thread_action),

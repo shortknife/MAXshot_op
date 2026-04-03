@@ -4,6 +4,13 @@ import { AppNav } from '@/components/app-nav'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
+type PromptRuntimeSummary = {
+  assembly_mode?: string | null
+  primary_prompt_slug?: string | null
+  prompt_count?: number | null
+  prompt_sources?: string[] | null
+}
+
 type SessionKernelSummary = {
   kernel_id?: string | null
   thread_action?: string | null
@@ -55,6 +62,11 @@ function Pill({ children, tone = 'slate' }: { children: React.ReactNode; tone?: 
   return <span className={`rounded-full border px-3 py-1 text-xs ${styles}`}>{children}</span>
 }
 
+
+function asPromptRuntimeSummary(meta: Record<string, unknown>): PromptRuntimeSummary | null {
+  const value = meta.prompt_runtime
+  return value && typeof value === 'object' ? (value as PromptRuntimeSummary) : null
+}
 
 function asSessionKernelSummary(meta: Record<string, unknown>): SessionKernelSummary | null {
   const value = meta.session_kernel
@@ -166,6 +178,23 @@ export function InteractionLogSurface({ source, items }: { source: 'supabase' | 
                           {item.requester_id && <Pill>{`requester: ${item.requester_id}`}</Pill>}
                           {item.session_id && <Pill>{`session: ${item.session_id}`}</Pill>}
                         </div>
+                        {(() => {
+                          const promptRuntime = asPromptRuntimeSummary(item.meta)
+                          if (!promptRuntime) return null
+                          return (
+                            <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                              <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">prompt_runtime</div>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {promptRuntime.assembly_mode && <Pill tone="sky">{`assembly: ${promptRuntime.assembly_mode}`}</Pill>}
+                                {promptRuntime.primary_prompt_slug && <Pill>{`primary: ${promptRuntime.primary_prompt_slug}`}</Pill>}
+                                {typeof promptRuntime.prompt_count === 'number' && <Pill>{`prompts: ${promptRuntime.prompt_count}`}</Pill>}
+                                {Array.isArray(promptRuntime.prompt_sources)
+                                  ? promptRuntime.prompt_sources.map((source) => <Pill key={source}>{`source: ${source}`}</Pill>)
+                                  : null}
+                              </div>
+                            </div>
+                          )
+                        })()}
                         {(() => {
                           const sessionKernel = asSessionKernelSummary(item.meta)
                           if (!sessionKernel) return null

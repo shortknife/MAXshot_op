@@ -154,3 +154,10 @@
 - Why: The platform now has customer boundary, verification, cost, learning log, and memory baselines. A session kernel is required to make runtime state auditable and reusable without introducing a heavier orchestration runtime too early.
 - Scope: Prepared kernel build, post-verification finalization, interaction-log extraction, and UI visibility.
 - Consequence: Future runtime evolution can build on one stable session snapshot contract rather than re-deriving state from multiple meta fragments.
+
+## D-027 Prompt Runtime Baseline Accepted
+- Date: 2026-04-03
+- Decision: Add a unified `prompt_runtime` snapshot to chat runtime metadata so prompt assembly can be audited through one stable contract instead of scattered per-surface prompt fields only.
+- Why: The platform now has session kernel, verification, cost, and learning baselines. Prompt source and assembly state must be normalized before stronger prompt policy or runtime prompt orchestration can be introduced.
+- Scope: Prompt runtime normalization, chat metadata attachment, interaction-log extraction, and UI visibility.
+- Consequence: Future prompt-policy, prompt replay, and prompt observability work can build on one runtime contract.

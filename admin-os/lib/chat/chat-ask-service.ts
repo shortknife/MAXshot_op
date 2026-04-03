@@ -13,6 +13,7 @@ import { dispatchNonBusinessIntent } from '@/lib/chat/handlers/non-business-inte
 import { ensureCanonicalIntentMeta } from '@/lib/chat/chat-response-normalize'
 import { finalizeDelivery } from '@/lib/chat/delivery-critic'
 import { applyRuntimeVerification } from '@/lib/chat/runtime-verification'
+import { attachPromptRuntime, buildPromptRuntime, type PromptRuntimeSnapshot } from '@/lib/chat/prompt-runtime'
 import { attachSessionKernel, buildPreparedSessionKernel, finalizeSessionKernel, type SessionKernelSnapshot } from '@/lib/chat/session-kernel'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
 
@@ -31,6 +32,7 @@ export type ChatAskRuntimeMeta = {
   model_prompt_slug: string | null
   verification_outcome?: string | null
   session_kernel?: SessionKernelSnapshot | null
+  prompt_runtime?: PromptRuntimeSnapshot | null
 }
 
 export type ChatAskServiceResult = {
@@ -162,11 +164,15 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
       model_prompt_slug: typeof prepared.step3?.trace?.prompt_slug === 'string' ? prepared.step3.trace.prompt_slug : null,
       verification_outcome: typeof verificationDecision.outcome === 'string' ? String(verificationDecision.outcome) : null,
       session_kernel: asSessionKernel(meta.session_kernel),
+      prompt_runtime: asPromptRuntime(meta.prompt_runtime),
     }
   }
 
   const asSessionKernel = (value: unknown): SessionKernelSnapshot | null =>
     value && typeof value === 'object' ? (value as SessionKernelSnapshot) : null
+
+  const asPromptRuntime = (value: unknown): PromptRuntimeSnapshot | null =>
+    value && typeof value === 'object' ? (value as PromptRuntimeSnapshot) : null
 
   const normalizeAndFinalize = (payload: unknown) =>
     perf.measure('verify_and_finalize', () =>
@@ -184,9 +190,14 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
           kernel: preparedKernel,
           payload: finalized,
         })
-        return attachSessionKernel({
+        const withKernel = attachSessionKernel({
           payload: finalized,
           kernel,
+        })
+        const promptRuntime = buildPromptRuntime(withKernel)
+        return attachPromptRuntime({
+          payload: withKernel,
+          promptRuntime,
         })
       }
     )
