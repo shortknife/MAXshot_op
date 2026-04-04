@@ -196,3 +196,11 @@
 - Why: Leaving release runtime, table-oriented docs, or legacy prompt JSON in place would preserve multiple prompt paths and keep the product mentally inconsistent.
 - Scope: remove prompt release runtime artifacts, remove `prompt-library-op` configs, remove `capability.prompt_governance_mutation`, and update current status docs to filesystem-first wording.
 - Consequence: Prompt architecture is now single-path in code and in current product status documents.
+
+
+## D-033 System Learning Asset Baseline Accepted
+- Date: 2026-04-04
+- Decision: Add a first-class learning asset derivation layer on top of runtime interaction logs.
+- Why: The platform already records interaction history, prompt policy, verification outcome, and customer signals, but those records were not yet transformed into reusable operational assets.
+- Scope: hard-case derivation, capability candidate aggregation, customer profile rollups, prompt policy issue extraction, `/learning-assets` surface, and markdown export.
+- Consequence: Future memory evolution, prompt tuning, and capability refinement can start from structured learning assets instead of raw logs only.
