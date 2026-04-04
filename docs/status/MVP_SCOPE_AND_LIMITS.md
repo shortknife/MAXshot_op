@@ -19,7 +19,7 @@
 - 高风险动作 Human Gate。
 
 4. Prompt 管理基线（本次新增）
-- Prompt 线上读取：Supabase `prompt_library`（DB-first）。
+- Prompt 线上读取：filesystem markdown（Git-managed, repo-first）。
 - DB 不可用：允许只读 fallback 本地 CSV。
 - 审计记录：`prompt_slug/prompt_version/prompt_source/prompt_hash`。
 
@@ -43,7 +43,7 @@
 - 客户可见业务结论必须携带来源证据。
 
 3. Prompt 不硬编码
-- 运行期 Prompt 必须来自 `prompt_library`（或 fallback CSV），不接受散落 hardcode。
+- 运行期 Prompt 必须来自 `filesystem markdown prompt docs，不接受散落 hardcode。
 
 ---
 

@@ -33,9 +33,9 @@
 - FSD 已新增 Clarified Addendum（不覆盖原文）。
 
 ### 本轮新增决策（已确认）
-1. Prompt 线上读取固定走 Supabase `prompt_library`。
+1. Prompt 线上读取固定走 filesystem prompt docs under `admin-os/prompts/`。
 2. DB 不可用允许 fallback 到本地 CSV（只读）。
-3. fallback 必须写审计：`prompt_source=fallback_csv`。
+3. fallback 必须写审计：`prompt_source=filesystem_md`。
 
 ---
 
@@ -54,14 +54,14 @@
 
 ### P0-B Prompt Registry（本轮重点）
 - 新增 `PromptRegistry`：
-  - 首选 `prompt_library`（Supabase）
-  - 失败时 fallback 本地 CSV：
-    `/Users/alexzheng/Documents/JOB/AI_Project/MAXshot_opencode/docs/reference/maxshot/prompts/prompt_library_rows0221.csv`
+  - 统一从本地 Markdown Prompt 文档读取
+  - 目录：
+    `/Users/alexzheng/Documents/JOB/AI_Project/MAXshot_opencode/admin-os/prompts/`
 - 统一输出结构：`system_prompt`, `user_prompt_template`, `model_config`, `version`, `slug`。
 - 审计补齐：`prompt_slug`, `prompt_version`, `prompt_source`, `prompt_hash`。
 
 **完成标准**
-- DB 可用路径与 fallback 路径都可跑通。
+- filesystem 路径可跑通，且系统中不存在第二套 Prompt 主读取方式。
 - 同一 query 的 prompt 版本可追溯。
 
 ### P0-C Answer Evidence Contract

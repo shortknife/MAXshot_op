@@ -56,14 +56,13 @@ This is why an explicit natural-language date range can still fail even though t
 ### 4. Prompt registry loader
 - File: `/Users/alexzheng/Documents/JOB/AI_Project/MAXshot_opencode/admin-os/lib/prompts/prompt-registry.ts`
 - Reads prompts from:
-  - Supabase `prompt_library`
-  - fallback CSV: `docs/reference/maxshot/prompts/prompt_library_rows0221.csv`
+  - filesystem prompt docs under `admin-os/prompts/`
 - This is prompt infrastructure, not an LLM call by itself.
 
 ## Prompt texts currently in use
 
 ### `intent_analyzer` (v2)
-Source: `docs/reference/maxshot/prompts/prompt_library_rows0221.csv`
+Source: `admin-os/prompts/intent/intent_analyzer.v2.md`
 
 System prompt starts with:
 - `You are the MAXshot Intent Analyzer...`
@@ -75,7 +74,7 @@ User template starts with:
 - `{"user_query": "{{clean_query}}", "session_context": {{context_payload}}, "vault_list": [...]}`
 
 ### `llm_question_classifier` (v1)
-Source: `docs/reference/maxshot/prompts/prompt_library_rows0221.csv`
+Source: `admin-os/prompts/fallback/llm_question_classifier.v1.md`
 
 System prompt starts with:
 - `You are MAXshot's intelligent question classifier...`
@@ -85,7 +84,7 @@ System prompt starts with:
 This is currently a fallback prompt and is not ideal for the main app flow.
 
 ### `content_generator` (v1)
-Source: `docs/reference/maxshot/prompts/prompt_library_rows0221.csv`
+Source: `admin-os/prompts/execution/content_generator.v1.md`
 
 System prompt starts with:
 - `You are the MAXshot Content Generator...`
@@ -95,7 +94,7 @@ System prompt starts with:
 Current code does **not** actually send this to an LLM.
 
 ### `product_doc_qna` (v1)
-Source: `docs/reference/maxshot/prompts/prompt_library_rows0221.csv`
+Source: `admin-os/prompts/execution/product_doc_qna.v1.md`
 
 System prompt starts with:
 - `You are the MAXshot Product Documentation Q&A assistant...`

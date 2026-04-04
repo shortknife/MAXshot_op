@@ -189,3 +189,10 @@
 - Why: Prompt assets are now platform runtime assets, closer to code than to operational data. Git-native review, diff, versioning, and rollback are a better fit than table mutation.
 - Scope: markdown prompt inventory, filesystem prompt registry, runtime prompt-source switch, filesystem-first `/prompts` governance surface, and deprecation of Supabase prompt mutation path.
 - Consequence: Prompt management is now single-path and auditable through repository history rather than mixed table/config sourcing.
+
+## D-032 Prompt Legacy Cleanup Accepted
+- Date: 2026-04-04
+- Decision: Remove obsolete Supabase prompt-management assets and old local JSON prompt source configs after filesystem prompt migration.
+- Why: Leaving release runtime, table-oriented docs, or legacy prompt JSON in place would preserve multiple prompt paths and keep the product mentally inconsistent.
+- Scope: remove prompt release runtime artifacts, remove `prompt-library-op` configs, remove `capability.prompt_governance_mutation`, and update current status docs to filesystem-first wording.
+- Consequence: Prompt architecture is now single-path in code and in current product status documents.

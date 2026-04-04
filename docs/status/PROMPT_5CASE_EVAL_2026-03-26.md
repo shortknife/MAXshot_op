@@ -15,7 +15,7 @@ Not evaluated here:
 - capability answer quality
 
 ## Runtime
-- Local prompt source: `/Users/alexzheng/Documents/JOB/AI_Project/MAXshot_opencode/admin-os/app/configs/prompt-library-op/prompt_library_op_v2.json`
+- Local prompt source: `/Users/alexzheng/Documents/JOB/AI_Project/MAXshot_opencode/admin-os/prompts/`
 - Intent prompt: `intent_analyzer_op_v2`
 - Intent critic: `intent_critic_op_v1`
 - Intent normalizer: `intent_normalizer_op_v1`
