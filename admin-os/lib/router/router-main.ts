@@ -192,9 +192,14 @@ export async function executeRouter(executionId: string) {
       memory_refs_ref: buildCapabilityRegistryRefIds(decomposition.capability_chain),
     })
 
+    const normalizedSlots = normalizeIntentSlots(intent, intent.extracted_slots || {})
+
+    const resolvedCustomerId = typeof normalizedSlots.customer_id === 'string' ? String(normalizedSlots.customer_id).trim() || null : typeof (execution.payload as { customer_id?: unknown } | null)?.customer_id === 'string' ? String((execution.payload as { customer_id?: unknown }).customer_id).trim() || null : null
+
     const memoryRefs = await selectMemories(
       decomposition.memory_query.types as MemoryType[],
-      decomposition.memory_query.context_tags
+      decomposition.memory_query.context_tags,
+      resolvedCustomerId
     )
     const workingMind = createWorkingMind(memoryRefs)
     logger.log('memory_selected', {
@@ -206,8 +211,6 @@ export async function executeRouter(executionId: string) {
       memory_refs_ref: toMemoryRefsRef(memoryRefs),
       memory_ref_count: memoryRefs.length,
     })
-
-    const normalizedSlots = normalizeIntentSlots(intent, intent.extracted_slots || {})
 
     const outputs: unknown[] = []
     let rollingMemoryRefs: unknown[] = workingMind.memory_refs

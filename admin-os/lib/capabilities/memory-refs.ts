@@ -19,6 +19,7 @@ export type MemoryRuntime = {
   ref_ids: string[]
   memory_ref_count: number
   learning_ref_count: number
+  customer_ref_count: number
   summary: string | null
 }
 
@@ -40,13 +41,17 @@ export function buildMemoryRuntime(memoryRefs: unknown[]): MemoryRuntime {
   const learningRefCount = Array.isArray(memoryRefs)
     ? memoryRefs.filter((item) => item && typeof item === 'object' && (item as { memory_origin?: string }).memory_origin === 'interaction_learning').length
     : 0
-  const hasLearningRefs = learningRefCount > 0
+  const customerRefCount = Array.isArray(memoryRefs)
+    ? memoryRefs.filter((item) => item && typeof item === 'object' && (item as { memory_origin?: string }).memory_origin === 'customer_profile').length
+    : 0
+  const hasLearningRefs = learningRefCount > 0 || customerRefCount > 0
   return {
     source_policy: hasLearningRefs ? 'hybrid_learning' : 'router_context_only',
     ref_ids: refIds,
     memory_ref_count: refIds.length,
     learning_ref_count: learningRefCount,
-    summary: hasLearningRefs ? `working mind includes ${learningRefCount} interaction-derived learning memories` : null,
+    customer_ref_count: customerRefCount,
+    summary: hasLearningRefs ? `working mind includes ${learningRefCount} interaction-derived refs and ${customerRefCount} customer-profile refs` : null,
   }
 }
 
@@ -57,6 +62,7 @@ export function resolveInputMemoryRuntime(input: CapabilityInputEnvelope): Memor
   const sourcePolicy = typeof runtime?.source_policy === 'string' ? runtime.source_policy : null
   const memoryRefCount = typeof runtime?.memory_ref_count === 'number' ? runtime.memory_ref_count : null
   const learningRefCount = typeof runtime?.learning_ref_count === 'number' ? runtime.learning_ref_count : 0
+  const customerRefCount = typeof runtime?.customer_ref_count === 'number' ? runtime.customer_ref_count : 0
   const summary = typeof runtime?.summary === 'string' ? runtime.summary : null
   if (refIds && (sourcePolicy === 'router_context_only' || sourcePolicy === 'hybrid_learning') && typeof memoryRefCount === 'number') {
     return {
@@ -64,6 +70,7 @@ export function resolveInputMemoryRuntime(input: CapabilityInputEnvelope): Memor
       ref_ids: refIds,
       memory_ref_count: memoryRefCount,
       learning_ref_count: learningRefCount,
+      customer_ref_count: customerRefCount,
       summary,
     }
   }

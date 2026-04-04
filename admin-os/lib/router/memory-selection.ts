@@ -1,6 +1,7 @@
 import { MemoryType, WorkingMind } from './types/memory'
 import { supabase } from '@/lib/supabase'
 import { buildInteractionLearningMemory } from '@/lib/interaction-learning/memory'
+import { buildCustomerLongTermMemory } from '@/lib/customers/memory'
 
 type MemoryRow = {
   id?: string
@@ -27,8 +28,8 @@ function scoreMemoryRow(row: MemoryRow, contextTags: string[]): number {
   return score
 }
 
-export async function selectMemories(types: MemoryType[], contextTags: string[]) {
-  const [{ data, error }, learningRefs] = await Promise.all([
+export async function selectMemories(types: MemoryType[], contextTags: string[], customerId?: string | null) {
+  const [{ data, error }, learningRefs, customerMemory] = await Promise.all([
     supabase
       .from('agent_memories_op')
       .select('id, type, content, weight, confidence')
@@ -36,6 +37,7 @@ export async function selectMemories(types: MemoryType[], contextTags: string[])
       .order('weight', { ascending: false })
       .limit(20),
     buildInteractionLearningMemory({ contextTags, limit: 5 }),
+    buildCustomerLongTermMemory(customerId),
   ])
 
   if (error) {
@@ -43,7 +45,7 @@ export async function selectMemories(types: MemoryType[], contextTags: string[])
   }
 
   const rows = Array.isArray(data) ? (data as MemoryRow[]) : []
-  const merged = [...rows, ...learningRefs]
+  const merged = [...rows, ...learningRefs, ...(customerMemory ? [customerMemory] : [])]
   return merged
     .sort((a, b) => scoreMemoryRow(b, contextTags) - scoreMemoryRow(a, contextTags))
     .slice(0, 6)
@@ -52,11 +54,13 @@ export async function selectMemories(types: MemoryType[], contextTags: string[])
 export function createWorkingMind(memories: unknown[]): WorkingMind {
   const refs = Array.isArray(memories) ? memories : []
   const learningRefCount = refs.filter((item) => item && typeof item === 'object' && (item as { memory_origin?: string }).memory_origin === 'interaction_learning').length
+  const customerRefCount = refs.filter((item) => item && typeof item === 'object' && (item as { memory_origin?: string }).memory_origin === 'customer_profile').length
   return {
     memory_refs: refs,
-    source_policy: learningRefCount > 0 ? 'hybrid_learning' : 'router_context_only',
+    source_policy: learningRefCount > 0 || customerRefCount > 0 ? 'hybrid_learning' : 'router_context_only',
     memory_ref_count: refs.length,
     learning_ref_count: learningRefCount,
-    summary: learningRefCount > 0 ? `working mind includes ${learningRefCount} interaction-derived learning memories` : null,
+    customer_ref_count: customerRefCount,
+    summary: learningRefCount > 0 || customerRefCount > 0 ? `working mind includes ${learningRefCount} interaction-derived refs and ${customerRefCount} customer-profile refs` : null,
   }
 }

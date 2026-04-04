@@ -129,6 +129,7 @@ export function extractInteractionLearningPayload(params: {
         memory_policy: asString(sessionKernel.memory_policy),
         memory_ref_count: asNumber(sessionKernel.memory_ref_count),
         learning_ref_count: asNumber(sessionKernel.learning_ref_count),
+        customer_ref_count: asNumber(sessionKernel.customer_ref_count),
         recall_triggered: sessionKernel.recall_triggered === true,
         verification_outcome: asString(sessionKernel.verification_outcome),
         source_plane: asString(sessionKernel.source_plane),

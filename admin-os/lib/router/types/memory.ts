@@ -37,6 +37,7 @@ export type WorkingMind = {
   source_policy: MemorySourcePolicy
   memory_ref_count: number
   learning_ref_count: number
+  customer_ref_count: number
   summary?: string | null
 }
 

@@ -204,3 +204,11 @@
 - Why: The platform already records interaction history, prompt policy, verification outcome, and customer signals, but those records were not yet transformed into reusable operational assets.
 - Scope: hard-case derivation, capability candidate aggregation, customer profile rollups, prompt policy issue extraction, `/learning-assets` surface, and markdown export.
 - Consequence: Future memory evolution, prompt tuning, and capability refinement can start from structured learning assets instead of raw logs only.
+
+
+## D-034 Customer Memory and Wallet Baseline Accepted
+- Date: 2026-04-04
+- Decision: Add filesystem-managed customer long-term memory and wallet contract assets, and inject customer-profile memory into working mind.
+- Why: The platform already had customer identity and boundary control, but still lacked a usable long-term preference layer and a simple wallet/payment posture for future agent commerce.
+- Scope: customer asset markdown, asset runtime loaders, customer-profile memory refs, customer page redesign, and wallet contract visibility.
+- Consequence: Nexa now has a lightweight customer-aware model that supports future wallet/payment work without adopting a heavy SaaS dashboard architecture.

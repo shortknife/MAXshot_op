@@ -82,7 +82,8 @@ function buildPreparedRequest(): PreparedChatRequest {
         ref_ids: ['mem-1', 'mem-2'],
         memory_ref_count: 2,
         learning_ref_count: 1,
-        summary: 'working mind includes 1 interaction-derived learning memories',
+        customer_ref_count: 1,
+        summary: 'working mind includes 1 interaction-derived refs and 1 customer-profile refs',
       },
       effective_query: '最近7天 APY 怎么样',
       policy_decision: {
@@ -133,6 +134,7 @@ describe('session kernel', () => {
     expect(kernel.active_chain).toBe('ethereum')
     expect(kernel.memory_policy).toBe('hybrid_learning')
     expect(kernel.learning_ref_count).toBe(1)
+    expect(kernel.customer_ref_count).toBe(1)
     expect(kernel.recall_triggered).toBe(true)
     expect(kernel.recall_confidence).toBe(0.78)
   })

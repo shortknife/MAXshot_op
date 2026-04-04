@@ -97,6 +97,7 @@ export type ContextEnvelope = {
     ref_ids: string[]
     memory_ref_count: number
     learning_ref_count: number
+    customer_ref_count?: number
     summary: string | null
   }
   effective_query: string

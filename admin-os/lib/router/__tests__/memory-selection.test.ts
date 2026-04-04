@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   order: vi.fn(),
   limit: vi.fn(),
   buildInteractionLearningMemory: vi.fn(),
+  buildCustomerLongTermMemory: vi.fn(),
 }))
 
 vi.mock('@/lib/supabase', () => ({
@@ -15,6 +16,10 @@ vi.mock('@/lib/supabase', () => ({
 
 vi.mock('@/lib/interaction-learning/memory', () => ({
   buildInteractionLearningMemory: mocks.buildInteractionLearningMemory,
+}))
+
+vi.mock('@/lib/customers/memory', () => ({
+  buildCustomerLongTermMemory: mocks.buildCustomerLongTermMemory,
 }))
 
 import { createWorkingMind, selectMemories } from '@/lib/router/memory-selection'
@@ -27,6 +32,7 @@ describe('memory selection', () => {
     mocks.order.mockReset()
     mocks.limit.mockReset()
     mocks.buildInteractionLearningMemory.mockReset()
+    mocks.buildCustomerLongTermMemory.mockReset()
   })
 
   it('merges stored memories with interaction-derived memories', async () => {
@@ -53,11 +59,21 @@ describe('memory selection', () => {
       },
     ])
 
-    const refs = await selectMemories(['foundation'], ['faq', 'password'])
+    mocks.buildCustomerLongTermMemory.mockResolvedValue({
+      id: 'customer-memory:maxshot',
+      type: 'insight',
+      memory_origin: 'customer_profile',
+      weight: 0.88,
+      confidence: 0.84,
+      content: { summary: 'prefers faq account answers' },
+    })
+
+    const refs = await selectMemories(['foundation'], ['faq', 'password'], 'maxshot')
     const workingMind = createWorkingMind(refs)
 
-    expect(refs.length).toBe(2)
+    expect(refs.length).toBe(3)
     expect(workingMind.source_policy).toBe('hybrid_learning')
     expect(workingMind.learning_ref_count).toBe(1)
+    expect(workingMind.customer_ref_count).toBe(1)
   })
 })

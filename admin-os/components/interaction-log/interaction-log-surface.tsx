@@ -25,6 +25,7 @@ type SessionKernelSummary = {
   memory_policy?: string | null
   memory_ref_count?: number | null
   learning_ref_count?: number | null
+  customer_ref_count?: number | null
   recall_triggered?: boolean
   verification_outcome?: string | null
   source_plane?: string | null
@@ -235,6 +236,7 @@ export function InteractionLogSurface({ source, items }: { source: 'supabase' | 
                                 {sessionKernel.memory_policy && <Pill>{`memory: ${sessionKernel.memory_policy}`}</Pill>}
                                 {typeof sessionKernel.memory_ref_count === 'number' && <Pill>{`refs: ${sessionKernel.memory_ref_count}`}</Pill>}
                                 {typeof sessionKernel.learning_ref_count === 'number' && <Pill>{`learning_refs: ${sessionKernel.learning_ref_count}`}</Pill>}
+                                {typeof sessionKernel.customer_ref_count === 'number' && <Pill>{`customer_refs: ${sessionKernel.customer_ref_count}`}</Pill>}
                                 {sessionKernel.recall_triggered && <Pill tone="emerald">recall_triggered</Pill>}
                                 {sessionKernel.verification_outcome && <Pill tone={sessionKernel.verification_outcome === 'pass' ? 'emerald' : sessionKernel.verification_outcome === 'review' ? 'amber' : 'rose'}>{`verify: ${sessionKernel.verification_outcome}`}</Pill>}
                               </div>

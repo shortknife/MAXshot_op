@@ -26,6 +26,7 @@ export type SessionKernelSnapshot = {
   memory_policy: 'router_context_only' | 'hybrid_learning'
   memory_ref_count: number
   learning_ref_count: number
+  customer_ref_count: number
   recall_triggered: boolean
   recall_confidence: number | null
   verification_outcome: string | null
@@ -86,6 +87,7 @@ export function buildPreparedSessionKernel(params: {
     memory_policy: memoryRuntime.source_policy,
     memory_ref_count: memoryRuntime.memory_ref_count,
     learning_ref_count: memoryRuntime.learning_ref_count,
+    customer_ref_count: typeof memoryRuntime.customer_ref_count === 'number' ? memoryRuntime.customer_ref_count : 0,
     recall_triggered: prepared.contextEnvelope.recall !== null,
     recall_confidence: prepared.contextEnvelope.recall?.recall_confidence ?? null,
     verification_outcome: null,
