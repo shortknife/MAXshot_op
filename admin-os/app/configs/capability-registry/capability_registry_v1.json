@@ -1096,12 +1096,12 @@
         "prompt_governance_mutation"
       ],
       "name": "Prompt Governance Mutation",
-      "description": "Platform-governed prompt release and rollback actions over the active prompt library.",
+      "description": "Platform-governed prompt release and rollback actions over the filesystem-managed prompt document set.",
       "lifecycle": "active",
       "risk_class": "side_effect",
       "examples": [
-        "Release prompt version v8 for product_doc_qna",
-        "Rollback intent analyzer to the previous approved version"
+        "Promote the approved markdown version for product_doc_qna",
+        "Rollback intent_analyzer to the previous Git-approved prompt file"
       ],
       "prompt_slot_schema": {
         "description": "Internal prompt-governance mutation contract.",
@@ -1182,7 +1182,7 @@
         "platform"
       ],
       "execution_mode": "mutation",
-      "mutation_scope": "prompt_library",
+      "mutation_scope": "prompt_docs",
       "concurrency_safe": false,
       "requires_confirmation": true,
       "requires_verification": true

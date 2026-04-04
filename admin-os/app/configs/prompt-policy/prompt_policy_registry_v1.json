@@ -1,36 +1,56 @@
 {
   "registry_id": "prompt_policy_registry_v1",
-  "version": "2026-04-03",
+  "version": "2026-04-04",
   "defaults": {
-    "allowed_intent_sources": ["supabase", "fallback_csv", "local_stub"],
-    "allowed_execution_sources": ["supabase", "fallback_csv"],
+    "allowed_intent_sources": [
+      "filesystem_md"
+    ],
+    "allowed_execution_sources": [
+      "filesystem_md"
+    ],
     "execution_prompt_required_capabilities": [
       "capability.product_doc_qna",
       "capability.content_generator"
     ],
     "execution_prompt_slug_allowlist": {
-      "capability.product_doc_qna": ["product_doc_qna"],
-      "capability.content_generator": ["content_generator"]
+      "capability.product_doc_qna": [
+        "product_doc_qna"
+      ],
+      "capability.content_generator": [
+        "content_generator"
+      ]
     }
   },
   "customers": [
     {
       "customer_id": "maxshot",
-      "allow_local_stub_intent": true,
-      "allowed_intent_sources": ["supabase", "fallback_csv", "local_stub"],
-      "allowed_execution_sources": ["supabase", "fallback_csv"]
+      "allow_local_stub_intent": false,
+      "allowed_intent_sources": [
+        "filesystem_md"
+      ],
+      "allowed_execution_sources": [
+        "filesystem_md"
+      ]
     },
     {
       "customer_id": "nexa-demo",
-      "allow_local_stub_intent": true,
-      "allowed_intent_sources": ["supabase", "fallback_csv", "local_stub"],
-      "allowed_execution_sources": ["supabase", "fallback_csv"]
+      "allow_local_stub_intent": false,
+      "allowed_intent_sources": [
+        "filesystem_md"
+      ],
+      "allowed_execution_sources": [
+        "filesystem_md"
+      ]
     },
     {
       "customer_id": "ops-observer",
       "allow_local_stub_intent": false,
-      "allowed_intent_sources": ["supabase", "fallback_csv"],
-      "allowed_execution_sources": ["supabase", "fallback_csv"]
+      "allowed_intent_sources": [
+        "filesystem_md"
+      ],
+      "allowed_execution_sources": [
+        "filesystem_md"
+      ]
     }
   ]
 }

@@ -33,7 +33,7 @@ describe('runtime cost extract', () => {
         matched_capability_ids: ['capability.product_doc_qna'],
         source_plane: 'product_docs',
         step3_tokens_used: 120,
-        model_source: 'supabase',
+        model_source: 'filesystem_md',
         model_prompt_slug: 'intent_analyzer',
         verification_outcome: 'pass',
       },

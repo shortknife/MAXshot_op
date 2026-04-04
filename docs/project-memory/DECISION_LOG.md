@@ -182,3 +182,10 @@
 - Why: Prompt governance is now visible, but active prompt changes still need explicit runtime controls, serialized mutation, and operator-attributed release logging.
 - Scope: prompt mutation capability metadata, prompt release runtime, prompt action API, version history in `/prompts`, and release event logging.
 - Consequence: Future prompt approval, staged rollout, and rollback safety checks can build on an already governed mutation baseline.
+
+## D-031 Prompt Filesystem Baseline Accepted
+- Date: 2026-04-04
+- Decision: Switch prompt source of truth from Supabase-managed rows to filesystem-managed markdown documents under `admin-os/prompts/`.
+- Why: Prompt assets are now platform runtime assets, closer to code than to operational data. Git-native review, diff, versioning, and rollback are a better fit than table mutation.
+- Scope: markdown prompt inventory, filesystem prompt registry, runtime prompt-source switch, filesystem-first `/prompts` governance surface, and deprecation of Supabase prompt mutation path.
+- Consequence: Prompt management is now single-path and auditable through repository history rather than mixed table/config sourcing.

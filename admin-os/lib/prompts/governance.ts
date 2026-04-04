@@ -1,19 +1,16 @@
-import fs from 'fs'
-import path from 'path'
-
 import { getPromptPolicyForCustomer } from '@/lib/chat/prompt-policy'
 import { listActiveCustomers } from '@/lib/customers/runtime'
 import { loadInteractionLearningLogRuntime } from '@/lib/interaction-learning/runtime'
-import { loadPromptReleaseEvents, loadPromptVersionHistory, type PromptReleaseEvent, type PromptVersionRecord } from '@/lib/prompts/release'
-import { supabase } from '@/lib/supabase'
+import { loadActivePromptInventory, loadPromptHistories, type PromptRecord } from '@/lib/prompts/prompt-registry'
 
 type PromptInventoryItem = {
   slug: string
   name: string
   description: string | null
   version: string
-  source: 'supabase' | 'local_config'
-  updated_at: string | null
+  family: string | null
+  source: 'filesystem_md'
+  file_path: string | null
   model_config: Record<string, unknown>
   system_prompt: string
   user_prompt_template: string | null
@@ -32,18 +29,30 @@ type PromptRuntimeRollup = {
   recent_logs: number
   policy_allow: number
   policy_review: number
-  local_stub_intent_count: number
+  filesystem_prompt_count: number
   primary_prompt_mix: Array<{ slug: string; count: number }>
   policy_reason_mix: Array<{ reason: string; count: number }>
 }
 
+export type PromptHistoryRecord = {
+  slug: string
+  name: string
+  version: string
+  is_active: boolean
+  updated_at: string | null
+  updated_by: string | null
+  editable: boolean
+  action_hint: 'release' | 'rollback' | 'none'
+  file_path: string | null
+}
+
 export type PromptGovernanceSnapshot = {
-  source: 'supabase' | 'local_config'
+  source: 'filesystem_md'
   prompts: PromptInventoryItem[]
   policy: PromptPolicyCustomerSummary[]
   runtime: PromptRuntimeRollup
-  histories: Record<string, PromptVersionRecord[]>
-  release_events: PromptReleaseEvent[]
+  histories: Record<string, PromptHistoryRecord[]>
+  release_events: []
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -58,51 +67,20 @@ function asStringArray(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item || '').trim()).filter(Boolean) : []
 }
 
-async function loadPromptInventoryFromSupabase(): Promise<PromptInventoryItem[] | null> {
-  try {
-    const { data, error } = await supabase
-      .from('prompt_library')
-      .select('slug,name,system_prompt,user_prompt_template,model_config,description,version,is_active,updated_at')
-      .eq('is_active', true)
-      .order('updated_at', { ascending: false })
-
-    if (error) throw error
-    if (!Array.isArray(data) || data.length === 0) return null
-
-    return data.map((row) => ({
-      slug: String(row.slug || ''),
-      name: String(row.name || row.slug || ''),
-      description: typeof row.description === 'string' ? row.description : null,
-      version: String(row.version || ''),
-      source: 'supabase',
-      updated_at: typeof row.updated_at === 'string' ? row.updated_at : null,
-      model_config: row.model_config && typeof row.model_config === 'object' ? row.model_config as Record<string, unknown> : {},
-      system_prompt: String(row.system_prompt || ''),
-      user_prompt_template: typeof row.user_prompt_template === 'string' ? row.user_prompt_template : null,
-      editable: true,
-    }))
-  } catch {
-    return null
+function toInventoryItem(prompt: PromptRecord): PromptInventoryItem {
+  return {
+    slug: prompt.slug,
+    name: prompt.name || prompt.slug,
+    description: typeof prompt.description === 'string' ? prompt.description : null,
+    version: prompt.version,
+    family: typeof prompt.family === 'string' ? prompt.family : null,
+    source: 'filesystem_md',
+    file_path: typeof prompt.file_path === 'string' ? prompt.file_path : null,
+    model_config: prompt.model_config && typeof prompt.model_config === 'object' ? prompt.model_config as Record<string, unknown> : {},
+    system_prompt: prompt.system_prompt,
+    user_prompt_template: typeof prompt.user_prompt_template === 'string' ? prompt.user_prompt_template : null,
+    editable: false,
   }
-}
-
-function loadPromptInventoryFromLocalConfig(): PromptInventoryItem[] {
-  const filePath = path.join(process.cwd(), 'app/configs/prompt-library-op/prompt_library_op_v2.json')
-  const raw = JSON.parse(fs.readFileSync(filePath, 'utf8')) as { version?: string; prompts?: Array<Record<string, unknown>> }
-  return Array.isArray(raw.prompts)
-    ? raw.prompts.map((item) => ({
-        slug: String(item.slug || ''),
-        name: String(item.name || item.slug || ''),
-        description: asString(item.description),
-        version: typeof item.version === 'string' ? item.version : typeof raw.version === 'string' ? raw.version : 'local',
-        source: 'local_config',
-        updated_at: null,
-        model_config: item.model_config && typeof item.model_config === 'object' ? item.model_config as Record<string, unknown> : {},
-        system_prompt: String(item.system_prompt || ''),
-        user_prompt_template: asString(item.user_prompt_template),
-        editable: false,
-      }))
-    : []
 }
 
 async function loadPromptRuntimeRollup(): Promise<PromptRuntimeRollup> {
@@ -112,7 +90,7 @@ async function loadPromptRuntimeRollup(): Promise<PromptRuntimeRollup> {
   const policyReasonCounts = new Map<string, number>()
   let policyAllow = 0
   let policyReview = 0
-  let localStubIntentCount = 0
+  let filesystemPromptCount = 0
 
   for (const item of items) {
     const meta = asRecord(item.meta)
@@ -131,14 +109,14 @@ async function loadPromptRuntimeRollup(): Promise<PromptRuntimeRollup> {
     if (promptPolicyReason) {
       policyReasonCounts.set(promptPolicyReason, (policyReasonCounts.get(promptPolicyReason) || 0) + 1)
     }
-    if (promptSources.includes('local_stub')) localStubIntentCount += 1
+    if (promptSources.includes('filesystem_md')) filesystemPromptCount += 1
   }
 
   return {
     recent_logs: items.length,
     policy_allow: policyAllow,
     policy_review: policyReview,
-    local_stub_intent_count: localStubIntentCount,
+    filesystem_prompt_count: filesystemPromptCount,
     primary_prompt_mix: [...primaryPromptCounts.entries()]
       .map(([slug, count]) => ({ slug, count }))
       .sort((a, b) => b.count - a.count)
@@ -163,39 +141,38 @@ function loadPromptPolicySummary(): PromptPolicyCustomerSummary[] {
   })
 }
 
-function buildLocalPromptHistories(prompts: PromptInventoryItem[]): Record<string, PromptVersionRecord[]> {
+async function buildPromptHistoryMap(): Promise<Record<string, PromptHistoryRecord[]>> {
+  const histories = await loadPromptHistories()
   return Object.fromEntries(
-    prompts.map((prompt) => [
-      prompt.slug,
-      [{
-        slug: prompt.slug,
-        name: prompt.name,
-        version: prompt.version,
-        is_active: true,
-        updated_at: prompt.updated_at,
+    Object.entries(histories).map(([slug, versions]) => {
+      const active = versions.find((item) => item.is_active) || null
+      return [slug, versions.map((item) => ({
+        slug,
+        name: item.name || slug,
+        version: item.version,
+        is_active: item.is_active === true,
+        updated_at: null,
         updated_by: null,
         editable: false,
-        action_hint: 'none' as const,
-      }],
-    ]),
+        action_hint: !active || item.is_active
+          ? 'none'
+          : Number(item.version) < Number(active.version)
+            ? 'rollback'
+            : 'release',
+        file_path: item.file_path || null,
+      }))]
+    }),
   )
 }
 
 export async function loadPromptGovernanceSnapshot(): Promise<PromptGovernanceSnapshot> {
-  const supabaseInventory = await loadPromptInventoryFromSupabase()
-  const prompts = supabaseInventory && supabaseInventory.length > 0
-    ? supabaseInventory
-    : loadPromptInventoryFromLocalConfig()
-  const histories = supabaseInventory && supabaseInventory.length > 0
-    ? await loadPromptVersionHistory()
-    : buildLocalPromptHistories(prompts)
-
+  const prompts = (await loadActivePromptInventory()).map(toInventoryItem)
   return {
-    source: supabaseInventory && supabaseInventory.length > 0 ? 'supabase' : 'local_config',
+    source: 'filesystem_md',
     prompts,
     policy: loadPromptPolicySummary(),
     runtime: await loadPromptRuntimeRollup(),
-    histories,
-    release_events: supabaseInventory && supabaseInventory.length > 0 ? await loadPromptReleaseEvents() : [],
+    histories: await buildPromptHistoryMap(),
+    release_events: [],
   }
 }

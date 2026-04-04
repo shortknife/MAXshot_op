@@ -1,5 +1,3 @@
-import fs from 'fs/promises'
-import path from 'path'
 import { getPromptBySlug, PromptResolution } from '@/lib/prompts/prompt-registry'
 import { hasTimeWindow } from '@/lib/chat/query-clarification'
 import { extractRelativeTimeSlots } from '@/lib/time/range-slots'
@@ -22,7 +20,7 @@ export type IntentAnalysisResult = {
   prompt_meta?: {
     slug: string
     version: string
-    source: 'supabase' | 'fallback_csv' | 'local_stub'
+    source: 'filesystem_md' | 'local_stub'
     hash?: string
   }
 }
@@ -342,44 +340,6 @@ function extractCalendarPeriod(raw: string): Record<string, unknown> {
     }
   }
   return {}
-}
-
-type LocalPromptConfig = {
-  version?: string
-  prompts?: Array<{
-    slug: string
-    status?: string
-    system_prompt?: string
-    user_prompt_template?: string
-  }>
-}
-
-async function getLocalPromptBySlug(slug: string): Promise<PromptResolution | null> {
-  const files = [
-    path.resolve(process.cwd(), 'app/configs/prompt-library-op/prompt_library_op_v2.json'),
-    path.resolve(process.cwd(), 'app/configs/prompt-library-op/prompt_library_op_v1.json'),
-  ]
-  for (const filePath of files) {
-    try {
-      const raw = await fs.readFile(filePath, 'utf8')
-      const parsed = JSON.parse(raw) as LocalPromptConfig
-      const prompt = (parsed.prompts || []).find((item) => item.slug === slug)
-      if (!prompt) continue
-      return {
-        prompt: {
-          slug: prompt.slug,
-          version: String(parsed.version || '1'),
-          system_prompt: String(prompt.system_prompt || ''),
-          user_prompt_template: String(prompt.user_prompt_template || ''),
-        },
-        source: 'fallback_csv',
-        hash: `local-op:${prompt.slug}:${parsed.version || '1.0.0'}`,
-      }
-    } catch {
-      continue
-    }
-  }
-  return null
 }
 
 type IntentCriticOutput = {
@@ -997,7 +957,7 @@ async function callIntentCritic(params: {
 }): Promise<IntentCriticOutput | null> {
   const apiKey = process.env.DEEPSEEK_API_KEY
   if (!apiKey) return null
-  const promptResolved = await getLocalPromptBySlug('intent_critic_op_v1')
+  const promptResolved = await getPromptBySlug('intent_critic')
   if (!promptResolved) return null
 
   const endpoint = process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com/v1/chat/completions'
@@ -1046,7 +1006,7 @@ async function callIntentNormalizer(params: {
 }): Promise<IntentNormalizerOutput | null> {
   const apiKey = process.env.DEEPSEEK_API_KEY
   if (!apiKey) return null
-  const promptResolved = await getLocalPromptBySlug('intent_normalizer_op_v1')
+  const promptResolved = await getPromptBySlug('intent_normalizer')
   if (!promptResolved) return null
 
   const endpoint = process.env.DEEPSEEK_API_BASE_URL || 'https://api.deepseek.com/v1/chat/completions'
@@ -1089,16 +1049,11 @@ async function callIntentNormalizer(params: {
 
 export async function callDeepSeek(rawQuery: string, sessionContext?: string): Promise<IntentAnalysisResult> {
   if (shouldUseHeuristicFastPath(rawQuery)) {
-    return buildFallbackResult(rawQuery, {
-      slug: 'intent_analyzer',
-      version: '0',
-      source: 'local_stub',
-    }, sessionContext)
+    const promptResolved = await getPromptBySlug('intent_analyzer')
+    return buildFallbackResult(rawQuery, buildPromptMeta(promptResolved), sessionContext)
   }
 
   const promptResolved =
-    (await getLocalPromptBySlug('intent_analyzer_op_v2')) ??
-    (await getLocalPromptBySlug('intent_analyzer_op_v1')) ??
     (await getPromptBySlug('intent_analyzer')) ??
     (await getPromptBySlug('llm_question_classifier'))
   const promptMeta = buildPromptMeta(promptResolved)

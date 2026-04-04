@@ -1,5 +1,4 @@
-import fs from 'fs/promises'
-import path from 'path'
+import { getPromptBySlug } from '@/lib/prompts/prompt-registry'
 import type { ActiveContextSnapshot, PendingClarificationSnapshot, TurnRelation, TurnRelationType } from '@/lib/chat/context-manager/types'
 
 type PromptSpec = {
@@ -139,28 +138,12 @@ function buildFallbackRelation(params: {
 }
 
 async function loadLocalPrompt(): Promise<PromptSpec | null> {
-  const files = [
-    path.resolve(process.cwd(), 'app/configs/prompt-library-op/prompt_library_op_v2.json'),
-    path.resolve(process.cwd(), 'app/configs/prompt-library-op/prompt_library_op_v1.json'),
-  ]
-  const slugs = ['turn_relation_classifier_op_v2', 'turn_relation_classifier_op_v1']
-  for (const filePath of files) {
-    try {
-      const raw = await fs.readFile(filePath, 'utf8')
-      const parsed = JSON.parse(raw) as {
-        prompts?: Array<{ slug?: string; system_prompt?: string; user_prompt_template?: string }>
-      }
-      const item = (parsed.prompts || []).find((p) => slugs.includes(String(p.slug || '')))
-      if (!item) continue
-      return {
-        system_prompt: String(item.system_prompt || ''),
-        user_prompt_template: String(item.user_prompt_template || ''),
-      }
-    } catch {
-      continue
-    }
+  const resolved = await getPromptBySlug('turn_relation_classifier')
+  if (!resolved) return null
+  return {
+    system_prompt: resolved.prompt.system_prompt,
+    user_prompt_template: resolved.prompt.user_prompt_template,
   }
-  return null
 }
 
 async function callClassifierModel(params: {

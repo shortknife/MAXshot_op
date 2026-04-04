@@ -106,7 +106,7 @@ export async function productDocQnA(input: CapabilityInputEnvelope): Promise<Cap
 
   if (prompt) {
     evidenceSources.push({
-      source: 'prompt_library',
+      source: 'prompt_filesystem',
       prompt_slug: prompt.prompt.slug,
       prompt_version: prompt.prompt.version,
       prompt_source: prompt.source,

@@ -15,7 +15,7 @@ export type OfficialStep3IntentType = (typeof OFFICIAL_STEP3_INTENT_TYPES)[numbe
 
 export type IntentHarnessTrace = {
   analyzer: 'intent-analyzer'
-  source: 'supabase' | 'fallback_csv' | 'local_stub'
+  source: 'filesystem_md' | 'local_stub'
   prompt_slug: string | null
   prompt_version: string | null
   prompt_hash: string | null

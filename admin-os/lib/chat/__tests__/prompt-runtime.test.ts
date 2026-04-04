@@ -10,13 +10,13 @@ describe('prompt runtime', () => {
           intent_prompt: {
             slug: 'intent_analyzer',
             version: '2',
-            source: 'supabase',
+            source: 'filesystem_md',
             hash: 'intent-hash',
           },
           qna_prompt: {
             prompt_slug: 'product_doc_qna',
-            prompt_version: '7',
-            prompt_source: 'fallback_csv',
+            prompt_version: '1',
+            prompt_source: 'filesystem_md',
             prompt_hash: 'qna-hash',
           },
         },
@@ -26,7 +26,7 @@ describe('prompt runtime', () => {
     expect(snapshot.assembly_mode).toBe('intent_plus_execution')
     expect(snapshot.primary_prompt_slug).toBe('product_doc_qna')
     expect(snapshot.prompt_count).toBe(2)
-    expect(snapshot.prompt_sources).toEqual(['supabase', 'fallback_csv'])
+    expect(snapshot.prompt_sources).toEqual(['filesystem_md'])
   })
 
   it('attaches prompt runtime into response meta', () => {
@@ -36,11 +36,11 @@ describe('prompt runtime', () => {
         assembly_mode: 'intent_only',
         prompt_count: 1,
         primary_prompt_slug: 'intent_analyzer',
-        prompt_sources: ['supabase'],
+        prompt_sources: ['filesystem_md'],
         intent_prompt: {
           slug: 'intent_analyzer',
           version: '2',
-          source: 'supabase',
+          source: 'filesystem_md',
           hash: 'intent-hash',
           role: 'intent',
         },

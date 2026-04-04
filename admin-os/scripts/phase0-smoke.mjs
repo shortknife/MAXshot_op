@@ -145,13 +145,13 @@ async function run() {
   {
     const { data } = await post('/api/intent/analyze', { raw_query: '最近执行状态汇总' })
     check('api-09 intent trace has prompt slug', typeof data?.trace?.prompt_slug === 'string' && data.trace.prompt_slug.length > 0)
-    check('api-10 intent trace has source', ['supabase', 'fallback_csv', 'local_stub'].includes(String(data?.trace?.source || '')))
+    check('api-10 intent trace has source', ['filesystem_md', 'local_stub'].includes(String(data?.trace?.source || '')))
   }
   {
     const res = await fetch(`${BASE}/api/prompt/resolve?slug=intent_analyzer`)
     const data = await res.json().catch(() => null)
     check('api-11 prompt resolve success', data?.success === true)
-    check('api-12 prompt resolve source', ['supabase', 'fallback_csv'].includes(String(data?.data?.source || '')))
+    check('api-12 prompt resolve source', ['filesystem_md'].includes(String(data?.data?.source || '')))
   }
   {
     const { data } = await post('/api/chat/ask', { raw_query: 'MAXshot 有哪些 vault 可以用？' })

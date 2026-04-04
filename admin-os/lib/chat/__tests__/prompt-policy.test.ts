@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { evaluatePromptPolicy } from '@/lib/chat/prompt-policy'
 
 describe('prompt policy', () => {
-  it('allows maxshot intent stub with approved execution prompt', () => {
+  it('allows filesystem-managed intent and execution prompts', () => {
     const decision = evaluatePromptPolicy({
       customerId: 'maxshot',
       primaryCapabilityId: 'capability.product_doc_qna',
@@ -11,18 +11,18 @@ describe('prompt policy', () => {
         assembly_mode: 'intent_plus_execution',
         prompt_count: 2,
         primary_prompt_slug: 'product_doc_qna',
-        prompt_sources: ['local_stub', 'supabase'],
+        prompt_sources: ['filesystem_md'],
         intent_prompt: {
           slug: 'intent_analyzer',
-          version: '1',
-          source: 'local_stub',
+          version: '2',
+          source: 'filesystem_md',
           hash: 'intent-hash',
           role: 'intent',
         },
         execution_prompt: {
           slug: 'product_doc_qna',
-          version: '7',
-          source: 'supabase',
+          version: '1',
+          source: 'filesystem_md',
           hash: 'exec-hash',
           role: 'execution',
         },
@@ -32,7 +32,7 @@ describe('prompt policy', () => {
     expect(decision.outcome).toBe('allow')
   })
 
-  it('reviews ops-observer when intent prompt comes from local stub', () => {
+  it('reviews intent source that is not filesystem-managed', () => {
     const decision = evaluatePromptPolicy({
       customerId: 'ops-observer',
       primaryCapabilityId: 'capability.product_doc_qna',
@@ -40,18 +40,18 @@ describe('prompt policy', () => {
         assembly_mode: 'intent_plus_execution',
         prompt_count: 2,
         primary_prompt_slug: 'product_doc_qna',
-        prompt_sources: ['local_stub', 'supabase'],
+        prompt_sources: ['local_stub', 'filesystem_md'],
         intent_prompt: {
           slug: 'intent_analyzer',
-          version: '1',
+          version: '2',
           source: 'local_stub',
           hash: 'intent-hash',
           role: 'intent',
         },
         execution_prompt: {
           slug: 'product_doc_qna',
-          version: '7',
-          source: 'supabase',
+          version: '1',
+          source: 'filesystem_md',
           hash: 'exec-hash',
           role: 'execution',
         },
@@ -70,11 +70,11 @@ describe('prompt policy', () => {
         assembly_mode: 'intent_only',
         prompt_count: 1,
         primary_prompt_slug: 'intent_analyzer',
-        prompt_sources: ['supabase'],
+        prompt_sources: ['filesystem_md'],
         intent_prompt: {
           slug: 'intent_analyzer',
-          version: '1',
-          source: 'supabase',
+          version: '2',
+          source: 'filesystem_md',
           hash: 'intent-hash',
           role: 'intent',
         },
