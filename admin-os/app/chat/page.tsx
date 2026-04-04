@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
+import { getStoredSession } from '@/lib/auth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -174,7 +175,7 @@ export default function ChatPage() {
       const res = await fetch('/api/chat/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ raw_query: input, session_id: sessionId }),
+        body: JSON.stringify({ raw_query: input, session_id: sessionId, requester_id: getStoredSession()?.identity_id || null, customer_id: getStoredSession()?.customer_id || null, entry_channel: 'web_app' }),
       })
       const data = await res.json()
       if (!res.ok) {

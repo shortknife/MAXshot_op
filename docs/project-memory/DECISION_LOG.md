@@ -212,3 +212,11 @@
 - Why: The platform already had customer identity and boundary control, but still lacked a usable long-term preference layer and a simple wallet/payment posture for future agent commerce.
 - Scope: customer asset markdown, asset runtime loaders, customer-profile memory refs, customer page redesign, and wallet contract visibility.
 - Consequence: Nexa now has a lightweight customer-aware model that supports future wallet/payment work without adopting a heavy SaaS dashboard architecture.
+
+
+## D-035 Hybrid Identity Baseline Accepted
+- Date: 2026-04-04
+- Decision: replace the old email-whitelist login path with a filesystem-managed hybrid identity model supporting both email and wallet login.
+- Why: wallet is needed now as identity binding and future commerce posture, not as immediate payment execution. Email and wallet therefore need to resolve to one runtime identity contract.
+- Scope: identity markdown assets, server-side identity resolution, login API route, hybrid login page, and identity propagation into chat runtime.
+- Consequence: Nexa now has customer-aware hybrid identity without introducing a heavy SaaS IAM or payment system.
