@@ -228,3 +228,11 @@
 - Why: customer-aware identity existed, but the entry path still resolved identities directly without proof. A minimal verification step is required before session issuance.
 - Scope: challenge/verify API routes, auth runtime persistence, email code verification, wallet signature verification, login UI upgrade, and auth audit events.
 - Consequence: Nexa now has a complete verified entry process without adopting heavy SaaS IAM or enabling payment execution.
+
+
+## D-037 Identity-Aware Workspace Baseline Accepted
+- Date: 2026-04-05
+- Decision: surface active identity, customer scope, and verification posture directly in the workspace shell.
+- Why: auth, customer, and operator boundaries were already enforced in runtime, but the product surface still hid who the current operator was and what customer context was active.
+- Scope: identity context strip, recent auth event visibility, auth events API, and current customer workspace highlight.
+- Consequence: Nexa now behaves more like a customer-aware workspace and less like a collection of disconnected capability pages.

@@ -7,6 +7,7 @@ import { loadCustomerMemoryWorkbench } from '@/lib/customers/memory'
 import { loadCustomerWalletAsset } from '@/lib/customers/asset-runtime'
 import { listActiveCustomers } from '@/lib/customers/runtime'
 import { getCapabilityExecutionPolicy } from '@/lib/router/capability-catalog'
+import { CurrentCustomerBadge } from '@/components/customers/current-customer-badge'
 
 export const dynamic = 'force-dynamic'
 
@@ -62,6 +63,7 @@ export default async function CustomersPage() {
                         <Pill tone="emerald">{customer.status}</Pill>
                         <Pill tone="sky">solution: {customer.solution_key}</Pill>
                         {customer.default_kb_scope ? <Pill>scope: {customer.default_kb_scope}</Pill> : null}
+                        <CurrentCustomerBadge customerId={customer.customer_id} />
                       </div>
                       {customer.notes ? <div className="max-w-2xl text-sm leading-6 text-slate-600">{customer.notes}</div> : null}
                     </div>

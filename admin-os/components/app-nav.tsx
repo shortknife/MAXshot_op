@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import { IdentityContextStrip } from '@/components/auth/identity-context-strip'
 
 type NavKey = 'chat' | 'interaction_log' | 'learning_assets' | 'costs' | 'kb_management' | 'faq_review' | 'customers' | 'prompts' | 'ops' | 'marketing' | 'operations' | 'outcome' | 'audit'
 
@@ -25,17 +26,20 @@ export function AppNav({ current }: { current?: NavKey }) {
   const router = useRouter()
 
   return (
-    <div className="flex flex-wrap gap-2">
-      {NAV_ITEMS.map((item) => (
-        <Button
-          key={item.key}
-          variant={item.key === current ? 'default' : 'outline'}
-          onClick={() => router.push(item.path)}
-          size="sm"
-        >
-          {item.label}
-        </Button>
-      ))}
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {NAV_ITEMS.map((item) => (
+          <Button
+            key={item.key}
+            variant={item.key === current ? 'default' : 'outline'}
+            onClick={() => router.push(item.path)}
+            size="sm"
+          >
+            {item.label}
+          </Button>
+        ))}
+      </div>
+      <IdentityContextStrip />
     </div>
   )
 }
