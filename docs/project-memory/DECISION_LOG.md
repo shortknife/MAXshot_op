@@ -243,3 +243,10 @@
 - Why: customer identity, capability policy, and long-term memory were already in place, but the product still treated every customer workspace as visually and operationally identical.
 - Scope: workspace markdown assets, runtime preset loader, customer workspace API, customer-specific chat quick queries and summary, and session-kernel preset hints.
 - Consequence: Nexa now presents a distinct default posture per customer without introducing a heavy tenant dashboard or duplicating product shells.
+
+## D-039 harness-cowork Narrow Adoption Accepted
+- Date: 2026-04-05
+- Decision: absorb `harness-cowork` only as a development-harness and release-discipline input, not as a replacement for Nexa runtime architecture.
+- Why: Nexa already has runtime-side equivalents for verification, serialized mutation, session-kernel state, and learning-asset derivation. The remaining value lies in repository workflow discipline.
+- Scope: classify deterministic hooks, task contracts, evaluator feedback ledger, and release-harness checks as next-stage platform-deepening work.
+- Consequence: external harness lessons strengthen implementation quality without distorting Nexa product architecture.

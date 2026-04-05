@@ -65,6 +65,7 @@ Correct order:
 1. finish platform governance and structure freeze
 2. define next-stage roadmap on top of the frozen structure
 3. implement one thin vertical slice at a time
+4. add repository-level harness discipline only where runtime maturity justifies it
 
 Reason:
 - avoids naming drift during implementation
@@ -120,6 +121,17 @@ Status:
 - conceptually defined
 - not yet formalized in runtime isolation terms
 
+### Layer E. Development Harness / Release Discipline
+Owns:
+- deterministic repository hooks
+- task contracts for multi-step implementation work
+- evaluator feedback ledger
+- release / freeze verification harness
+
+Status:
+- partially represented in runtime equivalents
+- not yet formalized in repository workflow
+
 ---
 
 ## 5. Roadmap Decision
@@ -152,6 +164,15 @@ Interpretation:
 - no env/schema/path migration yet
 
 A rename should happen only after the FAQ plane contracts and initial implementation are stable.
+
+### Decision D. Development harness lessons should be absorbed narrowly
+
+Accepted.
+
+Interpretation:
+- absorb deterministic hooks / contracts / evaluator closure patterns
+- do not import an external agent shell as Nexa runtime
+- development harness belongs to repository workflow, not customer-facing product runtime
 
 ---
 
@@ -315,3 +336,23 @@ Correct strategic order:
 5. postpone full rename and tenant formalization until the new plane is proven
 
 That is the lowest-risk path that preserves the current delivered MVP while allowing Nexa to evolve from a customer-shaped system into a true platform.
+
+---
+
+## 10. Current Addendum (2026-04-05)
+
+Since this roadmap was first written, Nexa has already implemented:
+- FAQ / KB plane runtime and product surfaces
+- customer-aware runtime and workspace baselines
+- verification stage baseline
+- write-lane baseline
+- session-kernel baseline
+- learning-asset derivation baseline
+
+The next roadmap gap is therefore no longer FAQ-plane existence.
+It is now:
+1. stronger customer-aware routing priority
+2. repository-level development harness and release discipline
+3. closure-quality and release-safety tooling
+
+This is the correct place to absorb targeted lessons from external development harness projects.

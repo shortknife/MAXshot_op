@@ -12,12 +12,13 @@ Why delta instead of rewrite:
 - high-value external assets have already been absorbed
 - the remaining work is structural upgrade, not greenfield ideation
 
-This document upgrades product design in five areas:
+This document upgrades product design in six areas:
 1. platform topology
 2. plane model
 3. verification-aware execution model
 4. three-layer memory model
 5. learning and mutation roadmap
+6. development harness and release discipline
 
 ---
 
@@ -63,6 +64,7 @@ It is:
 - formalization of product planes
 - formalization of verification and bounded mutation
 - formalization of memory and learning layers
+- formalization of development-time harness controls for safe iteration
 
 ---
 
@@ -215,6 +217,50 @@ Mutation-capability design metadata should eventually include:
 - `cost_visibility_required`
 
 This absorbs the useful part of the Claude Code tool-governance lesson without copying its entire runtime architecture.
+
+---
+
+## 7. Development Harness Upgrade
+
+The platform now has enough runtime maturity that release quality is increasingly constrained by development discipline rather than missing core capability only.
+
+Useful external development-harness lessons should be absorbed narrowly, not by replacing Nexa runtime architecture.
+
+### 7.1 What is already absorbed in product/runtime
+
+The following ideas are already substantially represented in Nexa:
+- deterministic verification instead of trust in free-form model output
+- bounded mutation policy and serialized write lanes
+- session-kernel snapshots as a stable runtime contract
+- interaction-log to learning-asset derivation
+
+These should be treated as **implemented platform equivalents**, even if the external naming differs.
+
+### 7.2 What is still missing
+
+The following remain missing and should be treated as next-stage development harness work:
+1. deterministic local hooks for edit / commit / push boundaries
+2. filesystem-based task contracts for multi-step implementation work
+3. filesystem-based evaluator feedback ledger for closure decisions
+4. stronger release-harness checks before step freeze
+
+### 7.3 Design rule
+
+Development-harness additions should:
+- live in repository workflow and docs, not in customer-facing runtime
+- strengthen freeze quality and release safety
+- avoid introducing a heavy multi-agent runtime as a prerequisite
+
+### 7.4 Current adoption judgment
+
+Absorb only:
+- deterministic hooks / guardrails
+- externalized implementation state (`contracts`, `progress`, `eval_feedback`)
+- skeptical evaluator closure pattern
+
+Do not absorb:
+- external project shell conventions as runtime architecture
+- full planner/generator/evaluator orchestration as a required product layer
 
 ---
 

@@ -50,6 +50,7 @@ As of 2026-04-02:
 - `Ops / Data Plane` is the most mature revenue-grade plane
 - `FAQ / KB Plane` is no longer reference-only; it has entered runtime, review, and management surfaces
 - `Customer Solution Layer` is conceptually established but still early
+- development-harness discipline is partially present in runtime, but still weak in repository workflow
 
 ### 2.2 Overall completion estimate against latest `v5.3` design
 
@@ -64,6 +65,7 @@ The gap is now concentrated in:
 3. KB mutation workflow
 4. customer / tenant formalization
 5. runtime evolution items such as verification formalization and cost accounting
+6. development harness and release-discipline tooling
 
 ### 2.3 Highest-level product state
 
@@ -86,6 +88,7 @@ Current product state can be described as:
 | `Cross-Plane Learning / Memory` | `P1` | `35%` | partial | thin memory exists; system learning loop does not |
 | `Cross-Plane Productization / UI` | `P2` | `65%` | usable | admin surfaces exist, but still in platform-console form |
 | `Cross-Plane Mutation / Governance Depth` | `P1` | `55%` | partial | review and bounded actions exist, but generalized mutation workflow is incomplete |
+| `Development Harness / Release Discipline` | `P1` | `42%` | partial | runtime verification/write-lane/session-kernel exist; repo-level hooks/contracts/eval ledger are missing |
 
 ---
 
@@ -108,6 +111,7 @@ Current product state can be described as:
 | Thin Runtime Memory | `P1` | `45%` | partial | memory writeback, weight, recall, session context | no strong long-term memory or synthesis |
 | System Learning Memory | `P1` | `20%` | defined only | design frozen in v5.3 delta | interaction learning log not implemented |
 | Runtime Kernel Evolution | `P2` | `15%` | defined only | Claude Code adoption direction documented | unified session kernel / task runtime not implemented |
+| Development Harness / Release Harness | `P1` | `42%` | partial | verification stage, write lanes, session kernel, learning assets | missing deterministic repo hooks, task contracts, evaluator feedback ledger |
 
 ### Core judgment
 
@@ -220,6 +224,7 @@ The remaining gap is not “missing UI entirely,” but “turning admin/runtime
 2. stronger memory layer
 3. customer-bound KB ownership
 4. richer review queue operations
+5. deterministic repo hooks and closure harness
 
 ### P2 - Valuable but not immediate blockers
 1. content / marketing plane refinement
@@ -249,6 +254,7 @@ These should be treated as implemented:
 - bounded review queue actions
 - chat + FAQ review + KB management product surfaces
 - external platform narrative documents
+- runtime-side development-harness equivalents: verification stage, write lanes, session-kernel snapshots, and learning-asset derivation
 
 ## 7.2 Defined but not yet implemented deeply
 
@@ -259,6 +265,8 @@ These should be treated as next-stage design commitments, not current implementa
 - stronger long-term memory
 - generalized verification stage
 - unified runtime kernel evolution
+- deterministic repository hooks
+- filesystem task contracts and evaluator feedback ledger
 
 ---
 
@@ -273,4 +281,3 @@ As of 2026-04-02, the correct platform status is:
 
 The most important shift is this:
 **the project no longer needs more asset absorption; it now needs deliberate platform-deepening work.**
-
