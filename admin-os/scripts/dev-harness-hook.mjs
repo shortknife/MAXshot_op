@@ -44,6 +44,10 @@ function hasEvaluatorFeedbackChanges(files) {
   return files.some((file) => file.startsWith('docs/dev-harness/eval-feedback/'))
 }
 
+function hasReleaseCheckChanges(files) {
+  return files.some((file) => file.startsWith('docs/dev-harness/release-checks/'))
+}
+
 function hasDocsOnlyChanges(files) {
   return files.length > 0 && files.every((file) => file.startsWith('docs/') || file.endsWith('.md'))
 }
@@ -89,7 +93,12 @@ function runPreCommit() {
     run('npm', ['run', 'feedback:validate'], adminRoot)
   }
 
-  if (hasDocsOnlyChanges(files) && !hasTaskContractChanges(files) && !hasEvaluatorFeedbackChanges(files)) {
+  if (hasReleaseCheckChanges(files)) {
+    console.log('[dev-harness-hook] pre-commit: validating release checks')
+    run('npm', ['run', 'release:checklist:validate'], adminRoot)
+  }
+
+  if (hasDocsOnlyChanges(files) && !hasTaskContractChanges(files) && !hasEvaluatorFeedbackChanges(files) && !hasReleaseCheckChanges(files)) {
     console.log('[dev-harness-hook] pre-commit: docs-only changes, skipping admin checks')
     return
   }

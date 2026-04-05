@@ -33,7 +33,8 @@
     "release:preflight": "node ./scripts/release-preflight.mjs",
     "uat:pack": "node ./scripts/uat-pack.mjs",
     "contracts:validate": "node ./scripts/validate-task-contracts.mjs",
-    "feedback:validate": "node ./scripts/validate-evaluator-feedback.mjs"
+    "feedback:validate": "node ./scripts/validate-evaluator-feedback.mjs",
+    "release:checklist:validate": "node ./scripts/validate-release-checks.mjs"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.1.8",

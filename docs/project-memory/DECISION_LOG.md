@@ -273,3 +273,11 @@
 - Why: task contracts now define scope and acceptance, but closure decisions still needed an explicit review artifact that records verdict, evidence, and next action.
 - Scope: feedback directory, markdown template, validator, validation script, and hook integration for changed evaluator feedback files.
 - Consequence: Nexa now has a repository-side closure ledger without pushing review state into product runtime or external tools.
+
+
+## D-043 Release Harness Closure Baseline Accepted
+- Date: 2026-04-05
+- Decision: add filesystem-managed release closure checklists with deterministic validation and preflight integration.
+- Why: task contracts and evaluator feedback now exist, but repository freeze and release readiness still lacked a stable closure artifact that can be checked mechanically before broader preflight work.
+- Scope: release-check directory, markdown template, validator, validation script, pre-commit integration, and release-preflight integration.
+- Consequence: Nexa now has explicit repository-side release closure checks without adding CI orchestration or product runtime complexity.

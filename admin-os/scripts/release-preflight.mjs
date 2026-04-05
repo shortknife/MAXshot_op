@@ -94,6 +94,7 @@ async function main() {
   hydrateEnvFromLocalFiles(requiredEnv)
   const missingEnv = requiredEnv.filter((k) => !process.env[k])
   const steps = [
+    { name: 'release:checklist:validate', cmd: 'npm', args: ['run', 'release:checklist:validate'], env: {} },
     { name: 'test:all:with-dev', cmd: 'npm', args: ['run', 'test:all:with-dev'], env: { BASE_URL: baseUrl } },
   ]
   const results = []
