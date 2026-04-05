@@ -1,6 +1,7 @@
 import { createHash } from 'crypto'
 
 import type { PreparedChatRequest } from '@/lib/chat/chat-request-preprocess'
+import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
 
 export type SessionKernelSnapshot = {
   kernel_id: string
@@ -32,6 +33,10 @@ export type SessionKernelSnapshot = {
   verification_outcome: string | null
   answer_type: string | null
   source_plane: string | null
+  workspace_primary_plane: string | null
+  workspace_default_entry_path: string | null
+  workspace_capability_count: number
+  workspace_focus_count: number
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -53,11 +58,13 @@ function buildKernelId(input: { sessionId: string | null; rawQuery: string; turn
 export function buildPreparedSessionKernel(params: {
   prepared: PreparedChatRequest
   body: Record<string, unknown>
+  workspacePreset?: CustomerWorkspacePreset | null
 }): SessionKernelSnapshot {
   const { prepared, body } = params
   const active = prepared.contextEnvelope.conversation_context.active_context
   const pending = prepared.contextEnvelope.conversation_context.pending_clarification
   const memoryRuntime = prepared.contextEnvelope.memory_runtime
+  const workspacePreset = params.workspacePreset || null
   return {
     kernel_id: buildKernelId({
       sessionId: prepared.sessionId,
@@ -93,6 +100,10 @@ export function buildPreparedSessionKernel(params: {
     verification_outcome: null,
     answer_type: null,
     source_plane: null,
+    workspace_primary_plane: workspacePreset?.primary_plane || null,
+    workspace_default_entry_path: workspacePreset?.default_entry_path || null,
+    workspace_capability_count: workspacePreset?.preferred_capabilities.length || 0,
+    workspace_focus_count: workspacePreset?.focused_surfaces.length || 0,
   }
 }
 

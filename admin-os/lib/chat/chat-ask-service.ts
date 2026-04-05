@@ -17,6 +17,7 @@ import { attachPromptRuntime, buildPromptRuntime, type PromptRuntimeSnapshot } f
 import { attachPromptPolicy, evaluatePromptPolicy, type PromptPolicyDecision } from '@/lib/chat/prompt-policy'
 import { attachSessionKernel, buildPreparedSessionKernel, finalizeSessionKernel, type SessionKernelSnapshot } from '@/lib/chat/session-kernel'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
+import { loadCustomerWorkspacePreset } from '@/lib/customers/workspace'
 
 export type ChatAskRuntimeMeta = {
   session_id: string | null
@@ -125,7 +126,10 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
     modelNeedClarification,
     followUpContextApplied,
   } = prepared
-  const preparedKernel = buildPreparedSessionKernel({ prepared, body })
+  const customerWorkspacePreset = await perf.measure('load_customer_workspace_preset', () =>
+    loadCustomerWorkspacePreset(typeof body.customer_id === 'string' ? String(body.customer_id) : null),
+  )
+  const preparedKernel = buildPreparedSessionKernel({ prepared, body, workspacePreset: customerWorkspacePreset })
 
   const buildRuntimeMeta = (payload: Record<string, unknown>): ChatAskRuntimeMeta => {
     const data = payload.data && typeof payload.data === 'object' ? (payload.data as Record<string, unknown>) : {}

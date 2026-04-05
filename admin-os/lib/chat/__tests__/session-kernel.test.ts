@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { attachSessionKernel, buildPreparedSessionKernel, finalizeSessionKernel } from '@/lib/chat/session-kernel'
 import type { PreparedChatRequest } from '@/lib/chat/chat-request-preprocess'
+import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
 
 function buildPreparedRequest(): PreparedChatRequest {
   return {
@@ -117,6 +118,18 @@ function buildPreparedRequest(): PreparedChatRequest {
 
 describe('session kernel', () => {
   it('builds prepared kernel from request context', () => {
+    const workspacePreset: CustomerWorkspacePreset = {
+      customer_id: 'maxshot',
+      workspace_version: '1',
+      primary_plane: 'ops_data',
+      default_entry_path: '/chat',
+      preferred_capabilities: ['capability.data_fact_query', 'capability.faq_answering'],
+      focused_surfaces: ['chat', 'kb-management'],
+      recommended_route_order: ['ops_data', 'faq_kb'],
+      summary: 'ops first',
+      quick_queries: ['最近 7 天 APY 趋势如何？'],
+      file_path: 'customer-assets/maxshot/workspace.md',
+    }
     const kernel = buildPreparedSessionKernel({
       prepared: buildPreparedRequest(),
       body: {
@@ -124,6 +137,7 @@ describe('session kernel', () => {
         requester_id: 'qa-runtime',
         entry_channel: 'web_app',
       },
+      workspacePreset,
     })
 
     expect(kernel.session_id).toBe('sess-001')
@@ -137,6 +151,10 @@ describe('session kernel', () => {
     expect(kernel.customer_ref_count).toBe(1)
     expect(kernel.recall_triggered).toBe(true)
     expect(kernel.recall_confidence).toBe(0.78)
+    expect(kernel.workspace_primary_plane).toBe('ops_data')
+    expect(kernel.workspace_default_entry_path).toBe('/chat')
+    expect(kernel.workspace_capability_count).toBe(2)
+    expect(kernel.workspace_focus_count).toBe(2)
   })
 
   it('finalizes kernel with verification and delivery outcome', () => {

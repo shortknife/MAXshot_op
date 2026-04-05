@@ -133,6 +133,10 @@ export function extractInteractionLearningPayload(params: {
         recall_triggered: sessionKernel.recall_triggered === true,
         verification_outcome: asString(sessionKernel.verification_outcome),
         source_plane: asString(sessionKernel.source_plane),
+        workspace_primary_plane: asString(sessionKernel.workspace_primary_plane),
+        workspace_default_entry_path: asString(sessionKernel.workspace_default_entry_path),
+        workspace_capability_count: asNumber(sessionKernel.workspace_capability_count),
+        workspace_focus_count: asNumber(sessionKernel.workspace_focus_count),
       },
     },
   }

@@ -29,6 +29,10 @@ type SessionKernelSummary = {
   recall_triggered?: boolean
   verification_outcome?: string | null
   source_plane?: string | null
+  workspace_primary_plane?: string | null
+  workspace_default_entry_path?: string | null
+  workspace_capability_count?: number | null
+  workspace_focus_count?: number | null
 }
 
 type InteractionLogItem = {
@@ -237,6 +241,10 @@ export function InteractionLogSurface({ source, items }: { source: 'supabase' | 
                                 {typeof sessionKernel.memory_ref_count === 'number' && <Pill>{`refs: ${sessionKernel.memory_ref_count}`}</Pill>}
                                 {typeof sessionKernel.learning_ref_count === 'number' && <Pill>{`learning_refs: ${sessionKernel.learning_ref_count}`}</Pill>}
                                 {typeof sessionKernel.customer_ref_count === 'number' && <Pill>{`customer_refs: ${sessionKernel.customer_ref_count}`}</Pill>}
+                                {sessionKernel.workspace_primary_plane && <Pill tone="sky">{`workspace: ${sessionKernel.workspace_primary_plane}`}</Pill>}
+                                {sessionKernel.workspace_default_entry_path && <Pill>{`entry: ${sessionKernel.workspace_default_entry_path}`}</Pill>}
+                                {typeof sessionKernel.workspace_capability_count === 'number' && <Pill>{`workspace_caps: ${sessionKernel.workspace_capability_count}`}</Pill>}
+                                {typeof sessionKernel.workspace_focus_count === 'number' && <Pill>{`workspace_surfaces: ${sessionKernel.workspace_focus_count}`}</Pill>}
                                 {sessionKernel.recall_triggered && <Pill tone="emerald">recall_triggered</Pill>}
                                 {sessionKernel.verification_outcome && <Pill tone={sessionKernel.verification_outcome === 'pass' ? 'emerald' : sessionKernel.verification_outcome === 'review' ? 'amber' : 'rose'}>{`verify: ${sessionKernel.verification_outcome}`}</Pill>}
                               </div>

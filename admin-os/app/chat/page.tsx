@@ -58,6 +58,17 @@ type ChatMeta = {
   } | null
 }
 
+type CustomerWorkspacePreset = {
+  customer_id: string
+  primary_plane: string | null
+  default_entry_path: string | null
+  preferred_capabilities: string[]
+  focused_surfaces: string[]
+  recommended_route_order: string[]
+  summary: string | null
+  quick_queries: string[]
+}
+
 type ChatMessage = {
   id: string
   role: 'user' | 'assistant'
@@ -120,17 +131,20 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState('')
+  const [workspacePreset, setWorkspacePreset] = useState<CustomerWorkspacePreset | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
 
   const quickQueries = useMemo(
-    () => [
-      'MAXshot 有哪些 vault 可以用？',
-      '当前 vault APY 怎么样？',
-      '给我最近一笔 execution 详情',
-      '写一条关于新品发布的帖子',
-    ],
-    []
+    () => workspacePreset?.quick_queries?.length
+      ? workspacePreset.quick_queries
+      : [
+          'MAXshot 有哪些 vault 可以用？',
+          '当前 vault APY 怎么样？',
+          '给我最近一笔 execution 详情',
+          '写一条关于新品发布的帖子',
+        ],
+    [workspacePreset]
   )
 
   useEffect(() => {
@@ -141,6 +155,17 @@ export default function ChatPage() {
       window.localStorage.setItem(key, id)
     }
     setSessionId(id)
+  }, [])
+
+  useEffect(() => {
+    const current = getStoredSession()
+    if (!current?.customer_id) return
+    void fetch(`/api/customers/workspace?customer_id=${encodeURIComponent(current.customer_id)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success === true && data.preset) setWorkspacePreset(data.preset)
+      })
+      .catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -269,10 +294,21 @@ export default function ChatPage() {
                 <CardContent className="space-y-5 p-6">
                   <div className="space-y-2">
                     <SectionTitle>Start Here</SectionTitle>
-                    <div className="text-2xl font-semibold tracking-tight">先直接问自然语言问题。</div>
-                    <div className="max-w-2xl text-sm leading-6 text-slate-600">
-                      当前入口已经支持业务查询、产品问答、营销文案。需要澄清时会继续追问，但输入框始终保留，不会覆盖已有对话。
+                    <div className="text-2xl font-semibold tracking-tight">
+                      {workspacePreset?.customer_id ? `${workspacePreset.customer_id} workspace` : '先直接问自然语言问题。'}
                     </div>
+                    <div className="max-w-2xl text-sm leading-6 text-slate-600">
+                      {workspacePreset?.summary || '当前入口已经支持业务查询、产品问答、营销文案。需要澄清时会继续追问，但输入框始终保留，不会覆盖已有对话。'}
+                    </div>
+                    {(workspacePreset?.focused_surfaces?.length || workspacePreset?.preferred_capabilities?.length) ? (
+                      <div className="flex flex-wrap gap-2">
+                        {workspacePreset?.primary_plane ? <MetaBadge label={`primary: ${workspacePreset.primary_plane}`} /> : null}
+                        {(workspacePreset?.focused_surfaces || []).map((surface) => <MetaBadge key={`surface-${surface}`} label={`surface: ${surface}`} />)}
+                        {(workspacePreset?.preferred_capabilities || []).slice(0, 4).map((capabilityId) => (
+                          <MetaBadge key={capabilityId} label={capabilityId.replace('capability.', '')} />
+                        ))}
+                      </div>
+                    ) : null}
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2">
                     {quickQueries.map((item) => (
@@ -594,7 +630,7 @@ export default function ChatPage() {
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="text-xs text-slate-500">
-                      当前会话会保留上下文。澄清时直接继续输入，不需要重新开始。
+                      当前会话会保留上下文。澄清时直接继续输入，不需要重新开始。{workspacePreset?.default_entry_path ? ` 当前 customer 默认入口：${workspacePreset.default_entry_path}` : ''}
                     </div>
                     <Button onClick={() => void sendQuery(query)} disabled={loading || !query.trim()} className="min-w-28">
                       {loading ? '处理中...' : '发送'}
@@ -625,12 +661,26 @@ export default function ChatPage() {
 
             <Card className="border-slate-200 bg-white/82 shadow-[0_16px_50px_rgba(15,23,42,0.06)]">
               <CardHeader>
-                <CardTitle className="text-base">提问建议</CardTitle>
+                <CardTitle className="text-base">Workspace Preset</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-slate-600">
-                <div>1. 先问对象：vault / execution / APY / marketing。</div>
-                <div>2. 需要趋势时，直接带时间范围。</div>
-                <div>3. 如果系统追问，继续自然语言补充即可。</div>
+                {workspacePreset ? (
+                  <>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                      <div className="text-xs uppercase tracking-[0.18em] text-slate-400">customer</div>
+                      <div className="mt-1 font-medium text-slate-800">{workspacePreset.customer_id}</div>
+                    </div>
+                    {workspacePreset.primary_plane ? <div>1. 当前优先 plane：{workspacePreset.primary_plane}。</div> : null}
+                    {workspacePreset.recommended_route_order.length > 0 ? <div>2. 推荐路径：{workspacePreset.recommended_route_order.join(' → ')}。</div> : null}
+                    {workspacePreset.focused_surfaces.length > 0 ? <div>3. 重点 surface：{workspacePreset.focused_surfaces.join(' / ')}。</div> : null}
+                  </>
+                ) : (
+                  <>
+                    <div>1. 先问对象：vault / execution / APY / marketing。</div>
+                    <div>2. 需要趋势时，直接带时间范围。</div>
+                    <div>3. 如果系统追问，继续自然语言补充即可。</div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </aside>

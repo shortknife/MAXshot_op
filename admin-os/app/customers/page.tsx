@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { loadOperatorRegistry } from '@/lib/customers/access'
 import { loadCustomerMemoryWorkbench } from '@/lib/customers/memory'
 import { loadCustomerWalletAsset } from '@/lib/customers/asset-runtime'
+import { loadCustomerWorkspacePreset } from '@/lib/customers/workspace'
 import { listActiveCustomers } from '@/lib/customers/runtime'
 import { getCapabilityExecutionPolicy } from '@/lib/router/capability-catalog'
 import { CurrentCustomerBadge } from '@/components/customers/current-customer-badge'
@@ -31,6 +32,7 @@ export default async function CustomersPage() {
       customer,
       memory: await loadCustomerMemoryWorkbench(customer.customer_id),
       wallet: await loadCustomerWalletAsset(customer.customer_id),
+      workspace: await loadCustomerWorkspacePreset(customer.customer_id),
     })),
   )
 
@@ -53,7 +55,7 @@ export default async function CustomersPage() {
               <CardTitle className="text-base font-semibold">Customer Workspace</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5 p-4 sm:p-6">
-              {cards.map(({ customer, memory, wallet }) => (
+              {cards.map(({ customer, memory, wallet, workspace }) => (
                 <div key={customer.customer_id} className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(248,250,252,0.93))] p-5 shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-3">
@@ -105,6 +107,25 @@ export default async function CustomersPage() {
                               {memory.profile.top_capabilities.map((cap) => <div key={`${customer.customer_id}-${cap.capability_id}`}>capability: {cap.capability_id} × {cap.count}</div>)}
                               {memory.profile.top_issue_reasons.map((reason) => <div key={`${customer.customer_id}-${reason.reason}`}>issue: {reason.reason} × {reason.count}</div>)}
                             </div>
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="rounded-3xl border border-slate-200 bg-white/80 p-4">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Workspace Preset</div>
+                        <div className="mt-3 text-sm leading-6 text-slate-700">{workspace?.summary || 'No workspace preset yet.'}</div>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                          {workspace?.primary_plane ? <Pill tone="emerald">primary: {workspace.primary_plane}</Pill> : null}
+                          {workspace?.default_entry_path ? <Pill tone="violet">entry: {workspace.default_entry_path}</Pill> : null}
+                          {(workspace?.focused_surfaces || []).map((surface) => <Pill key={`${customer.customer_id}-surface-${surface}`}>surface: {surface}</Pill>)}
+                        </div>
+                        {(workspace?.quick_queries || []).length > 0 ? (
+                          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                            {workspace?.quick_queries.map((query) => (
+                              <div key={`${customer.customer_id}-query-${query}`} className="rounded-2xl border border-slate-100 bg-slate-50/70 px-3 py-3 text-sm text-slate-600">
+                                {query}
+                              </div>
+                            ))}
                           </div>
                         ) : null}
                       </div>
