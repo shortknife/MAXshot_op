@@ -265,3 +265,11 @@
 - Why: deterministic hooks established the first repository-level gate, but multi-step implementation work still lacked a stable artifact for written scope, acceptance, and freeze evidence.
 - Scope: contract directory, markdown template, validator, validation script, and hook integration for changed contract files.
 - Consequence: Nexa now has explicit repository-side step contracts without turning development harness state into product runtime data.
+
+
+## D-042 Evaluator Feedback Ledger Baseline Accepted
+- Date: 2026-04-05
+- Decision: add filesystem-managed evaluator feedback entries with deterministic validation and contract linkage.
+- Why: task contracts now define scope and acceptance, but closure decisions still needed an explicit review artifact that records verdict, evidence, and next action.
+- Scope: feedback directory, markdown template, validator, validation script, and hook integration for changed evaluator feedback files.
+- Consequence: Nexa now has a repository-side closure ledger without pushing review state into product runtime or external tools.

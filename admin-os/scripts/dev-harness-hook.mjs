@@ -40,6 +40,10 @@ function hasTaskContractChanges(files) {
   return files.some((file) => file.startsWith('docs/dev-harness/contracts/'))
 }
 
+function hasEvaluatorFeedbackChanges(files) {
+  return files.some((file) => file.startsWith('docs/dev-harness/eval-feedback/'))
+}
+
 function hasDocsOnlyChanges(files) {
   return files.length > 0 && files.every((file) => file.startsWith('docs/') || file.endsWith('.md'))
 }
@@ -80,7 +84,12 @@ function runPreCommit() {
     run('npm', ['run', 'contracts:validate'], adminRoot)
   }
 
-  if (hasDocsOnlyChanges(files) && !hasTaskContractChanges(files)) {
+  if (hasEvaluatorFeedbackChanges(files)) {
+    console.log('[dev-harness-hook] pre-commit: validating evaluator feedback')
+    run('npm', ['run', 'feedback:validate'], adminRoot)
+  }
+
+  if (hasDocsOnlyChanges(files) && !hasTaskContractChanges(files) && !hasEvaluatorFeedbackChanges(files)) {
     console.log('[dev-harness-hook] pre-commit: docs-only changes, skipping admin checks')
     return
   }
