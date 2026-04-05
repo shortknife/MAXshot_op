@@ -2,6 +2,7 @@ import { handleOpsIntent } from '@/lib/chat/handlers/ops-intent-handler'
 import { handleContentIntent } from '@/lib/chat/handlers/content-intent-handler'
 import { handleQnaIntent } from '@/lib/chat/handlers/qna-intent-handler'
 import { resolveChatIntentLane } from '@/lib/chat/chat-intent-lane'
+import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
 
 type ParsedLike = {
   intent: {
@@ -17,8 +18,9 @@ export async function dispatchNonBusinessIntent(params: {
   primaryCapabilityId: string | null
   parsed: ParsedLike
   rawQuery: string
+  workspacePreset?: CustomerWorkspacePreset | null
 }): Promise<unknown> {
-  const { intentType, canonicalIntentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery } = params
+  const { intentType, canonicalIntentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery, workspacePreset } = params
   const lane = resolveChatIntentLane({
     intentType,
     canonicalIntentType,
@@ -44,6 +46,7 @@ export async function dispatchNonBusinessIntent(params: {
       primaryCapabilityId,
       parsed,
       rawQuery,
+      workspacePreset,
     })
     if (contentHandled.handled) return contentHandled.body
   }
@@ -54,6 +57,7 @@ export async function dispatchNonBusinessIntent(params: {
     primaryCapabilityId,
     parsed,
     rawQuery,
+    workspacePreset,
   })
   return qnaHandled.body
 }

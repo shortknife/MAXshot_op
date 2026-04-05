@@ -138,6 +138,12 @@ describe('session kernel', () => {
         entry_channel: 'web_app',
       },
       workspacePreset,
+      routingPriority: {
+        primaryCapabilityId: 'capability.faq_answering',
+        matchedCapabilityIds: ['capability.faq_answering', 'capability.product_doc_qna'],
+        applied: true,
+        reason: 'workspace_route_priority:faq_kb',
+      },
     })
 
     expect(kernel.session_id).toBe('sess-001')
@@ -152,6 +158,9 @@ describe('session kernel', () => {
     expect(kernel.recall_triggered).toBe(true)
     expect(kernel.recall_confidence).toBe(0.78)
     expect(kernel.workspace_primary_plane).toBe('ops_data')
+    expect(kernel.primary_capability_id).toBe('capability.faq_answering')
+    expect(kernel.routing_priority_applied).toBe(true)
+    expect(kernel.routing_priority_reason).toBe('workspace_route_priority:faq_kb')
     expect(kernel.workspace_default_entry_path).toBe('/chat')
     expect(kernel.workspace_capability_count).toBe(2)
     expect(kernel.workspace_focus_count).toBe(2)

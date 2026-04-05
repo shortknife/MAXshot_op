@@ -89,6 +89,44 @@ describe('qna-intent-handler', () => {
     expect((result.body as { data?: { meta?: { answer_meta?: { capability_id?: string } } } }).data?.meta?.answer_meta?.capability_id).toBe('faq_answering')
   })
 
+
+  it('prefers faq capability for faq-first customer workspaces when both qna capabilities match', async () => {
+    mocks.faqAnswering.mockResolvedValue({
+      capability_id: 'faq_answering',
+      capability_version: '1.0',
+      status: 'success',
+      result: { answer: 'FAQ path', citations: [], confidence: 0.91, fallback_required: false, review_required: false },
+      evidence: { sources: [], doc_quotes: null },
+      audit: { capability_id: 'faq_answering', capability_version: '1.0', status: 'success', used_skills: [] },
+      used_skills: [],
+      metadata: { retrieval_count: 1 },
+    })
+
+    const result = await handleQnaIntent({
+      intentType: 'general_qna',
+      matchedCapabilityIds: ['capability.product_doc_qna', 'capability.faq_answering'],
+      primaryCapabilityId: 'capability.product_doc_qna',
+      parsed: { intent: { extracted_slots: { customer_id: 'nexa-demo' } }, prompt_meta: null },
+      rawQuery: 'How does the FAQ review chain work?',
+      workspacePreset: {
+        customer_id: 'nexa-demo',
+        workspace_version: '1',
+        primary_plane: 'faq_kb',
+        default_entry_path: '/chat',
+        preferred_capabilities: ['capability.faq_answering', 'capability.product_doc_qna'],
+        focused_surfaces: ['chat'],
+        recommended_route_order: ['faq_kb', 'product_docs'],
+        summary: 'faq first',
+        quick_queries: [],
+        file_path: 'customer-assets/nexa-demo/workspace.md',
+      },
+    })
+
+    expect(mocks.faqAnswering).toHaveBeenCalledTimes(1)
+    expect(mocks.productDocQnA).not.toHaveBeenCalled()
+    expect((result.body as { data?: { meta?: { answer_meta?: { capability_id?: string } } } }).data?.meta?.answer_meta?.capability_id).toBe('faq_answering')
+  })
+
   it('routes low-confidence faq answers through fallback and review packaging', async () => {
     mocks.enqueueFaqReviewItem.mockResolvedValue({ review_id: 'faq-review-runtime-1', queue_source: 'supabase' })
     mocks.faqAnswering.mockResolvedValue({

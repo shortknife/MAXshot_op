@@ -137,6 +137,8 @@ export function extractInteractionLearningPayload(params: {
         workspace_default_entry_path: asString(sessionKernel.workspace_default_entry_path),
         workspace_capability_count: asNumber(sessionKernel.workspace_capability_count),
         workspace_focus_count: asNumber(sessionKernel.workspace_focus_count),
+        routing_priority_applied: sessionKernel.routing_priority_applied === true,
+        routing_priority_reason: asString(sessionKernel.routing_priority_reason),
       },
     },
   }

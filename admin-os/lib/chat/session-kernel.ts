@@ -37,7 +37,10 @@ export type SessionKernelSnapshot = {
   workspace_default_entry_path: string | null
   workspace_capability_count: number
   workspace_focus_count: number
+  routing_priority_applied: boolean
+  routing_priority_reason: string | null
 }
+
 
 function asRecord(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' ? (value as Record<string, unknown>) : {}
@@ -59,18 +62,20 @@ export function buildPreparedSessionKernel(params: {
   prepared: PreparedChatRequest
   body: Record<string, unknown>
   workspacePreset?: CustomerWorkspacePreset | null
+  routingPriority?: { primaryCapabilityId: string | null; matchedCapabilityIds: string[]; applied: boolean; reason: string | null } | null
 }): SessionKernelSnapshot {
   const { prepared, body } = params
   const active = prepared.contextEnvelope.conversation_context.active_context
   const pending = prepared.contextEnvelope.conversation_context.pending_clarification
   const memoryRuntime = prepared.contextEnvelope.memory_runtime
   const workspacePreset = params.workspacePreset || null
+  const routingPriority = params.routingPriority || null
   return {
     kernel_id: buildKernelId({
       sessionId: prepared.sessionId,
       rawQuery: prepared.rawQuery,
       turnRelationType: prepared.turnRelation.type,
-      primaryCapabilityId: prepared.primaryCapabilityId,
+      primaryCapabilityId: routingPriority?.primaryCapabilityId || prepared.primaryCapabilityId,
     }),
     session_id: prepared.sessionId,
     customer_id: typeof body.customer_id === 'string' ? String(body.customer_id).trim() || null : null,
@@ -89,8 +94,8 @@ export function buildPreparedSessionKernel(params: {
     active_vault_name: active.vault_name,
     pending_clarification: pending.exists,
     pending_scope: pending.scope,
-    primary_capability_id: prepared.primaryCapabilityId,
-    matched_capability_ids: prepared.matchedCapabilityIds,
+    primary_capability_id: routingPriority?.primaryCapabilityId || prepared.primaryCapabilityId,
+    matched_capability_ids: routingPriority?.matchedCapabilityIds || prepared.matchedCapabilityIds,
     memory_policy: memoryRuntime.source_policy,
     memory_ref_count: memoryRuntime.memory_ref_count,
     learning_ref_count: memoryRuntime.learning_ref_count,
@@ -104,6 +109,8 @@ export function buildPreparedSessionKernel(params: {
     workspace_default_entry_path: workspacePreset?.default_entry_path || null,
     workspace_capability_count: workspacePreset?.preferred_capabilities.length || 0,
     workspace_focus_count: workspacePreset?.focused_surfaces.length || 0,
+    routing_priority_applied: routingPriority?.applied === true,
+    routing_priority_reason: routingPriority?.reason || null,
   }
 }
 

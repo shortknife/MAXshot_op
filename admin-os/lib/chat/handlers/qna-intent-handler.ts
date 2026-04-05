@@ -7,6 +7,7 @@ import { enqueueFaqReviewItem } from '@/lib/faq-kb/review-queue'
 import { buildChatEnvelope } from '@/lib/chat/chat-route-helpers'
 import { toCanonicalIntentType } from '@/lib/intent-analyzer/intent-taxonomy'
 import { isCapabilityAllowedForCustomer } from '@/lib/customers/runtime'
+import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
 
 type ParsedLike = {
   intent: {
@@ -21,14 +22,20 @@ export async function handleQnaIntent(params: {
   primaryCapabilityId?: string | null
   parsed: ParsedLike
   rawQuery: string
+  workspacePreset?: CustomerWorkspacePreset | null
 }): Promise<{ body: unknown }> {
-  const { intentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery } = params
+  const { intentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery, workspacePreset } = params
   const qnaSlots: Record<string, unknown> = {
     ...(parsed.intent.extracted_slots || {}),
     question: String((parsed.intent.extracted_slots || {}).question || rawQuery || '').trim(),
   }
+  const qnaPriorityPlane = workspacePreset?.recommended_route_order?.[0] || workspacePreset?.primary_plane || null
+  const hasFaqCapability = (matchedCapabilityIds || []).includes('capability.faq_answering')
+  const hasProductDocCapability = (matchedCapabilityIds || []).includes('capability.product_doc_qna')
   const useFaqCapability =
-    primaryCapabilityId === 'capability.faq_answering' || (matchedCapabilityIds || []).includes('capability.faq_answering')
+    primaryCapabilityId === 'capability.faq_answering' ||
+    (hasFaqCapability && !hasProductDocCapability) ||
+    (hasFaqCapability && hasProductDocCapability && qnaPriorityPlane === 'faq_kb')
   const customerId = typeof qnaSlots.customer_id === 'string' ? qnaSlots.customer_id : null
 
   if (useFaqCapability && customerId && !isCapabilityAllowedForCustomer(customerId, 'capability.faq_answering')) {

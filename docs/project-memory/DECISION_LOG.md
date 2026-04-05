@@ -281,3 +281,11 @@
 - Why: task contracts and evaluator feedback now exist, but repository freeze and release readiness still lacked a stable closure artifact that can be checked mechanically before broader preflight work.
 - Scope: release-check directory, markdown template, validator, validation script, pre-commit integration, and release-preflight integration.
 - Consequence: Nexa now has explicit repository-side release closure checks without adding CI orchestration or product runtime complexity.
+
+
+## D-044 Customer-Aware Routing Priority Baseline Accepted
+- Date: 2026-04-06
+- Decision: add deterministic customer-aware routing priority so customer workspace presets can reorder matched capabilities and shift primary capability selection.
+- Why: customer presets already existed as workspace posture and runtime hints, but routing still treated capability matches as neutral once intent analysis completed.
+- Scope: routing-priority helper, chat runtime integration, session-kernel propagation, interaction-learning extraction, and FAQ-vs-product-doc preference handling.
+- Consequence: Nexa customer workspaces now influence execution posture in a deterministic, auditable way instead of remaining display-only presets.

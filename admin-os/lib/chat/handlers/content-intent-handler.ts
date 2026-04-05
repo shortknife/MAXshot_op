@@ -3,6 +3,7 @@ import { inferMarketingTagsFromQuery } from '@/lib/marketing/analytics'
 import { extractTopicFromQuery, isMeaningfulTopic } from '@/lib/user-chat-core'
 import { buildContentBriefFailureResponse, buildContentBriefSuccessResponse } from '@/lib/chat/non-business-response'
 import { buildChatEnvelope, detectQueryLanguage } from '@/lib/chat/chat-route-helpers'
+import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
 
 type ParsedLike = {
   intent: {
@@ -18,6 +19,7 @@ export async function handleContentIntent(params: {
   primaryCapabilityId: string | null
   parsed: ParsedLike
   rawQuery: string
+  workspacePreset?: CustomerWorkspacePreset | null
 }): Promise<{ handled: false } | { handled: true; body: unknown }> {
   const { intentType, canonicalIntentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery } = params
   if (

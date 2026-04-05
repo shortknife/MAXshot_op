@@ -18,6 +18,7 @@ import { attachPromptPolicy, evaluatePromptPolicy, type PromptPolicyDecision } f
 import { attachSessionKernel, buildPreparedSessionKernel, finalizeSessionKernel, type SessionKernelSnapshot } from '@/lib/chat/session-kernel'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
 import { loadCustomerWorkspacePreset } from '@/lib/customers/workspace'
+import { applyCustomerRoutingPriority } from '@/lib/chat/customer-routing-priority'
 
 export type ChatAskRuntimeMeta = {
   session_id: string | null
@@ -129,7 +130,21 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   const customerWorkspacePreset = await perf.measure('load_customer_workspace_preset', () =>
     loadCustomerWorkspacePreset(typeof body.customer_id === 'string' ? String(body.customer_id) : null),
   )
-  const preparedKernel = buildPreparedSessionKernel({ prepared, body, workspacePreset: customerWorkspacePreset })
+  const routingPriority = applyCustomerRoutingPriority({
+    workspacePreset: customerWorkspacePreset,
+    intentType,
+    canonicalIntentType,
+    matchedCapabilityIds,
+    primaryCapabilityId,
+  })
+  const resolvedMatchedCapabilityIds = routingPriority.matchedCapabilityIds
+  const resolvedPrimaryCapabilityId = routingPriority.primaryCapabilityId
+  const preparedKernel = buildPreparedSessionKernel({
+    prepared,
+    body,
+    workspacePreset: customerWorkspacePreset,
+    routingPriority,
+  })
 
   const buildRuntimeMeta = (payload: Record<string, unknown>): ChatAskRuntimeMeta => {
     const data = payload.data && typeof payload.data === 'object' ? (payload.data as Record<string, unknown>) : {}
@@ -155,14 +170,14 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
       entry_channel: typeof body.entry_channel === 'string' ? String(body.entry_channel) : typeof parsed.intent.extracted_slots?.channel === 'string' ? String(parsed.intent.extracted_slots.channel) : 'web_app',
       intent_type: intentType,
       intent_type_canonical: canonicalIntentType,
-      primary_capability_id: primaryCapabilityId,
-      matched_capability_ids: matchedCapabilityIds,
+      primary_capability_id: resolvedPrimaryCapabilityId,
+      matched_capability_ids: resolvedMatchedCapabilityIds,
       source_plane:
-        primaryCapabilityId === 'capability.data_fact_query'
+        resolvedPrimaryCapabilityId === 'capability.data_fact_query'
           ? 'ops_data'
-          : primaryCapabilityId === 'capability.product_doc_qna'
+          : resolvedPrimaryCapabilityId === 'capability.product_doc_qna'
             ? 'product_docs'
-            : typeof primaryCapabilityId === 'string' && primaryCapabilityId.startsWith('capability.faq_')
+            : typeof resolvedPrimaryCapabilityId === 'string' && resolvedPrimaryCapabilityId.startsWith('capability.faq_')
               ? 'faq_kb'
               : resolvedPlane,
       step3_tokens_used: Number(prepared.step3?.trace?.tokens_used || 0),
@@ -191,8 +206,8 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
           payload,
           intentType,
           canonicalIntentType,
-          matchedCapabilityIds,
-          primaryCapabilityId
+          resolvedMatchedCapabilityIds,
+          resolvedPrimaryCapabilityId
         ) as Record<string, unknown>
         const promptRuntime = buildPromptRuntime(canonicalized)
         const withPromptRuntime = attachPromptRuntime({
@@ -201,7 +216,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
         })
         const promptPolicy = evaluatePromptPolicy({
           customerId: typeof body.customer_id === 'string' ? String(body.customer_id) : null,
-          primaryCapabilityId,
+          primaryCapabilityId: resolvedPrimaryCapabilityId,
           promptRuntime,
         })
         const verified = finalizeDelivery(applyRuntimeVerification(attachPromptPolicy({
