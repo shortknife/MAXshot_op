@@ -220,3 +220,11 @@
 - Why: wallet is needed now as identity binding and future commerce posture, not as immediate payment execution. Email and wallet therefore need to resolve to one runtime identity contract.
 - Scope: identity markdown assets, server-side identity resolution, login API route, hybrid login page, and identity propagation into chat runtime.
 - Consequence: Nexa now has customer-aware hybrid identity without introducing a heavy SaaS IAM or payment system.
+
+
+## D-036 Customer Auth Verification Baseline Accepted
+- Date: 2026-04-05
+- Decision: add a lightweight verification layer above hybrid identity using email code challenge and wallet signature challenge.
+- Why: customer-aware identity existed, but the entry path still resolved identities directly without proof. A minimal verification step is required before session issuance.
+- Scope: challenge/verify API routes, auth runtime persistence, email code verification, wallet signature verification, login UI upgrade, and auth audit events.
+- Consequence: Nexa now has a complete verified entry process without adopting heavy SaaS IAM or enabling payment execution.

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { Button } from '@/components/ui/button'
@@ -8,68 +8,126 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { login, loginWithWallet } from '@/lib/auth'
+import { requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
+
+type EmailState = {
+  email: string
+  challenge: EmailChallenge | null
+  code: string
+}
+
+type WalletState = {
+  walletAddress: string
+  challenge: WalletChallenge | null
+}
 
 export default function LoginPage() {
   const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [walletAddress, setWalletAddress] = useState('')
-  const [loadingMode, setLoadingMode] = useState<'email' | 'wallet' | null>(null)
+  const [emailState, setEmailState] = useState<EmailState>({ email: '', challenge: null, code: '' })
+  const [walletState, setWalletState] = useState<WalletState>({ walletAddress: '', challenge: null })
+  const [loadingMode, setLoadingMode] = useState<'email_issue' | 'email_verify' | 'wallet_issue' | 'wallet_verify' | null>(null)
   const [error, setError] = useState('')
 
-  const handleEmailLogin = async (e: React.FormEvent) => {
+  const emailStep = emailState.challenge ? 2 : 1
+  const walletStep = walletState.challenge ? 2 : 1
+
+  const emailExpiry = useMemo(() => {
+    if (!emailState.challenge?.expires_at) return null
+    return new Date(emailState.challenge.expires_at).toLocaleString('zh-CN')
+  }, [emailState.challenge])
+
+  const walletExpiry = useMemo(() => {
+    if (!walletState.challenge?.expires_at) return null
+    return new Date(walletState.challenge.expires_at).toLocaleString('zh-CN')
+  }, [walletState.challenge])
+
+  const handleEmailChallenge = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setLoadingMode('email')
+    setLoadingMode('email_issue')
     try {
-      const result = await login(email)
-      if (result.success) router.push('/chat')
-      else setError(result.error || 'Login failed')
-    } catch (err) {
-      console.error('Email login error:', err)
-      setError('Email login failed')
+      const result = await requestEmailChallenge(emailState.email)
+      if (!result.success) {
+        setError(result.error || 'Email challenge failed')
+        return
+      }
+      setEmailState((prev) => ({ ...prev, challenge: result.challenge }))
     } finally {
       setLoadingMode(null)
     }
   }
 
-  const handleWalletLogin = async (e: React.FormEvent) => {
+  const handleEmailVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!emailState.challenge) return
+    setError('')
+    setLoadingMode('email_verify')
+    try {
+      const result = await verifyEmailCode(emailState.email, emailState.challenge.challenge_id, emailState.code)
+      if (!result.success) {
+        setError(result.error || 'Email verification failed')
+        return
+      }
+      router.push('/chat')
+    } finally {
+      setLoadingMode(null)
+    }
+  }
+
+  const handleWalletChallenge = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setLoadingMode('wallet')
+    setLoadingMode('wallet_issue')
     try {
-      const result = await loginWithWallet(walletAddress)
-      if (result.success) router.push('/chat')
-      else setError(result.error || 'Wallet login failed')
-    } catch (err) {
-      console.error('Wallet login error:', err)
-      setError('Wallet login failed')
+      const result = await requestWalletChallenge(walletState.walletAddress)
+      if (!result.success) {
+        setError(result.error || 'Wallet challenge failed')
+        return
+      }
+      setWalletState((prev) => ({ ...prev, challenge: result.challenge }))
+    } finally {
+      setLoadingMode(null)
+    }
+  }
+
+  const handleWalletVerify = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!walletState.challenge) return
+    setError('')
+    setLoadingMode('wallet_verify')
+    try {
+      const result = await verifyWalletSignature(walletState.walletAddress, walletState.challenge)
+      if (!result.success) {
+        setError(result.error || 'Wallet verification failed')
+        return
+      }
+      router.push('/chat')
     } finally {
       setLoadingMode(null)
     }
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ecfeff_0%,#f8fafc_40%,#fff7ed_100%)] px-4 py-12 text-slate-950">
-      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-        <div className="rounded-[32px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.9))] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-xl">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#ecfeff_0%,#f8fafc_38%,#fff7ed_100%)] px-4 py-12 text-slate-950">
+      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[0.94fr_1.06fr]">
+        <div className="rounded-[32px] border border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96),rgba(248,250,252,0.88))] p-8 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-xl">
           <div className="text-[11px] uppercase tracking-[0.24em] text-slate-400">Nexa Access</div>
-          <h1 className="mt-4 text-4xl font-semibold tracking-tight">Hybrid identity for customer-aware operations</h1>
+          <h1 className="mt-4 text-4xl font-semibold tracking-tight">Verified hybrid identity for customer-aware operations</h1>
           <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">
-            This version supports lightweight identity binding. Email and wallet are both account-entry methods. Wallet is used here as identity and account binding, not as payment execution.
+            Identity entry now includes verification. Email uses a bounded verification code flow. Wallet uses a nonce challenge and signature. Wallet remains identity binding only in this release.
           </p>
           <div className="mt-6 grid gap-3 text-sm text-slate-600">
             <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
-              <div className="font-medium text-slate-900">Email login</div>
-              <div className="mt-1">Operator-friendly login path for current customer workspaces.</div>
+              <div className="font-medium text-slate-900">Email verification</div>
+              <div className="mt-1">Issue a short-lived code, verify it, then mint a local runtime session.</div>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
-              <div className="font-medium text-slate-900">Wallet login</div>
-              <div className="mt-1">Identity binding path for future agent commerce. No transfer or payment execution is enabled in this release.</div>
+              <div className="font-medium text-slate-900">Wallet signature verification</div>
+              <div className="mt-1">Issue a nonce-bound message and verify the recovered address against the linked customer identity.</div>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white/80 p-4">
-              <div className="font-medium text-slate-900">Single runtime identity</div>
-              <div className="mt-1">Session carries `identity_id`, `customer_id`, `operator_id`, email, and linked wallet metadata into the runtime.</div>
+              <div className="font-medium text-slate-900">Customer-aware session</div>
+              <div className="mt-1">Verified session carries identity, customer, operator, and linked methods into runtime, audit, and learning layers.</div>
             </div>
           </div>
         </div>
@@ -77,7 +135,7 @@ export default function LoginPage() {
         <Card className="border-white/70 bg-white/88 shadow-[0_24px_80px_rgba(15,23,42,0.10)] backdrop-blur-xl">
           <CardHeader>
             <CardTitle className="text-2xl tracking-tight">Sign in</CardTitle>
-            <CardDescription>Use email or wallet address. Both resolve to a single filesystem-managed identity record.</CardDescription>
+            <CardDescription>Use email or wallet. Both resolve to one filesystem-managed identity record, but now verification is mandatory.</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="email" className="space-y-5">
@@ -86,37 +144,87 @@ export default function LoginPage() {
                 <TabsTrigger value="wallet">Wallet</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="email">
-                <form onSubmit={handleEmailLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email address</Label>
-                    <Input id="email" type="email" placeholder="ops@maxshot.ai" value={email} onChange={(e) => setEmail(e.target.value)} disabled={loadingMode !== null} />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loadingMode !== null}>
-                    {loadingMode === 'email' ? 'Signing in...' : 'Sign in with email'}
-                  </Button>
-                </form>
+              <TabsContent value="email" className="space-y-4">
+                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
+                  <span>Email verification flow</span>
+                  <span className="font-medium text-slate-900">Step {emailStep} / 2</span>
+                </div>
+                {!emailState.challenge ? (
+                  <form onSubmit={handleEmailChallenge} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email address</Label>
+                      <Input id="email" type="email" placeholder="ops@maxshot.ai" value={emailState.email} onChange={(e) => setEmailState((prev) => ({ ...prev, email: e.target.value }))} disabled={loadingMode !== null} />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loadingMode !== null}>
+                      {loadingMode === 'email_issue' ? 'Issuing code...' : 'Request verification code'}
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleEmailVerify} className="space-y-4">
+                    <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-950">
+                      <div className="font-medium">Manual preview delivery</div>
+                      <div className="mt-1">This version does not send live email yet. Use the preview code below to complete verification.</div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className="rounded-xl bg-white px-3 py-1.5 font-mono text-base tracking-[0.22em] text-slate-950 shadow-sm">{emailState.challenge.code_preview}</span>
+                        {emailExpiry ? <span className="text-xs text-amber-800">expires {emailExpiry}</span> : null}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="email-code">Verification code</Label>
+                      <Input id="email-code" placeholder="6-digit code" value={emailState.code} onChange={(e) => setEmailState((prev) => ({ ...prev, code: e.target.value }))} disabled={loadingMode !== null} />
+                    </div>
+                    <div className="flex gap-3">
+                      <Button type="submit" className="flex-1" disabled={loadingMode !== null}>
+                        {loadingMode === 'email_verify' ? 'Verifying...' : 'Verify and enter'}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setEmailState({ email: emailState.email, challenge: null, code: '' })} disabled={loadingMode !== null}>
+                        Restart
+                      </Button>
+                    </div>
+                  </form>
+                )}
               </TabsContent>
 
-              <TabsContent value="wallet">
-                <form onSubmit={handleWalletLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="wallet">Wallet address</Label>
-                    <Input id="wallet" placeholder="0x..." value={walletAddress} onChange={(e) => setWalletAddress(e.target.value)} disabled={loadingMode !== null} />
-                  </div>
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-3 text-sm text-amber-900">
-                    Wallet is currently used only for identity binding and future account readiness. Payment execution remains disabled.
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loadingMode !== null}>
-                    {loadingMode === 'wallet' ? 'Resolving identity...' : 'Sign in with wallet'}
-                  </Button>
-                </form>
+              <TabsContent value="wallet" className="space-y-4">
+                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm text-slate-600">
+                  <span>Wallet signature flow</span>
+                  <span className="font-medium text-slate-900">Step {walletStep} / 2</span>
+                </div>
+                {!walletState.challenge ? (
+                  <form onSubmit={handleWalletChallenge} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="wallet">Wallet address</Label>
+                      <Input id="wallet" placeholder="0x..." value={walletState.walletAddress} onChange={(e) => setWalletState((prev) => ({ ...prev, walletAddress: e.target.value }))} disabled={loadingMode !== null} />
+                    </div>
+                    <div className="rounded-2xl border border-sky-200 bg-sky-50/80 p-3 text-sm text-sky-950">
+                      Wallet is identity binding only. This flow verifies address ownership with a signature but does not enable payment or transfer execution.
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loadingMode !== null}>
+                      {loadingMode === 'wallet_issue' ? 'Preparing challenge...' : 'Request wallet challenge'}
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={handleWalletVerify} className="space-y-4">
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-950">
+                      <div className="font-medium">Wallet challenge ready</div>
+                      <div className="mt-1">Use your injected wallet to sign the message below. The signature is verified server-side against the linked identity record.</div>
+                      {walletExpiry ? <div className="mt-2 text-xs text-emerald-800">expires {walletExpiry}</div> : null}
+                      <pre className="mt-3 overflow-x-auto rounded-xl bg-white/90 p-3 text-xs leading-6 text-slate-800 shadow-inner">{walletState.challenge.message}</pre>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button type="submit" className="flex-1" disabled={loadingMode !== null}>
+                        {loadingMode === 'wallet_verify' ? 'Signing and verifying...' : 'Sign challenge and enter'}
+                      </Button>
+                      <Button type="button" variant="outline" onClick={() => setWalletState({ walletAddress: walletState.walletAddress, challenge: null })} disabled={loadingMode !== null}>
+                        Restart
+                      </Button>
+                    </div>
+                  </form>
+                )}
               </TabsContent>
             </Tabs>
 
-            {error ? (
-              <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div>
-            ) : null}
+            {error ? <div className="mt-5 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div> : null}
           </CardContent>
         </Card>
       </div>
