@@ -36,6 +36,10 @@ function hasAdminChanges(files) {
   return files.some((file) => file.startsWith('admin-os/'))
 }
 
+function hasTaskContractChanges(files) {
+  return files.some((file) => file.startsWith('docs/dev-harness/contracts/'))
+}
+
 function hasDocsOnlyChanges(files) {
   return files.length > 0 && files.every((file) => file.startsWith('docs/') || file.endsWith('.md'))
 }
@@ -71,7 +75,12 @@ function runPreCommit() {
   blockForbiddenFiles(files)
   checkConflictMarkers()
 
-  if (hasDocsOnlyChanges(files)) {
+  if (hasTaskContractChanges(files)) {
+    console.log('[dev-harness-hook] pre-commit: validating task contracts')
+    run('npm', ['run', 'contracts:validate'], adminRoot)
+  }
+
+  if (hasDocsOnlyChanges(files) && !hasTaskContractChanges(files)) {
     console.log('[dev-harness-hook] pre-commit: docs-only changes, skipping admin checks')
     return
   }

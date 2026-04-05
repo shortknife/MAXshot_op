@@ -257,3 +257,11 @@
 - Why: runtime verification and mutation safety already exist, but repository workflow still depended too much on manual discipline. A first mechanical gate is needed before adding richer contracts and evaluator ledgers.
 - Scope: forbidden-file blocking, staged diff checks, lint on admin code in pre-commit, build gate in pre-push, optional full-smoke escalation, and local git hook installation.
 - Consequence: Nexa now has a real repository-level harness baseline without making existing unrelated smoke regressions a permanent push blocker.
+
+
+## D-041 Filesystem Task Contracts Baseline Accepted
+- Date: 2026-04-05
+- Decision: add filesystem-managed task contracts with deterministic markdown validation and pre-commit enforcement.
+- Why: deterministic hooks established the first repository-level gate, but multi-step implementation work still lacked a stable artifact for written scope, acceptance, and freeze evidence.
+- Scope: contract directory, markdown template, validator, validation script, and hook integration for changed contract files.
+- Consequence: Nexa now has explicit repository-side step contracts without turning development harness state into product runtime data.
