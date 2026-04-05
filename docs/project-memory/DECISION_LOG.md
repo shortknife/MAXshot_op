@@ -250,3 +250,10 @@
 - Why: Nexa already has runtime-side equivalents for verification, serialized mutation, session-kernel state, and learning-asset derivation. The remaining value lies in repository workflow discipline.
 - Scope: classify deterministic hooks, task contracts, evaluator feedback ledger, and release-harness checks as next-stage platform-deepening work.
 - Consequence: external harness lessons strengthen implementation quality without distorting Nexa product architecture.
+
+## D-040 Deterministic Hooks Baseline Accepted
+- Date: 2026-04-05
+- Decision: add deterministic repository hooks for `pre-commit` and `pre-push`, with a stable default gate and an explicit stronger full-smoke path.
+- Why: runtime verification and mutation safety already exist, but repository workflow still depended too much on manual discipline. A first mechanical gate is needed before adding richer contracts and evaluator ledgers.
+- Scope: forbidden-file blocking, staged diff checks, lint on admin code in pre-commit, build gate in pre-push, optional full-smoke escalation, and local git hook installation.
+- Consequence: Nexa now has a real repository-level harness baseline without making existing unrelated smoke regressions a permanent push blocker.

@@ -26,20 +26,18 @@ function Pill({ children, className }: { children: React.ReactNode; className?: 
 
 export function IdentityContextStrip() {
   const router = useRouter()
-  const [session, setSession] = useState<IdentitySession | null>(null)
+  const [session] = useState<IdentitySession | null>(() => getStoredSession())
   const [events, setEvents] = useState<AuthEventItem[]>([])
 
   useEffect(() => {
-    const current = getStoredSession()
-    setSession(current)
-    if (!current?.identity_id) return
-    void fetch(`/api/auth/events?identity_id=${encodeURIComponent(current.identity_id)}`)
+    if (!session?.identity_id) return
+    void fetch(`/api/auth/events?identity_id=${encodeURIComponent(session.identity_id)}`)
       .then((res) => res.json())
       .then((data) => {
         if (data?.success === true && Array.isArray(data.items)) setEvents(data.items)
       })
       .catch(() => {})
-  }, [])
+  }, [session?.identity_id])
 
   if (!session) return null
 

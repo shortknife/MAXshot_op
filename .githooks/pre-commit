@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)/admin-os"
+node ./scripts/dev-harness-hook.mjs pre-commit
