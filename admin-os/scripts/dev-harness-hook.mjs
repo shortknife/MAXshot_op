@@ -127,7 +127,7 @@ function runPrePush() {
   }
 
   console.log('[dev-harness-hook] pre-push: running build')
-  rmSync(path.join(adminRoot, '.next'), { recursive: true, force: true })
+  rmSync(path.join(adminRoot, '.next'), { recursive: true, force: true, maxRetries: 8, retryDelay: 200 })
   run('npm', ['run', 'build'], adminRoot)
 
   if (!forceFullCheck) {
