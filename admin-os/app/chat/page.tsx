@@ -70,6 +70,21 @@ type ChatMeta = {
   } | null
 }
 
+type CustomerRuntimePolicyMeta = {
+  customer_id: string
+  policy_version: string
+  primary_plane: string | null
+  default_entry_path?: string | null
+  preferred_capability_count?: number
+  route_order?: string[]
+  focused_surface_count?: number
+  auth_primary_method?: string | null
+  auth_verification_posture?: string | null
+  delivery_summary_style?: string | null
+  review_escalation_style?: string | null
+  clarification_style?: string | null
+}
+
 type CustomerWorkspacePreset = {
   customer_id: string
   primary_plane: string | null
@@ -144,6 +159,7 @@ export default function ChatPage() {
   const [error, setError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState('')
   const [workspacePreset, setWorkspacePreset] = useState<CustomerWorkspacePreset | null>(null)
+  const [customerRuntimePolicy, setCustomerRuntimePolicy] = useState<CustomerRuntimePolicyMeta | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
 
@@ -175,7 +191,10 @@ export default function ChatPage() {
     void fetch(`/api/customers/workspace?customer_id=${encodeURIComponent(current.customer_id)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data?.success === true && data.preset) setWorkspacePreset(data.preset)
+        if (data?.success === true) {
+          setWorkspacePreset(data.preset || null)
+          setCustomerRuntimePolicy(data.runtime_policy || null)
+        }
       })
       .catch(() => {})
   }, [])
@@ -315,6 +334,8 @@ export default function ChatPage() {
                     {(workspacePreset?.focused_surfaces?.length || workspacePreset?.preferred_capabilities?.length) ? (
                       <div className="flex flex-wrap gap-2">
                         {workspacePreset?.primary_plane ? <MetaBadge label={`primary: ${workspacePreset.primary_plane}`} /> : null}
+                        {customerRuntimePolicy?.policy_version ? <MetaBadge label={`policy: ${customerRuntimePolicy.policy_version}`} /> : null}
+                        {customerRuntimePolicy?.auth_primary_method ? <MetaBadge label={`auth: ${customerRuntimePolicy.auth_primary_method}`} /> : null}
                         {(workspacePreset?.focused_surfaces || []).map((surface) => <MetaBadge key={`surface-${surface}`} label={`surface: ${surface}`} />)}
                         {(workspacePreset?.preferred_capabilities || []).slice(0, 4).map((capabilityId) => (
                           <MetaBadge key={capabilityId} label={capabilityId.replace('capability.', '')} />
@@ -688,6 +709,7 @@ export default function ChatPage() {
                     {workspacePreset.primary_plane ? <div>1. 当前优先 plane：{workspacePreset.primary_plane}。</div> : null}
                     {workspacePreset.recommended_route_order.length > 0 ? <div>2. 推荐路径：{workspacePreset.recommended_route_order.join(' → ')}。</div> : null}
                     {workspacePreset.focused_surfaces.length > 0 ? <div>3. 重点 surface：{workspacePreset.focused_surfaces.join(' / ')}。</div> : null}
+                    {customerRuntimePolicy?.policy_version ? <div>4. Runtime policy：{customerRuntimePolicy.policy_version}{customerRuntimePolicy.auth_verification_posture ? ` · verify=${customerRuntimePolicy.auth_verification_posture}` : ''}。</div> : null}
                   </>
                 ) : (
                   <>

@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type AuthPostureMeta, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
+import { requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type AuthPostureMeta, type CustomerRuntimePolicyMeta, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
 
 type EmailState = {
   email: string
@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [loadingMode, setLoadingMode] = useState<'email_issue' | 'email_verify' | 'wallet_issue' | 'wallet_verify' | null>(null)
   const [error, setError] = useState('')
   const [authPosture, setAuthPosture] = useState<AuthPostureMeta | null>(null)
+  const [runtimePolicy, setRuntimePolicy] = useState<CustomerRuntimePolicyMeta | null>(null)
 
   const emailStep = emailState.challenge ? 2 : 1
   const walletStep = walletState.challenge ? 2 : 1
@@ -61,6 +62,7 @@ export default function LoginPage() {
       }
       setEmailState((prev) => ({ ...prev, challenge: result.challenge }))
       setAuthPosture(result.challenge.auth_posture || null)
+      setRuntimePolicy(result.customer_runtime_policy || result.challenge.customer_runtime_policy || null)
     } finally {
       setLoadingMode(null)
     }
@@ -78,6 +80,7 @@ export default function LoginPage() {
         return
       }
       setAuthPosture(result.session.auth_posture || emailState.challenge?.auth_posture || null)
+      setRuntimePolicy(result.session.customer_runtime_policy || emailState.challenge?.customer_runtime_policy || null)
       router.push('/chat')
     } finally {
       setLoadingMode(null)
@@ -96,6 +99,7 @@ export default function LoginPage() {
       }
       setWalletState((prev) => ({ ...prev, challenge: result.challenge }))
       setAuthPosture(result.challenge.auth_posture || null)
+      setRuntimePolicy(result.customer_runtime_policy || result.challenge.customer_runtime_policy || null)
     } finally {
       setLoadingMode(null)
     }
@@ -113,6 +117,7 @@ export default function LoginPage() {
         return
       }
       setAuthPosture(result.session.auth_posture || walletState.challenge?.auth_posture || null)
+      setRuntimePolicy(result.session.customer_runtime_policy || walletState.challenge?.customer_runtime_policy || null)
       router.push('/chat')
     } finally {
       setLoadingMode(null)
@@ -158,6 +163,13 @@ export default function LoginPage() {
                 </div>
                 <div className="mt-3 leading-6">{authPosture.summary}</div>
                 {authPosture.entry_hint ? <div className="mt-2 text-xs opacity-80">{authPosture.entry_hint}</div> : null}
+                {runtimePolicy ? (
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs opacity-85">
+                    <span className="rounded-full border border-current/15 px-2.5 py-1">policy: {runtimePolicy.policy_version}</span>
+                    {runtimePolicy.primary_plane ? <span className="rounded-full border border-current/15 px-2.5 py-1">plane: {runtimePolicy.primary_plane}</span> : null}
+                    {runtimePolicy.auth_primary_method ? <span className="rounded-full border border-current/15 px-2.5 py-1">runtime auth: {runtimePolicy.auth_primary_method}</span> : null}
+                  </div>
+                ) : null}
                 {authPosture.recovery_actions.length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {authPosture.recovery_actions.map((action) => (

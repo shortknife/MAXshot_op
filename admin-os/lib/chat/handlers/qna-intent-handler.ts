@@ -9,7 +9,7 @@ import { toCanonicalIntentType } from '@/lib/intent-analyzer/intent-taxonomy'
 import { isCapabilityAllowedForCustomer } from '@/lib/customers/runtime'
 import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
 import type { CustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
-import { loadCustomerReviewPosture } from '@/lib/customers/review'
+import { loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 
 type ParsedLike = {
   intent: {
@@ -27,7 +27,8 @@ export async function handleQnaIntent(params: {
   workspacePreset?: CustomerWorkspacePreset | null
   runtimePolicy?: CustomerRuntimePolicy | null
 }): Promise<{ body: unknown }> {
-  const { intentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery, workspacePreset, runtimePolicy } = params
+  const { intentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery, runtimePolicy } = params
+  const workspacePreset = params.workspacePreset || runtimePolicy?.workspace || null
   const qnaSlots: Record<string, unknown> = {
     ...(parsed.intent.extracted_slots || {}),
     question: String((parsed.intent.extracted_slots || {}).question || rawQuery || '').trim(),
@@ -78,7 +79,8 @@ export async function handleQnaIntent(params: {
   let reviewPayload: Record<string, unknown> | null = null
 
   if (useFaqCapability && qnaResult?.fallback_required) {
-    const reviewPosture = runtimePolicy?.review || await loadCustomerReviewPosture(customerId)
+    const resolvedRuntimePolicy = runtimePolicy || await loadCustomerRuntimePolicy(customerId)
+    const reviewPosture = resolvedRuntimePolicy?.review || null
     const fallbackReason = qnaResult.reason || qna.evidence?.fallback_reason || 'faq_generation_failed'
     const fallbackOutput = await faqFallback(
       buildChatEnvelope(intentType, {

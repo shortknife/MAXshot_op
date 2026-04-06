@@ -22,7 +22,8 @@ export async function dispatchNonBusinessIntent(params: {
   workspacePreset?: CustomerWorkspacePreset | null
   runtimePolicy?: CustomerRuntimePolicy | null
 }): Promise<unknown> {
-  const { intentType, canonicalIntentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery, workspacePreset, runtimePolicy } = params
+  const { intentType, canonicalIntentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery, runtimePolicy } = params
+  const workspacePreset = params.workspacePreset || runtimePolicy?.workspace || null
   const lane = resolveChatIntentLane({
     intentType,
     canonicalIntentType,

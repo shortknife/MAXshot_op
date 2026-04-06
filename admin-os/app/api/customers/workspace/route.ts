@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { loadCustomerWorkspacePreset } from '@/lib/customers/workspace'
+import { buildCustomerRuntimePolicyMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -8,6 +8,6 @@ export async function GET(req: Request) {
   if (!customerId) {
     return NextResponse.json({ success: false, error: 'missing_customer_id' }, { status: 400 })
   }
-  const preset = await loadCustomerWorkspacePreset(customerId)
-  return NextResponse.json({ success: true, preset })
+  const runtimePolicy = await loadCustomerRuntimePolicy(customerId)
+  return NextResponse.json({ success: true, preset: runtimePolicy?.workspace || null, runtime_policy: buildCustomerRuntimePolicyMeta(runtimePolicy), runtime_policy_full: runtimePolicy })
 }

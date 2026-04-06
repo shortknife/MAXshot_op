@@ -1,4 +1,5 @@
 import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
+import type { CustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 
 const CAPABILITY_PLANE_MAP: Record<string, string> = {
   'capability.data_fact_query': 'ops_data',
@@ -36,12 +37,14 @@ export function resolveCapabilityPlane(capabilityId: string | null | undefined):
 
 export function applyCustomerRoutingPriority(params: {
   workspacePreset?: CustomerWorkspacePreset | null
+  runtimePolicy?: CustomerRuntimePolicy | null
   intentType: string
   canonicalIntentType: string
   matchedCapabilityIds: string[]
   primaryCapabilityId: string | null
 }): CustomerRoutingPriorityDecision {
-  const { workspacePreset, intentType, canonicalIntentType, primaryCapabilityId } = params
+  const workspacePreset = params.workspacePreset || params.runtimePolicy?.workspace || null
+  const { intentType, canonicalIntentType, primaryCapabilityId } = params
   const matchedCapabilityIds = Array.from(new Set((params.matchedCapabilityIds || []).filter(Boolean)))
   const preferredPlane = workspacePreset?.primary_plane || workspacePreset?.recommended_route_order?.[0] || null
 

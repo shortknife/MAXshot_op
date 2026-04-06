@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { loadFaqReviewQueue, type FaqReviewQueueItem } from '@/lib/faq-kb/loaders'
-import { loadCustomerReviewPosture } from '@/lib/customers/review'
+import { loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 import { assertCapabilityMutationPolicy } from '@/lib/router/capability-policy'
 import { acquireWriteLane, releaseWriteLane } from '@/lib/router/write-lane'
@@ -73,7 +73,7 @@ function normalizeCitations(value: unknown): Array<{ source_id?: string; title?:
 }
 
 async function toQueueItem(row: ReviewQueueRow): Promise<FaqReviewQueueItem> {
-  const reviewPosture = await loadCustomerReviewPosture(row.customer_id)
+  const reviewPosture = (await loadCustomerRuntimePolicy(row.customer_id))?.review || null
   return {
     review_id: row.review_id,
     question: row.question,

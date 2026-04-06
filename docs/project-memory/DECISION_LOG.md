@@ -352,3 +352,18 @@
 - Why: workspace, routing, delivery, review, clarification, and auth posture were already implemented, but they needed one deterministic policy contract before deeper policy evolution work.
 - Scope: unified policy resolution, shared runtime propagation, shared evidence, and concentrated validation for auth and chat hot paths.
 - Consequence: future customer-aware development can build on a single runtime policy surface instead of continuing to duplicate customer-specific logic per page or per handler.
+
+## D-053 Customer Runtime Policy Evolution Baseline Accepted
+- Date: 2026-04-06
+- Decision: make customer runtime policy the default consumption path for workspace API responses, review queue decoration, auth client surfacing, and chat workspace surfacing.
+- Why: the first runtime policy baseline unified policy resolution, but residual per-surface posture consumers still existed and weakened the single-contract goal.
+- Scope: workspace API, review queue runtime, auth client/runtime metadata, chat workspace surface, and residual routing/review fallback cleanup.
+- Consequence: Nexa now uses customer runtime policy as the primary cross-surface contract rather than only as a server-side aggregation object.
+
+
+## D-054 Customer Runtime Policy Evolution Block Accepted
+- Date: 2026-04-06
+- Decision: freeze the customer runtime policy evolution block after moving remaining hot-path customer-aware consumers onto the unified policy layer.
+- Why: after the runtime policy baseline, the next defensible step was to remove residual direct posture consumption from production surfaces before building deeper policy composition.
+- Scope: workspace route, review queue, auth client hints, chat customer workspace hints, and concentrated validation across server and client-facing policy consumers.
+- Consequence: future customer policy work can focus on composition and extension instead of continuing to normalize basic policy consumption.

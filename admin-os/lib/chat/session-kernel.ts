@@ -76,7 +76,7 @@ export function buildPreparedSessionKernel(params: {
   const active = prepared.contextEnvelope.conversation_context.active_context
   const pending = prepared.contextEnvelope.conversation_context.pending_clarification
   const memoryRuntime = prepared.contextEnvelope.memory_runtime
-  const workspacePreset = params.workspacePreset || null
+  const workspacePreset = params.workspacePreset || params.runtimePolicy?.workspace || null
   const routingPriority = params.routingPriority || null
   const runtimePolicy = params.runtimePolicy || null
   return {
