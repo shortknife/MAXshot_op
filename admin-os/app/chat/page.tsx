@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import type { CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { getStoredSession } from '@/lib/auth'
@@ -68,21 +69,6 @@ type ChatMeta = {
       queue_source?: string
     } | null
   } | null
-}
-
-type CustomerRuntimePolicyMeta = {
-  customer_id: string
-  policy_version: string
-  primary_plane: string | null
-  default_entry_path?: string | null
-  preferred_capability_count?: number
-  route_order?: string[]
-  focused_surface_count?: number
-  auth_primary_method?: string | null
-  auth_verification_posture?: string | null
-  delivery_summary_style?: string | null
-  review_escalation_style?: string | null
-  clarification_style?: string | null
 }
 
 type CustomerWorkspacePreset = {

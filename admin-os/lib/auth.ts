@@ -1,5 +1,7 @@
 'use client'
 
+import type { CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
+
 export interface IdentitySession {
   identity_id: string
   customer_id: string | null
@@ -18,25 +20,6 @@ export interface IdentitySession {
 export interface IdentitySessionResult extends IdentitySession {
   auth_posture?: AuthPostureMeta | null
   customer_runtime_policy?: CustomerRuntimePolicyMeta | null
-}
-
-export interface CustomerRuntimePolicyMeta {
-  customer_id: string
-  policy_version: string
-  primary_plane: string | null
-  default_entry_path?: string | null
-  preferred_capability_count?: number
-  route_order?: string[]
-  focused_surface_count?: number
-  has_delivery_posture?: boolean
-  has_review_posture?: boolean
-  has_clarification_posture?: boolean
-  has_auth_posture?: boolean
-  auth_primary_method?: string | null
-  auth_verification_posture?: string | null
-  delivery_summary_style?: string | null
-  review_escalation_style?: string | null
-  clarification_style?: string | null
 }
 
 export interface AuthPostureMeta {

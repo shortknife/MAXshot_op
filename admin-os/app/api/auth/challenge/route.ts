@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { resolveIdentityByEmail, resolveIdentityByWallet } from '@/lib/auth/identity-registry'
-import { buildAuthPostureMeta } from '@/lib/customers/auth'
-import { loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { buildCustomerAuthResponseMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 import { issueEmailChallenge, issueWalletChallenge } from '@/lib/auth/runtime'
 
 export async function POST(request: NextRequest) {
@@ -17,7 +16,7 @@ export async function POST(request: NextRequest) {
     const challenge = await issueEmailChallenge(identity)
     if (!challenge) return NextResponse.json({ success: false, error: 'challenge_issue_failed' }, { status: 500 })
     const runtimePolicy = await loadCustomerRuntimePolicy(identity.customer_id)
-    return NextResponse.json({ success: true, challenge: { ...challenge, auth_posture: buildAuthPostureMeta(runtimePolicy?.auth || null), customer_runtime_policy: runtimePolicy ? { customer_id: runtimePolicy.customer_id, policy_version: runtimePolicy.policy_version, primary_plane: runtimePolicy.primary_plane } : null } })
+    return NextResponse.json({ success: true, challenge: { ...challenge, ...buildCustomerAuthResponseMeta(runtimePolicy) } })
   }
 
   if (mode === 'wallet') {
@@ -28,7 +27,7 @@ export async function POST(request: NextRequest) {
     const challenge = await issueWalletChallenge(identity)
     if (!challenge) return NextResponse.json({ success: false, error: 'challenge_issue_failed' }, { status: 500 })
     const runtimePolicy = await loadCustomerRuntimePolicy(identity.customer_id)
-    return NextResponse.json({ success: true, challenge: { ...challenge, auth_posture: buildAuthPostureMeta(runtimePolicy?.auth || null), customer_runtime_policy: runtimePolicy ? { customer_id: runtimePolicy.customer_id, policy_version: runtimePolicy.policy_version, primary_plane: runtimePolicy.primary_plane } : null } })
+    return NextResponse.json({ success: true, challenge: { ...challenge, ...buildCustomerAuthResponseMeta(runtimePolicy) } })
   }
 
   return NextResponse.json({ success: false, error: 'unsupported_auth_mode' }, { status: 400 })

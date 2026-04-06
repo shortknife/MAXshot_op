@@ -9,7 +9,7 @@ import { toCanonicalIntentType } from '@/lib/intent-analyzer/intent-taxonomy'
 import { isCapabilityAllowedForCustomer } from '@/lib/customers/runtime'
 import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
 import type { CustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
-import { loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { decorateReviewPayloadWithRuntimePolicy, loadCustomerRuntimePolicy, selectCustomerReviewPosture, selectCustomerWorkspacePreset } from '@/lib/customers/runtime-policy'
 
 type ParsedLike = {
   intent: {
@@ -28,7 +28,7 @@ export async function handleQnaIntent(params: {
   runtimePolicy?: CustomerRuntimePolicy | null
 }): Promise<{ body: unknown }> {
   const { intentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery, runtimePolicy } = params
-  const workspacePreset = params.workspacePreset || runtimePolicy?.workspace || null
+  const workspacePreset = params.workspacePreset || selectCustomerWorkspacePreset(runtimePolicy)
   const qnaSlots: Record<string, unknown> = {
     ...(parsed.intent.extracted_slots || {}),
     question: String((parsed.intent.extracted_slots || {}).question || rawQuery || '').trim(),
@@ -80,7 +80,7 @@ export async function handleQnaIntent(params: {
 
   if (useFaqCapability && qnaResult?.fallback_required) {
     const resolvedRuntimePolicy = runtimePolicy || await loadCustomerRuntimePolicy(customerId)
-    const reviewPosture = resolvedRuntimePolicy?.review || null
+    const reviewPosture = selectCustomerReviewPosture(resolvedRuntimePolicy)
     const fallbackReason = qnaResult.reason || qna.evidence?.fallback_reason || 'faq_generation_failed'
     const fallbackOutput = await faqFallback(
       buildChatEnvelope(intentType, {
@@ -109,27 +109,7 @@ export async function handleQnaIntent(params: {
       })
     )
     reviewPayload = ((reviewOutput.result as { review_payload?: Record<string, unknown> } | null)?.review_payload) || null
-    if (reviewPayload && reviewPosture) {
-      reviewPayload = {
-        ...reviewPayload,
-        review_queue_label:
-          typeof reviewPayload.review_queue_label === 'string'
-            ? reviewPayload.review_queue_label
-            : reviewPosture.review_queue_label,
-        escalation_style:
-          typeof reviewPayload.escalation_style === 'string'
-            ? reviewPayload.escalation_style
-            : reviewPosture.escalation_style,
-        operator_hint:
-          typeof reviewPayload.operator_hint === 'string'
-            ? reviewPayload.operator_hint
-            : reviewPosture.operator_hint,
-        suggested_actions:
-          Array.isArray(reviewPayload.suggested_actions) && reviewPayload.suggested_actions.length > 0
-            ? reviewPayload.suggested_actions
-            : reviewPosture.suggested_actions,
-      }
-    }
+    reviewPayload = decorateReviewPayloadWithRuntimePolicy(reviewPayload, resolvedRuntimePolicy)
     if (reviewPayload) {
       const persistedReview = await enqueueFaqReviewItem({
         question: String(reviewPayload.question || qnaSlots.question || ''),

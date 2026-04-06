@@ -367,3 +367,17 @@
 - Why: after the runtime policy baseline, the next defensible step was to remove residual direct posture consumption from production surfaces before building deeper policy composition.
 - Scope: workspace route, review queue, auth client hints, chat customer workspace hints, and concentrated validation across server and client-facing policy consumers.
 - Consequence: future customer policy work can focus on composition and extension instead of continuing to normalize basic policy consumption.
+
+## D-055 Customer Policy Composition Baseline Accepted
+- Date: 2026-04-06
+- Decision: add reusable selectors and decorators to the customer runtime policy layer so auth, review, and client surfaces consume one shared composition contract.
+- Why: the runtime policy evolution block made policy the main hot-path contract, but residual local posture shaping still duplicated customer logic and weakened future maintainability.
+- Scope: shared policy selectors, shared auth response metadata, shared FAQ review payload decoration, and duplicate client meta cleanup.
+- Consequence: future customer policy changes can update one composition layer instead of touching each auth, review, or chat surface independently.
+
+## D-056 Customer Policy Composition Block Accepted
+- Date: 2026-04-06
+- Decision: freeze the customer policy composition block after reusable selectors/decorators replaced the remaining duplicated shaping logic in auth and review hot paths.
+- Why: the next defensible step after runtime policy evolution was to eliminate repeated policy-to-surface mapping before expanding policy defaults further.
+- Scope: auth challenge/verify routes, review queue decoration, qna review payload shaping, client type cleanup, and concentrated validation across customer policy consumers.
+- Consequence: the customer policy stack now has a stable composition layer and future work can focus on deeper defaults rather than more normalization.

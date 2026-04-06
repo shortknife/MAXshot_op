@@ -66,8 +66,8 @@ describe('auth verify route', () => {
 
 vi.mock('@/lib/customers/runtime-policy', () => ({
   loadCustomerRuntimePolicy: mocks.loadCustomerRuntimePolicy,
-}))
-
-vi.mock('@/lib/customers/auth', () => ({
-  buildAuthPostureMeta: (value: unknown) => value,
+  buildCustomerAuthResponseMeta: (policy: { auth?: unknown; customer_id?: string; policy_version?: string; primary_plane?: string } | null | undefined) => ({
+    auth_posture: policy?.auth || null,
+    customer_runtime_policy: policy ? { customer_id: policy.customer_id || null, policy_version: policy.policy_version || null, primary_plane: policy.primary_plane || null } : null,
+  }),
 }))

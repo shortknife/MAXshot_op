@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { loadFaqReviewQueue, type FaqReviewQueueItem } from '@/lib/faq-kb/loaders'
-import { loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { decorateReviewPayloadWithRuntimePolicy, loadCustomerRuntimePolicy, selectCustomerReviewPosture } from '@/lib/customers/runtime-policy'
 import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 import { assertCapabilityMutationPolicy } from '@/lib/router/capability-policy'
 import { acquireWriteLane, releaseWriteLane } from '@/lib/router/write-lane'
@@ -73,8 +73,9 @@ function normalizeCitations(value: unknown): Array<{ source_id?: string; title?:
 }
 
 async function toQueueItem(row: ReviewQueueRow): Promise<FaqReviewQueueItem> {
-  const reviewPosture = (await loadCustomerRuntimePolicy(row.customer_id))?.review || null
-  return {
+  const runtimePolicy = await loadCustomerRuntimePolicy(row.customer_id)
+  const reviewPosture = selectCustomerReviewPosture(runtimePolicy)
+  return decorateReviewPayloadWithRuntimePolicy({
     review_id: row.review_id,
     question: row.question,
     reason: row.reason,
@@ -91,7 +92,7 @@ async function toQueueItem(row: ReviewQueueRow): Promise<FaqReviewQueueItem> {
     operator_hint: reviewPosture?.operator_hint || null,
     suggested_actions: reviewPosture?.suggested_actions || [],
     escalation_style: reviewPosture?.escalation_style || null,
-  }
+  }, runtimePolicy) as FaqReviewQueueItem
 }
 
 export function isValidFaqReviewAction(action: string): action is FaqReviewQueueAction {

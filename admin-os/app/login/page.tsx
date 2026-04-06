@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type AuthPostureMeta, type CustomerRuntimePolicyMeta, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
+import type { CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
+import { requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type AuthPostureMeta, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
 
 type EmailState = {
   email: string

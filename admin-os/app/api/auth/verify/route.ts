@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { resolveIdentityByEmail, resolveIdentityByWallet } from '@/lib/auth/identity-registry'
-import { buildAuthPostureMeta } from '@/lib/customers/auth'
-import { loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { buildCustomerAuthResponseMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 import { verifyEmailChallenge, verifyWalletChallenge } from '@/lib/auth/runtime'
 
 export async function POST(request: NextRequest) {
@@ -21,7 +20,7 @@ export async function POST(request: NextRequest) {
     try {
       const session = await verifyEmailChallenge(identity, challengeId, code)
       const runtimePolicy = await loadCustomerRuntimePolicy(identity.customer_id)
-      return NextResponse.json({ success: true, session, auth_posture: buildAuthPostureMeta(runtimePolicy?.auth || null), customer_runtime_policy: runtimePolicy ? { customer_id: runtimePolicy.customer_id, policy_version: runtimePolicy.policy_version, primary_plane: runtimePolicy.primary_plane } : null })
+      return NextResponse.json({ success: true, session, ...buildCustomerAuthResponseMeta(runtimePolicy) })
     } catch (error) {
       return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'email_verification_failed' }, { status: 403 })
     }
@@ -37,7 +36,7 @@ export async function POST(request: NextRequest) {
     try {
       const session = await verifyWalletChallenge(identity, challengeId, signature)
       const runtimePolicy = await loadCustomerRuntimePolicy(identity.customer_id)
-      return NextResponse.json({ success: true, session, auth_posture: buildAuthPostureMeta(runtimePolicy?.auth || null), customer_runtime_policy: runtimePolicy ? { customer_id: runtimePolicy.customer_id, policy_version: runtimePolicy.policy_version, primary_plane: runtimePolicy.primary_plane } : null })
+      return NextResponse.json({ success: true, session, ...buildCustomerAuthResponseMeta(runtimePolicy) })
     } catch (error) {
       return NextResponse.json({ success: false, error: error instanceof Error ? error.message : 'wallet_verification_failed' }, { status: 403 })
     }
