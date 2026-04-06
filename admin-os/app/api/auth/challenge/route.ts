@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { resolveIdentityByEmail, resolveIdentityByWallet } from '@/lib/auth/identity-registry'
+import { buildAuthPostureMeta, loadCustomerAuthPosture } from '@/lib/customers/auth'
 import { issueEmailChallenge, issueWalletChallenge } from '@/lib/auth/runtime'
 
 export async function POST(request: NextRequest) {
@@ -14,7 +15,8 @@ export async function POST(request: NextRequest) {
     if (!identity) return NextResponse.json({ success: false, error: 'identity_not_found' }, { status: 403 })
     const challenge = await issueEmailChallenge(identity)
     if (!challenge) return NextResponse.json({ success: false, error: 'challenge_issue_failed' }, { status: 500 })
-    return NextResponse.json({ success: true, challenge })
+    const authPosture = await loadCustomerAuthPosture(identity.customer_id)
+    return NextResponse.json({ success: true, challenge: { ...challenge, auth_posture: buildAuthPostureMeta(authPosture) } })
   }
 
   if (mode === 'wallet') {
@@ -24,7 +26,8 @@ export async function POST(request: NextRequest) {
     if (!identity) return NextResponse.json({ success: false, error: 'identity_not_found' }, { status: 403 })
     const challenge = await issueWalletChallenge(identity)
     if (!challenge) return NextResponse.json({ success: false, error: 'challenge_issue_failed' }, { status: 500 })
-    return NextResponse.json({ success: true, challenge })
+    const authPosture = await loadCustomerAuthPosture(identity.customer_id)
+    return NextResponse.json({ success: true, challenge: { ...challenge, auth_posture: buildAuthPostureMeta(authPosture) } })
   }
 
   return NextResponse.json({ success: false, error: 'unsupported_auth_mode' }, { status: 400 })

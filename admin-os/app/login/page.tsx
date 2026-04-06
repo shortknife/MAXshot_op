@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
+import { requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type AuthPostureMeta, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
 
 type EmailState = {
   email: string
@@ -27,6 +27,7 @@ export default function LoginPage() {
   const [walletState, setWalletState] = useState<WalletState>({ walletAddress: '', challenge: null })
   const [loadingMode, setLoadingMode] = useState<'email_issue' | 'email_verify' | 'wallet_issue' | 'wallet_verify' | null>(null)
   const [error, setError] = useState('')
+  const [authPosture, setAuthPosture] = useState<AuthPostureMeta | null>(null)
 
   const emailStep = emailState.challenge ? 2 : 1
   const walletStep = walletState.challenge ? 2 : 1
@@ -41,6 +42,13 @@ export default function LoginPage() {
     return new Date(walletState.challenge.expires_at).toLocaleString('zh-CN')
   }, [walletState.challenge])
 
+  const postureTone = useMemo(() => {
+    if (!authPosture) return 'border-slate-200 bg-slate-50/80 text-slate-700'
+    if (authPosture.verification_posture === 'guided') return 'border-sky-200 bg-sky-50/80 text-sky-900'
+    if (authPosture.verification_posture === 'audit') return 'border-violet-200 bg-violet-50/80 text-violet-900'
+    return 'border-emerald-200 bg-emerald-50/80 text-emerald-950'
+  }, [authPosture])
+
   const handleEmailChallenge = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
@@ -52,6 +60,7 @@ export default function LoginPage() {
         return
       }
       setEmailState((prev) => ({ ...prev, challenge: result.challenge }))
+      setAuthPosture(result.challenge.auth_posture || null)
     } finally {
       setLoadingMode(null)
     }
@@ -68,6 +77,7 @@ export default function LoginPage() {
         setError(result.error || 'Email verification failed')
         return
       }
+      setAuthPosture(result.session.auth_posture || emailState.challenge?.auth_posture || null)
       router.push('/chat')
     } finally {
       setLoadingMode(null)
@@ -85,6 +95,7 @@ export default function LoginPage() {
         return
       }
       setWalletState((prev) => ({ ...prev, challenge: result.challenge }))
+      setAuthPosture(result.challenge.auth_posture || null)
     } finally {
       setLoadingMode(null)
     }
@@ -101,6 +112,7 @@ export default function LoginPage() {
         setError(result.error || 'Wallet verification failed')
         return
       }
+      setAuthPosture(result.session.auth_posture || walletState.challenge?.auth_posture || null)
       router.push('/chat')
     } finally {
       setLoadingMode(null)
@@ -136,6 +148,25 @@ export default function LoginPage() {
           <CardHeader>
             <CardTitle className="text-2xl tracking-tight">Sign in</CardTitle>
             <CardDescription>Use email or wallet. Both resolve to one filesystem-managed identity record, but now verification is mandatory.</CardDescription>
+            {authPosture ? (
+              <div className={`mt-4 rounded-2xl border p-4 text-sm ${postureTone}`}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-medium">{authPosture.customer_id}</span>
+                  <span className="rounded-full border border-current/15 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]">primary: {authPosture.primary_auth_method}</span>
+                  <span className="rounded-full border border-current/15 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]">verify: {authPosture.verification_posture}</span>
+                  <span className="rounded-full border border-current/15 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]">wallet: {authPosture.wallet_posture}</span>
+                </div>
+                <div className="mt-3 leading-6">{authPosture.summary}</div>
+                {authPosture.entry_hint ? <div className="mt-2 text-xs opacity-80">{authPosture.entry_hint}</div> : null}
+                {authPosture.recovery_actions.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {authPosture.recovery_actions.map((action) => (
+                      <span key={action} className="rounded-full border border-current/15 px-3 py-1 text-xs">{action}</span>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="email" className="space-y-5">

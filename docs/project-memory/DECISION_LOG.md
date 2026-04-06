@@ -321,3 +321,19 @@
 - Why: customer-aware workspace, routing, delivery, review escalation, and memory recall were already in place, but clarification flows still used a generic posture that ignored customer-specific product framing.
 - Scope: clarification markdown assets, clarification posture loader, business clarification integration, delivery integration, and chat / interaction-learning visibility.
 - Consequence: Nexa clarification now follows customer-specific posture deterministically without adding a second runtime source or database-managed product asset.
+
+
+## D-049 Customer-Aware Auth Posture Baseline Accepted
+- Date: 2026-04-06
+- Decision: add filesystem-managed customer auth posture assets and return them during challenge and verify flows.
+- Why: hybrid identity and verification were already working, but login still used a generic posture that did not reflect customer-specific entry expectations or recovery guidance.
+- Scope: auth markdown assets, auth posture loader, auth challenge/verify route integration, and `/login` / `/customers` surface updates.
+- Consequence: Nexa login and verification are now customer-aware without introducing a database-managed auth content source.
+
+
+## D-050 Customer-Aware Experience Block Accepted
+- Date: 2026-04-06
+- Decision: freeze the first customer-aware experience block after closing workspace, routing, delivery, review, memory recall, clarification, and auth posture baselines.
+- Why: the platform already had customer-aware runtime pieces, but they needed to be aligned into a coherent end-to-end experience before moving deeper into runtime policy work.
+- Scope: customer-aware experience path from login and workspace through routing, delivery, review, clarification, and recall.
+- Consequence: Nexa now has a consistent customer-aware experience layer and can move to the next block as a runtime policy problem rather than a UI consistency problem.

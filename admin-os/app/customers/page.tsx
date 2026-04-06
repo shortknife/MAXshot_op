@@ -6,6 +6,7 @@ import { loadOperatorRegistry } from '@/lib/customers/access'
 import { loadCustomerMemoryWorkbench } from '@/lib/customers/memory'
 import { loadCustomerWalletAsset } from '@/lib/customers/asset-runtime'
 import { loadCustomerWorkspacePreset } from '@/lib/customers/workspace'
+import { loadCustomerAuthPosture } from '@/lib/customers/auth'
 import { listActiveCustomers } from '@/lib/customers/runtime'
 import { getCapabilityExecutionPolicy } from '@/lib/router/capability-catalog'
 import { CurrentCustomerBadge } from '@/components/customers/current-customer-badge'
@@ -33,6 +34,7 @@ export default async function CustomersPage() {
       memory: await loadCustomerMemoryWorkbench(customer.customer_id),
       wallet: await loadCustomerWalletAsset(customer.customer_id),
       workspace: await loadCustomerWorkspacePreset(customer.customer_id),
+      auth: await loadCustomerAuthPosture(customer.customer_id),
     })),
   )
 
@@ -55,7 +57,7 @@ export default async function CustomersPage() {
               <CardTitle className="text-base font-semibold">Customer Workspace</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5 p-4 sm:p-6">
-              {cards.map(({ customer, memory, wallet, workspace }) => (
+              {cards.map(({ customer, memory, wallet, workspace, auth }) => (
                 <div key={customer.customer_id} className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(248,250,252,0.93))] p-5 shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-3">
@@ -178,6 +180,22 @@ export default async function CustomersPage() {
                         <div className="mt-3 flex flex-wrap gap-2">
                           {customer.enabled_planes.map((plane) => <Pill key={`${customer.customer_id}-enabled-${plane}`}>{plane}</Pill>)}
                         </div>
+                      </div>
+
+                      <div className="rounded-3xl border border-slate-200 bg-white/80 p-4">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Auth Posture</div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {auth?.primary_auth_method ? <Pill tone="emerald">primary: {auth.primary_auth_method}</Pill> : null}
+                          {auth?.verification_posture ? <Pill tone="sky">verify: {auth.verification_posture}</Pill> : null}
+                          {auth?.wallet_posture ? <Pill tone="violet">wallet: {auth.wallet_posture}</Pill> : null}
+                        </div>
+                        <div className="mt-4 text-sm leading-6 text-slate-700">{auth?.summary || 'No auth posture configured.'}</div>
+                        {auth?.entry_hint ? <div className="mt-3 text-sm text-slate-600">{auth.entry_hint}</div> : null}
+                        {(auth?.recovery_actions || []).length > 0 ? (
+                          <div className="mt-4 space-y-2 text-sm text-slate-600">
+                            {auth?.recovery_actions.map((action) => <div key={`${customer.customer_id}-auth-${action}`}>- {action}</div>)}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   </div>

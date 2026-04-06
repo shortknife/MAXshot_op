@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   resolveIdentityByEmail: vi.fn(),
   resolveIdentityByWallet: vi.fn(),
   verifyEmailChallenge: vi.fn(),
   verifyWalletChallenge: vi.fn(),
+  loadCustomerAuthPosture: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/identity-registry', () => ({
@@ -28,6 +29,9 @@ function buildRequest(body: Record<string, unknown>) {
 }
 
 describe('auth verify route', () => {
+  beforeEach(() => {
+    mocks.loadCustomerAuthPosture.mockResolvedValue({ customer_id: 'maxshot', verification_posture: 'operator' })
+  })
   it('verifies email challenge', async () => {
     mocks.resolveIdentityByEmail.mockResolvedValue({ identity_id: 'maxshot-ops' })
     mocks.verifyEmailChallenge.mockResolvedValue({ identity_id: 'maxshot-ops', auth_method: 'email', verification_method: 'email_code', token: 'tok', timestamp: 1 })
@@ -36,6 +40,7 @@ describe('auth verify route', () => {
     expect(res.status).toBe(200)
     expect(body.success).toBe(true)
     expect(body.session.verification_method).toBe('email_code')
+    expect(body.auth_posture.customer_id).toBe('maxshot')
   })
 
   it('verifies wallet challenge', async () => {
@@ -46,6 +51,7 @@ describe('auth verify route', () => {
     expect(res.status).toBe(200)
     expect(body.success).toBe(true)
     expect(body.session.verification_method).toBe('wallet_signature')
+    expect(body.auth_posture.customer_id).toBe('maxshot')
   })
 
   it('returns verifier errors as 403', async () => {
@@ -57,3 +63,8 @@ describe('auth verify route', () => {
     expect(body.error).toBe('invalid_code')
   })
 })
+
+vi.mock('@/lib/customers/auth', () => ({
+  loadCustomerAuthPosture: mocks.loadCustomerAuthPosture,
+  buildAuthPostureMeta: (value: unknown) => value,
+}))

@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   resolveIdentityByEmail: vi.fn(),
   resolveIdentityByWallet: vi.fn(),
   issueEmailChallenge: vi.fn(),
   issueWalletChallenge: vi.fn(),
+  loadCustomerAuthPosture: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/identity-registry', () => ({
@@ -28,6 +29,9 @@ function buildRequest(body: Record<string, unknown>) {
 }
 
 describe('auth challenge route', () => {
+  beforeEach(() => {
+    mocks.loadCustomerAuthPosture.mockResolvedValue({ customer_id: 'maxshot', verification_posture: 'operator' })
+  })
   it('issues email challenge', async () => {
     mocks.resolveIdentityByEmail.mockResolvedValue({ identity_id: 'maxshot-ops', customer_id: 'maxshot' })
     mocks.issueEmailChallenge.mockResolvedValue({ challenge_id: 'email-auth-1', code_preview: '123456' })
@@ -36,6 +40,7 @@ describe('auth challenge route', () => {
     expect(res.status).toBe(200)
     expect(body.success).toBe(true)
     expect(body.challenge.challenge_id).toBe('email-auth-1')
+    expect(body.challenge.auth_posture.customer_id).toBe('maxshot')
   })
 
   it('issues wallet challenge', async () => {
@@ -46,6 +51,7 @@ describe('auth challenge route', () => {
     expect(res.status).toBe(200)
     expect(body.success).toBe(true)
     expect(body.challenge.challenge_id).toBe('wallet-auth-1')
+    expect(body.challenge.auth_posture.customer_id).toBe('maxshot')
   })
 
   it('rejects unknown identity', async () => {
@@ -56,3 +62,8 @@ describe('auth challenge route', () => {
     expect(body.error).toBe('identity_not_found')
   })
 })
+
+vi.mock('@/lib/customers/auth', () => ({
+  loadCustomerAuthPosture: mocks.loadCustomerAuthPosture,
+  buildAuthPostureMeta: (value: unknown) => value,
+}))

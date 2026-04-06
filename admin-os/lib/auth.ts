@@ -15,6 +15,22 @@ export interface IdentitySession {
   timestamp: number
 }
 
+export interface IdentitySessionResult extends IdentitySession {
+  auth_posture?: AuthPostureMeta | null
+}
+
+export interface AuthPostureMeta {
+  customer_id: string
+  auth_version: string
+  primary_auth_method: 'email' | 'wallet'
+  verification_posture: 'operator' | 'guided' | 'audit'
+  wallet_posture: 'identity_only' | 'identity_preferred' | 'disabled'
+  summary: string | null
+  entry_hint: string | null
+  recovery_actions: string[]
+  file_path: string
+}
+
 export interface EmailChallenge {
   challenge_id: string
   identity_id: string
@@ -23,6 +39,7 @@ export interface EmailChallenge {
   email: string
   code_preview: string
   expires_at: string
+  auth_posture?: AuthPostureMeta | null
 }
 
 export interface WalletChallenge {
@@ -33,6 +50,7 @@ export interface WalletChallenge {
   nonce: string
   message: string
   expires_at: string
+  auth_posture?: AuthPostureMeta | null
 }
 
 const TOKEN_KEY = 'nexa_identity_session'
@@ -113,7 +131,7 @@ export async function verifyEmailCode(email: string, challengeId: string, code: 
     return { success: false as const, error: String(data.error || 'email_verification_failed') }
   }
   setStoredSession(data.session)
-  return { success: true as const, session: data.session as IdentitySession }
+  return { success: true as const, session: { ...(data.session as IdentitySession), auth_posture: (data.auth_posture as AuthPostureMeta | null | undefined) || null } as IdentitySessionResult }
 }
 
 export async function requestWalletChallenge(walletAddress: string) {
@@ -153,7 +171,7 @@ export async function verifyWalletSignature(walletAddress: string, challenge: Wa
       return { success: false as const, error: String(data.error || 'wallet_verification_failed') }
     }
     setStoredSession(data.session)
-    return { success: true as const, session: data.session as IdentitySession, signature }
+    return { success: true as const, session: { ...(data.session as IdentitySession), auth_posture: (data.auth_posture as AuthPostureMeta | null | undefined) || null } as IdentitySessionResult, signature }
   } catch (error) {
     return { success: false as const, error: error instanceof Error ? error.message : 'wallet_verification_failed' }
   }
