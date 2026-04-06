@@ -17,9 +17,7 @@ import { attachPromptRuntime, buildPromptRuntime, type PromptRuntimeSnapshot } f
 import { attachPromptPolicy, evaluatePromptPolicy, type PromptPolicyDecision } from '@/lib/chat/prompt-policy'
 import { attachSessionKernel, buildPreparedSessionKernel, finalizeSessionKernel, type SessionKernelSnapshot } from '@/lib/chat/session-kernel'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
-import { loadCustomerWorkspacePreset } from '@/lib/customers/workspace'
-import { loadCustomerDeliveryPosture } from '@/lib/customers/delivery'
-import { loadCustomerClarificationPosture } from '@/lib/customers/clarification'
+import { buildCustomerRuntimePolicyMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 import { applyCustomerRoutingPriority } from '@/lib/chat/customer-routing-priority'
 
 export type ChatAskRuntimeMeta = {
@@ -130,15 +128,12 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
     followUpContextApplied,
   } = prepared
   const customerId = typeof body.customer_id === 'string' ? String(body.customer_id) : null
-  const customerWorkspacePreset = await perf.measure('load_customer_workspace_preset', () =>
-    loadCustomerWorkspacePreset(customerId),
+  const customerRuntimePolicy = await perf.measure('load_customer_runtime_policy', () =>
+    loadCustomerRuntimePolicy(customerId),
   )
-  const customerDeliveryPosture = await perf.measure('load_customer_delivery_posture', () =>
-    loadCustomerDeliveryPosture(customerId),
-  )
-  const customerClarificationPosture = await perf.measure('load_customer_clarification_posture', () =>
-    loadCustomerClarificationPosture(customerId),
-  )
+  const customerWorkspacePreset = customerRuntimePolicy?.workspace || null
+  const customerDeliveryPosture = customerRuntimePolicy?.delivery || null
+  const customerClarificationPosture = customerRuntimePolicy?.clarification || null
   const routingPriority = applyCustomerRoutingPriority({
     workspacePreset: customerWorkspacePreset,
     intentType,
@@ -153,6 +148,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
     body,
     workspacePreset: customerWorkspacePreset,
     routingPriority,
+    runtimePolicy: customerRuntimePolicy,
   })
 
   const buildRuntimeMeta = (payload: Record<string, unknown>): ChatAskRuntimeMeta => {
@@ -233,15 +229,28 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
           promptPolicy,
         })), {
           deliveryPosture: customerDeliveryPosture,
+          clarificationPosture: customerClarificationPosture,
         })
         const kernel = finalizeSessionKernel({
           kernel: preparedKernel,
           payload: verified,
         })
-        return attachSessionKernel({
+        const withKernel = attachSessionKernel({
           payload: verified,
           kernel,
-        })
+        }) as Record<string, unknown>
+        const data = withKernel.data && typeof withKernel.data === 'object' ? (withKernel.data as Record<string, unknown>) : {}
+        const meta = data.meta && typeof data.meta === 'object' ? (data.meta as Record<string, unknown>) : {}
+        return {
+          ...withKernel,
+          data: {
+            ...data,
+            meta: {
+              ...meta,
+              customer_runtime_policy: buildCustomerRuntimePolicyMeta(customerRuntimePolicy),
+            },
+          },
+        }
       }
     )
 

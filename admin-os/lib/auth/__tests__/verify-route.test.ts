@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   resolveIdentityByWallet: vi.fn(),
   verifyEmailChallenge: vi.fn(),
   verifyWalletChallenge: vi.fn(),
-  loadCustomerAuthPosture: vi.fn(),
+  loadCustomerRuntimePolicy: vi.fn(),
 }))
 
 vi.mock('@/lib/auth/identity-registry', () => ({
@@ -30,7 +30,7 @@ function buildRequest(body: Record<string, unknown>) {
 
 describe('auth verify route', () => {
   beforeEach(() => {
-    mocks.loadCustomerAuthPosture.mockResolvedValue({ customer_id: 'maxshot', verification_posture: 'operator' })
+    mocks.loadCustomerRuntimePolicy.mockResolvedValue({ customer_id: 'maxshot', policy_version: '1.5', primary_plane: 'ops_data', auth: { customer_id: 'maxshot', verification_posture: 'operator' } })
   })
   it('verifies email challenge', async () => {
     mocks.resolveIdentityByEmail.mockResolvedValue({ identity_id: 'maxshot-ops' })
@@ -64,7 +64,10 @@ describe('auth verify route', () => {
   })
 })
 
+vi.mock('@/lib/customers/runtime-policy', () => ({
+  loadCustomerRuntimePolicy: mocks.loadCustomerRuntimePolicy,
+}))
+
 vi.mock('@/lib/customers/auth', () => ({
-  loadCustomerAuthPosture: mocks.loadCustomerAuthPosture,
   buildAuthPostureMeta: (value: unknown) => value,
 }))

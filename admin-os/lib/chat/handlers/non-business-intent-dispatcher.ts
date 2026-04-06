@@ -3,6 +3,7 @@ import { handleContentIntent } from '@/lib/chat/handlers/content-intent-handler'
 import { handleQnaIntent } from '@/lib/chat/handlers/qna-intent-handler'
 import { resolveChatIntentLane } from '@/lib/chat/chat-intent-lane'
 import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
+import type { CustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 
 type ParsedLike = {
   intent: {
@@ -19,8 +20,9 @@ export async function dispatchNonBusinessIntent(params: {
   parsed: ParsedLike
   rawQuery: string
   workspacePreset?: CustomerWorkspacePreset | null
+  runtimePolicy?: CustomerRuntimePolicy | null
 }): Promise<unknown> {
-  const { intentType, canonicalIntentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery, workspacePreset } = params
+  const { intentType, canonicalIntentType, matchedCapabilityIds, primaryCapabilityId, parsed, rawQuery, workspacePreset, runtimePolicy } = params
   const lane = resolveChatIntentLane({
     intentType,
     canonicalIntentType,
@@ -58,6 +60,7 @@ export async function dispatchNonBusinessIntent(params: {
     parsed,
     rawQuery,
     workspacePreset,
+    runtimePolicy,
   })
   return qnaHandled.body
 }

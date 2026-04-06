@@ -2,6 +2,7 @@ import { createHash } from 'crypto'
 
 import type { PreparedChatRequest } from '@/lib/chat/chat-request-preprocess'
 import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
+import type { CustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 
 export type SessionKernelSnapshot = {
   kernel_id: string
@@ -41,6 +42,10 @@ export type SessionKernelSnapshot = {
   workspace_focus_count: number
   routing_priority_applied: boolean
   routing_priority_reason: string | null
+  customer_policy_loaded: boolean
+  customer_policy_version: string | null
+  customer_policy_primary_plane: string | null
+  customer_policy_auth_method: string | null
 }
 
 
@@ -65,6 +70,7 @@ export function buildPreparedSessionKernel(params: {
   body: Record<string, unknown>
   workspacePreset?: CustomerWorkspacePreset | null
   routingPriority?: { primaryCapabilityId: string | null; matchedCapabilityIds: string[]; applied: boolean; reason: string | null } | null
+  runtimePolicy?: CustomerRuntimePolicy | null
 }): SessionKernelSnapshot {
   const { prepared, body } = params
   const active = prepared.contextEnvelope.conversation_context.active_context
@@ -72,6 +78,7 @@ export function buildPreparedSessionKernel(params: {
   const memoryRuntime = prepared.contextEnvelope.memory_runtime
   const workspacePreset = params.workspacePreset || null
   const routingPriority = params.routingPriority || null
+  const runtimePolicy = params.runtimePolicy || null
   return {
     kernel_id: buildKernelId({
       sessionId: prepared.sessionId,
@@ -115,6 +122,10 @@ export function buildPreparedSessionKernel(params: {
     workspace_focus_count: workspacePreset?.focused_surfaces.length || 0,
     routing_priority_applied: routingPriority?.applied === true,
     routing_priority_reason: routingPriority?.reason || null,
+    customer_policy_loaded: Boolean(runtimePolicy),
+    customer_policy_version: runtimePolicy?.policy_version || null,
+    customer_policy_primary_plane: runtimePolicy?.primary_plane || null,
+    customer_policy_auth_method: runtimePolicy?.auth?.primary_auth_method || null,
   }
 }
 

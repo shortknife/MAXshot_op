@@ -337,3 +337,18 @@
 - Why: the platform already had customer-aware runtime pieces, but they needed to be aligned into a coherent end-to-end experience before moving deeper into runtime policy work.
 - Scope: customer-aware experience path from login and workspace through routing, delivery, review, clarification, and recall.
 - Consequence: Nexa now has a consistent customer-aware experience layer and can move to the next block as a runtime policy problem rather than a UI consistency problem.
+
+## D-051 Customer Runtime Policy Baseline Accepted
+- Date: 2026-04-06
+- Decision: add a unified customer runtime policy loader and propagate it through chat runtime, auth, workspace surfacing, session kernel, and interaction learning.
+- Why: the customer-aware experience block was complete, but customer posture was still being resolved through multiple local loaders and branches, which made evidence fragmented and increased drift risk.
+- Scope: runtime-policy contract, chat integration, auth route integration, customer workspace summary, session-kernel evidence, and interaction-log evidence.
+- Consequence: Nexa now resolves customer posture once per request and carries one coherent policy object through the main runtime path.
+
+
+## D-052 Customer Runtime Policy Block Accepted
+- Date: 2026-04-06
+- Decision: freeze the customer runtime policy block after unifying customer-aware behavior into one runtime policy layer.
+- Why: workspace, routing, delivery, review, clarification, and auth posture were already implemented, but they needed one deterministic policy contract before deeper policy evolution work.
+- Scope: unified policy resolution, shared runtime propagation, shared evidence, and concentrated validation for auth and chat hot paths.
+- Consequence: future customer-aware development can build on a single runtime policy surface instead of continuing to duplicate customer-specific logic per page or per handler.

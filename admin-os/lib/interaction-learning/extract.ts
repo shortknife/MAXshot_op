@@ -57,6 +57,7 @@ export function extractInteractionLearningPayload(params: {
   const promptRuntime = asObject(meta.prompt_runtime)
   const promptPolicy = asObject(meta.prompt_policy)
   const deliveryPosture = asObject(meta.delivery_posture)
+  const customerRuntimePolicy = asObject(meta.customer_runtime_policy)
 
   const matchedCapabilityIds = asStringArray(meta.matched_capability_ids)
   const primaryCapabilityId =
@@ -122,6 +123,16 @@ export function extractInteractionLearningPayload(params: {
         reason: asString(promptPolicy.reason),
         checks: asStringArray(promptPolicy.checks),
       },
+      customer_runtime_policy: {
+        customer_id: asString(customerRuntimePolicy.customer_id),
+        policy_version: asString(customerRuntimePolicy.policy_version),
+        primary_plane: asString(customerRuntimePolicy.primary_plane),
+        preferred_capability_count: asNumber(customerRuntimePolicy.preferred_capability_count),
+        focused_surface_count: asNumber(customerRuntimePolicy.focused_surface_count),
+        auth_primary_method: asString(customerRuntimePolicy.auth_primary_method),
+        clarification_style: asString(customerRuntimePolicy.clarification_style),
+        review_escalation_style: asString(customerRuntimePolicy.review_escalation_style),
+      },
       delivery_posture: {
         customer_id: asString(deliveryPosture.customer_id),
         delivery_version: asString(deliveryPosture.delivery_version),
@@ -150,6 +161,10 @@ export function extractInteractionLearningPayload(params: {
         workspace_focus_count: asNumber(sessionKernel.workspace_focus_count),
         routing_priority_applied: sessionKernel.routing_priority_applied === true,
         routing_priority_reason: asString(sessionKernel.routing_priority_reason),
+        customer_policy_loaded: sessionKernel.customer_policy_loaded === true,
+        customer_policy_version: asString(sessionKernel.customer_policy_version),
+        customer_policy_primary_plane: asString(sessionKernel.customer_policy_primary_plane),
+        customer_policy_auth_method: asString(sessionKernel.customer_policy_auth_method),
       },
     },
   }
