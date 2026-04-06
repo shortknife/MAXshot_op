@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { loadFaqReviewQueue, type FaqReviewQueueItem } from '@/lib/faq-kb/loaders'
+import { loadCustomerReviewPosture } from '@/lib/customers/review'
 import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 import { assertCapabilityMutationPolicy } from '@/lib/router/capability-policy'
 import { acquireWriteLane, releaseWriteLane } from '@/lib/router/write-lane'
@@ -71,7 +72,8 @@ function normalizeCitations(value: unknown): Array<{ source_id?: string; title?:
   return Array.isArray(value) ? value.filter((item) => item && typeof item === 'object') as Array<{ source_id?: string; title?: string; snippet?: string }> : []
 }
 
-function toQueueItem(row: ReviewQueueRow): FaqReviewQueueItem {
+async function toQueueItem(row: ReviewQueueRow): Promise<FaqReviewQueueItem> {
+  const reviewPosture = await loadCustomerReviewPosture(row.customer_id)
   return {
     review_id: row.review_id,
     question: row.question,
@@ -85,6 +87,10 @@ function toQueueItem(row: ReviewQueueRow): FaqReviewQueueItem {
     created_at: row.created_at,
     draft_answer: row.draft_answer,
     citations: normalizeCitations(row.citations),
+    review_queue_label: reviewPosture?.review_queue_label || null,
+    operator_hint: reviewPosture?.operator_hint || null,
+    suggested_actions: reviewPosture?.suggested_actions || [],
+    escalation_style: reviewPosture?.escalation_style || null,
   }
 }
 
@@ -106,7 +112,7 @@ export async function loadFaqReviewQueueRuntime(): Promise<FaqReviewQueueRuntime
       return {
         queue_id: FAQ_REVIEW_QUEUE_ID,
         source: 'supabase',
-        items: data.map((row) => toQueueItem(row as ReviewQueueRow)),
+        items: await Promise.all(data.map((row) => toQueueItem(row as ReviewQueueRow))),
       }
     }
   } catch (error) {

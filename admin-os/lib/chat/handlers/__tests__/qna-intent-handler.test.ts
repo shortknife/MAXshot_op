@@ -187,7 +187,14 @@ describe('qna-intent-handler', () => {
     expect((result.body as { data?: { meta?: { answer_meta?: { capability_id?: string } } } }).data?.meta?.answer_meta?.capability_id).toBe('faq_qa_review')
     expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { priority?: string; review_id?: string; queue_source?: string } } } } }).data?.meta?.answer_meta?.review_payload?.priority).toBe('high')
     expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { review_id?: string; queue_source?: string } } } } }).data?.meta?.answer_meta?.review_payload?.review_id).toBe('faq-review-runtime-1')
-    expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { queue_source?: string } } } } }).data?.meta?.answer_meta?.review_payload?.queue_source).toBe('supabase')
+    expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { queue_source?: string; review_queue_label?: string; escalation_style?: string; suggested_actions?: string[] } } } } }).data?.meta?.answer_meta?.review_payload?.queue_source).toBe('supabase')
+    expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { review_queue_label?: string } } } } }).data?.meta?.answer_meta?.review_payload?.review_queue_label).toBe('Operator Review Queue')
+    expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { escalation_style?: string } } } } }).data?.meta?.answer_meta?.review_payload?.escalation_style).toBe('operator')
+    expect((result.body as { data?: { meta?: { answer_meta?: { review_payload?: { suggested_actions?: string[] } } } } }).data?.meta?.answer_meta?.review_payload?.suggested_actions).toEqual([
+      '打开 FAQ Review',
+      '检查 KB Management',
+      '缩小问题范围后重试',
+    ])
     expect(mocks.enqueueFaqReviewItem).toHaveBeenCalledTimes(1)
     expect(mocks.enqueueFaqReviewItem).toHaveBeenCalledWith(expect.objectContaining({ customer_id: 'maxshot' }))
   })

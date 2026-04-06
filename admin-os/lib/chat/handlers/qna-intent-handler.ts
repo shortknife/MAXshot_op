@@ -8,6 +8,7 @@ import { buildChatEnvelope } from '@/lib/chat/chat-route-helpers'
 import { toCanonicalIntentType } from '@/lib/intent-analyzer/intent-taxonomy'
 import { isCapabilityAllowedForCustomer } from '@/lib/customers/runtime'
 import type { CustomerWorkspacePreset } from '@/lib/customers/workspace'
+import { loadCustomerReviewPosture } from '@/lib/customers/review'
 
 type ParsedLike = {
   intent: {
@@ -75,6 +76,7 @@ export async function handleQnaIntent(params: {
   let reviewPayload: Record<string, unknown> | null = null
 
   if (useFaqCapability && qnaResult?.fallback_required) {
+    const reviewPosture = await loadCustomerReviewPosture(customerId)
     const fallbackReason = qnaResult.reason || qna.evidence?.fallback_reason || 'faq_generation_failed'
     const fallbackOutput = await faqFallback(
       buildChatEnvelope(intentType, {
@@ -95,9 +97,35 @@ export async function handleQnaIntent(params: {
         customer_context: typeof qnaSlots.customer_context === 'string' ? qnaSlots.customer_context : null,
         channel: typeof qnaSlots.channel === 'string' ? qnaSlots.channel : null,
         kb_scope: typeof qna.metadata?.kb_scope === 'string' ? qna.metadata.kb_scope : null,
+        escalation_style: reviewPosture?.escalation_style || null,
+        review_queue_label: reviewPosture?.review_queue_label || null,
+        operator_hint: reviewPosture?.operator_hint || null,
+        suggested_actions: reviewPosture?.suggested_actions || [],
+        priority_override: reviewPosture?.default_priority || null,
       })
     )
     reviewPayload = ((reviewOutput.result as { review_payload?: Record<string, unknown> } | null)?.review_payload) || null
+    if (reviewPayload && reviewPosture) {
+      reviewPayload = {
+        ...reviewPayload,
+        review_queue_label:
+          typeof reviewPayload.review_queue_label === 'string'
+            ? reviewPayload.review_queue_label
+            : reviewPosture.review_queue_label,
+        escalation_style:
+          typeof reviewPayload.escalation_style === 'string'
+            ? reviewPayload.escalation_style
+            : reviewPosture.escalation_style,
+        operator_hint:
+          typeof reviewPayload.operator_hint === 'string'
+            ? reviewPayload.operator_hint
+            : reviewPosture.operator_hint,
+        suggested_actions:
+          Array.isArray(reviewPayload.suggested_actions) && reviewPayload.suggested_actions.length > 0
+            ? reviewPayload.suggested_actions
+            : reviewPosture.suggested_actions,
+      }
+    }
     if (reviewPayload) {
       const persistedReview = await enqueueFaqReviewItem({
         question: String(reviewPayload.question || qnaSlots.question || ''),

@@ -30,6 +30,10 @@ export type FaqReviewQueueItem = {
   created_at: string
   draft_answer: string | null
   citations: Array<{ source_id?: string; title?: string; snippet?: string }>
+  review_queue_label?: string | null
+  operator_hint?: string | null
+  suggested_actions?: string[]
+  escalation_style?: 'operator' | 'guided' | 'observer' | null
 }
 
 export type KbQcPreviewItem = {

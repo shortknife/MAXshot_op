@@ -24,6 +24,10 @@ type ReviewItem = {
   created_at: string
   draft_answer: string | null
   citations: Array<{ source_id?: string; title?: string; snippet?: string }>
+  review_queue_label?: string | null
+  operator_hint?: string | null
+  suggested_actions?: string[]
+  escalation_style?: 'operator' | 'guided' | 'observer' | null
 }
 
 type ReviewSurfaceProps = {
@@ -193,6 +197,8 @@ export function FaqReviewSurface({ queueId, queueSource, items }: ReviewSurfaceP
                             <QueueBadge tone="rose">{item.reason}</QueueBadge>
                             <QueueBadge tone={item.queue_status === 'approved' ? 'emerald' : item.queue_status === 'resolved' ? 'slate' : item.queue_status === 'rejected' ? 'rose' : 'amber'}>{item.queue_status}</QueueBadge>
                             {item.customer_id && <QueueBadge>{`customer: ${item.customer_id}`}</QueueBadge>}
+                            {item.review_queue_label && <QueueBadge tone="emerald">{item.review_queue_label}</QueueBadge>}
+                            {item.escalation_style && <QueueBadge>{`style: ${item.escalation_style}`}</QueueBadge>}
                             {item.kb_scope && <QueueBadge>{`scope: ${item.kb_scope}`}</QueueBadge>}
                             {item.channel && <QueueBadge>{`channel: ${item.channel}`}</QueueBadge>}
                             {typeof item.confidence === 'number' && <QueueBadge>{`confidence: ${item.confidence.toFixed(2)}`}</QueueBadge>}
@@ -203,6 +209,13 @@ export function FaqReviewSurface({ queueId, queueSource, items }: ReviewSurfaceP
                           <div className="mt-1 font-medium text-slate-800">{new Date(item.created_at).toLocaleString('zh-CN', { hour12: false })}</div>
                         </div>
                       </div>
+
+                      {item.operator_hint && (
+                        <div className="mt-5 rounded-3xl border border-sky-200 bg-sky-50/80 p-4 text-sm leading-7 text-sky-900">
+                          <div className="text-[11px] uppercase tracking-[0.18em] text-sky-600">Operator Hint</div>
+                          <div className="mt-2">{item.operator_hint}</div>
+                        </div>
+                      )}
 
                       <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
                         <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
@@ -225,6 +238,17 @@ export function FaqReviewSurface({ queueId, queueSource, items }: ReviewSurfaceP
                           )}
                         </div>
                       </div>
+
+                      {Array.isArray(item.suggested_actions) && item.suggested_actions.length > 0 && (
+                        <div className="mt-5 rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
+                          <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Suggested Next Actions</div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            {item.suggested_actions.map((action) => (
+                              <QueueBadge key={`${item.review_id}-${action}`}>{action}</QueueBadge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-200 pt-4">
                         {actions.length > 0 ? (

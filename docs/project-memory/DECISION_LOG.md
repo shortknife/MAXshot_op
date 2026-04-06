@@ -297,3 +297,11 @@
 - Why: customer-aware workspace and routing were already in place, but final answer packaging still looked operationally identical across customers.
 - Scope: delivery markdown assets, delivery posture loader, delivery critic integration, chat meta surfacing, and interaction-learning extraction.
 - Consequence: Nexa can now vary summary style and default next actions per customer without changing capability semantics or reintroducing database-managed product assets.
+
+
+## D-046 Customer-Aware Review Escalation Baseline Accepted
+- Date: 2026-04-06
+- Decision: add filesystem-managed customer review posture assets and apply them during FAQ / KB review escalation packaging and queue presentation.
+- Why: customer-aware workspace, routing, and delivery posture were already in place, but review escalation still looked identical across customers.
+- Scope: review markdown assets, review posture loader, FAQ review packaging integration, runtime queue decoration, and `/faq-review` surface updates.
+- Consequence: Nexa review escalation now carries customer-specific queue framing, operator guidance, and suggested next actions without changing runtime queue schema or reintroducing database-managed product assets.

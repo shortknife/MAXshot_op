@@ -44,8 +44,13 @@ export async function faqQaReview(input: CapabilityInputEnvelope): Promise<Capab
   const kbScope = readStringParam(slots, 'kb_scope') || null
   const confidence = typeof slots.confidence === 'number' ? slots.confidence : null
   const citations = Array.isArray(slots.citations) ? slots.citations : []
+  const escalationStyle = readStringParam(slots, 'escalation_style') || null
+  const queueLabel = readStringParam(slots, 'review_queue_label') || null
+  const operatorHint = readStringParam(slots, 'operator_hint') || null
+  const suggestedActions = Array.isArray(slots.suggested_actions) ? slots.suggested_actions.map((item) => String(item || '').trim()).filter(Boolean) : []
+  const priorityOverride = readStringParam(slots, 'priority_override') || null
 
-  const priority = reason === 'faq_out_of_scope' ? 'normal' : 'high'
+  const priority = priorityOverride === 'normal' ? 'normal' : (reason === 'faq_out_of_scope' ? 'normal' : 'high')
   const reviewPayload = {
     question,
     draft_answer: draftAnswer,
@@ -57,6 +62,10 @@ export async function faqQaReview(input: CapabilityInputEnvelope): Promise<Capab
     channel,
     kb_scope: kbScope,
     priority,
+    escalation_style: escalationStyle,
+    review_queue_label: queueLabel,
+    operator_hint: operatorHint,
+    suggested_actions: suggestedActions,
   }
 
   return {
