@@ -381,3 +381,17 @@
 - Why: the next defensible step after runtime policy evolution was to eliminate repeated policy-to-surface mapping before expanding policy defaults further.
 - Scope: auth challenge/verify routes, review queue decoration, qna review payload shaping, client type cleanup, and concentrated validation across customer policy consumers.
 - Consequence: the customer policy stack now has a stable composition layer and future work can focus on deeper defaults rather than more normalization.
+
+## D-057 Customer Default Experience Refinement Baseline Accepted
+- Date: 2026-04-06
+- Decision: add reusable default-experience helpers on top of customer runtime policy for workspace and auth surfaces.
+- Why: after policy composition, the remaining weak point was secondary surface copy that still rendered raw preset/posture data directly.
+- Scope: runtime policy helpers, workspace API expansion, chat/customer/login surface migration, and auth response metadata enrichment.
+- Consequence: customer-aware defaults now flow through one composed layer before reaching user-facing secondary surfaces.
+
+## D-058 Customer Default Experience Refinement Block Accepted
+- Date: 2026-04-06
+- Decision: freeze the customer default experience refinement block after migrating workspace, chat, customers, and login onto composed runtime-policy defaults.
+- Why: the right next step after policy composition was to remove preset-derived copy shaping from secondary surfaces before extending customer defaults further.
+- Scope: workspace API, chat surface, customers surface, login surface, auth response client types, and concentrated validation with live acceptance.
+- Consequence: future customer-aware surface work can extend the composed default layer instead of rebuilding surface-local copy logic.

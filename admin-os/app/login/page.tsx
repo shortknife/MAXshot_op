@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
+import type { CustomerAuthDefaultExperience, CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
 import { requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type AuthPostureMeta, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
 
 type EmailState = {
@@ -29,6 +29,7 @@ export default function LoginPage() {
   const [loadingMode, setLoadingMode] = useState<'email_issue' | 'email_verify' | 'wallet_issue' | 'wallet_verify' | null>(null)
   const [error, setError] = useState('')
   const [authPosture, setAuthPosture] = useState<AuthPostureMeta | null>(null)
+  const [authExperience, setAuthExperience] = useState<CustomerAuthDefaultExperience | null>(null)
   const [runtimePolicy, setRuntimePolicy] = useState<CustomerRuntimePolicyMeta | null>(null)
 
   const emailStep = emailState.challenge ? 2 : 1
@@ -63,6 +64,7 @@ export default function LoginPage() {
       }
       setEmailState((prev) => ({ ...prev, challenge: result.challenge }))
       setAuthPosture(result.challenge.auth_posture || null)
+      setAuthExperience(result.auth_default_experience || result.challenge.auth_default_experience || null)
       setRuntimePolicy(result.customer_runtime_policy || result.challenge.customer_runtime_policy || null)
     } finally {
       setLoadingMode(null)
@@ -81,6 +83,7 @@ export default function LoginPage() {
         return
       }
       setAuthPosture(result.session.auth_posture || emailState.challenge?.auth_posture || null)
+      setAuthExperience(result.session.auth_default_experience || emailState.challenge?.auth_default_experience || null)
       setRuntimePolicy(result.session.customer_runtime_policy || emailState.challenge?.customer_runtime_policy || null)
       router.push('/chat')
     } finally {
@@ -100,6 +103,7 @@ export default function LoginPage() {
       }
       setWalletState((prev) => ({ ...prev, challenge: result.challenge }))
       setAuthPosture(result.challenge.auth_posture || null)
+      setAuthExperience(result.auth_default_experience || result.challenge.auth_default_experience || null)
       setRuntimePolicy(result.customer_runtime_policy || result.challenge.customer_runtime_policy || null)
     } finally {
       setLoadingMode(null)
@@ -118,6 +122,7 @@ export default function LoginPage() {
         return
       }
       setAuthPosture(result.session.auth_posture || walletState.challenge?.auth_posture || null)
+      setAuthExperience(result.session.auth_default_experience || walletState.challenge?.auth_default_experience || null)
       setRuntimePolicy(result.session.customer_runtime_policy || walletState.challenge?.customer_runtime_policy || null)
       router.push('/chat')
     } finally {
@@ -157,13 +162,13 @@ export default function LoginPage() {
             {authPosture ? (
               <div className={`mt-4 rounded-2xl border p-4 text-sm ${postureTone}`}>
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-medium">{authPosture.customer_id}</span>
-                  <span className="rounded-full border border-current/15 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]">primary: {authPosture.primary_auth_method}</span>
-                  <span className="rounded-full border border-current/15 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]">verify: {authPosture.verification_posture}</span>
-                  <span className="rounded-full border border-current/15 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]">wallet: {authPosture.wallet_posture}</span>
+                  <span className="font-medium">{authExperience?.customer_id || authPosture.customer_id}</span>
+                  <span className="rounded-full border border-current/15 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]">primary: {authExperience?.primary_auth_method || authPosture.primary_auth_method}</span>
+                  <span className="rounded-full border border-current/15 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]">verify: {authExperience?.verification_posture || authPosture.verification_posture}</span>
+                  <span className="rounded-full border border-current/15 px-2.5 py-1 text-[11px] uppercase tracking-[0.18em]">wallet: {authExperience?.wallet_posture || authPosture.wallet_posture}</span>
                 </div>
-                <div className="mt-3 leading-6">{authPosture.summary}</div>
-                {authPosture.entry_hint ? <div className="mt-2 text-xs opacity-80">{authPosture.entry_hint}</div> : null}
+                <div className="mt-3 leading-6">{authExperience?.summary || authPosture.summary}</div>
+                {(authExperience?.entry_hint || authPosture.entry_hint) ? <div className="mt-2 text-xs opacity-80">{authExperience?.entry_hint || authPosture.entry_hint}</div> : null}
                 {runtimePolicy ? (
                   <div className="mt-2 flex flex-wrap gap-2 text-xs opacity-85">
                     <span className="rounded-full border border-current/15 px-2.5 py-1">policy: {runtimePolicy.policy_version}</span>
@@ -171,9 +176,9 @@ export default function LoginPage() {
                     {runtimePolicy.auth_primary_method ? <span className="rounded-full border border-current/15 px-2.5 py-1">runtime auth: {runtimePolicy.auth_primary_method}</span> : null}
                   </div>
                 ) : null}
-                {authPosture.recovery_actions.length > 0 ? (
+{(authExperience?.recovery_actions || authPosture.recovery_actions).length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-2">
-                    {authPosture.recovery_actions.map((action) => (
+                    {(authExperience?.recovery_actions || authPosture.recovery_actions).map((action) => (
                       <span key={action} className="rounded-full border border-current/15 px-3 py-1 text-xs">{action}</span>
                     ))}
                   </div>

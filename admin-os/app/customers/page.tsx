@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { loadOperatorRegistry } from '@/lib/customers/access'
 import { loadCustomerMemoryWorkbench } from '@/lib/customers/memory'
 import { loadCustomerWalletAsset } from '@/lib/customers/asset-runtime'
-import { loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { buildCustomerAuthDefaultExperience, buildCustomerDefaultExperience, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 import { listActiveCustomers } from '@/lib/customers/runtime'
 import { getCapabilityExecutionPolicy } from '@/lib/router/capability-catalog'
 import { CurrentCustomerBadge } from '@/components/customers/current-customer-badge'
@@ -55,7 +55,7 @@ export default async function CustomersPage() {
               <CardTitle className="text-base font-semibold">Customer Workspace</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5 p-4 sm:p-6">
-              {cards.map(({ customer, memory, wallet, runtimePolicy }) => { const workspace = runtimePolicy?.workspace || null; const auth = runtimePolicy?.auth || null; return (
+              {cards.map(({ customer, memory, wallet, runtimePolicy }) => { const experience = buildCustomerDefaultExperience(runtimePolicy); const authExperience = buildCustomerAuthDefaultExperience(runtimePolicy); return (
                 <div key={customer.customer_id} className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(248,250,252,0.93))] p-5 shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-3">
@@ -113,15 +113,15 @@ export default async function CustomersPage() {
 
                       <div className="rounded-3xl border border-slate-200 bg-white/80 p-4">
                         <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Workspace Preset</div>
-                        <div className="mt-3 text-sm leading-6 text-slate-700">{workspace?.summary || 'No workspace preset yet.'}</div>
+                        <div className="mt-3 text-sm leading-6 text-slate-700">{experience?.summary || 'No workspace preset yet.'}</div>
                         <div className="mt-4 flex flex-wrap gap-2">
-                          {workspace?.primary_plane ? <Pill tone="emerald">primary: {workspace.primary_plane}</Pill> : null}
-                          {workspace?.default_entry_path ? <Pill tone="violet">entry: {workspace.default_entry_path}</Pill> : null}
-                          {(workspace?.focused_surfaces || []).map((surface) => <Pill key={`${customer.customer_id}-surface-${surface}`}>surface: {surface}</Pill>)}
+                          {experience?.primary_plane ? <Pill tone="emerald">primary: {experience.primary_plane}</Pill> : null}
+                          {experience?.default_entry_path ? <Pill tone="violet">entry: {experience.default_entry_path}</Pill> : null}
+                          {(experience?.focused_surfaces || []).map((surface) => <Pill key={`${customer.customer_id}-surface-${surface}`}>surface: {surface}</Pill>)}
                         </div>
-                        {(workspace?.quick_queries || []).length > 0 ? (
+                        {(experience?.quick_queries || []).length > 0 ? (
                           <div className="mt-4 grid gap-2 sm:grid-cols-2">
-                            {workspace?.quick_queries.map((query) => (
+                            {experience?.quick_queries.map((query) => (
                               <div key={`${customer.customer_id}-query-${query}`} className="rounded-2xl border border-slate-100 bg-slate-50/70 px-3 py-3 text-sm text-slate-600">
                                 {query}
                               </div>
@@ -183,15 +183,15 @@ export default async function CustomersPage() {
                       <div className="rounded-3xl border border-slate-200 bg-white/80 p-4">
                         <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Auth Posture</div>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          {auth?.primary_auth_method ? <Pill tone="emerald">primary: {auth.primary_auth_method}</Pill> : null}
-                          {auth?.verification_posture ? <Pill tone="sky">verify: {auth.verification_posture}</Pill> : null}
-                          {auth?.wallet_posture ? <Pill tone="violet">wallet: {auth.wallet_posture}</Pill> : null}
+                          {authExperience?.primary_auth_method ? <Pill tone="emerald">primary: {authExperience.primary_auth_method}</Pill> : null}
+                          {authExperience?.verification_posture ? <Pill tone="sky">verify: {authExperience.verification_posture}</Pill> : null}
+                          {authExperience?.wallet_posture ? <Pill tone="violet">wallet: {authExperience.wallet_posture}</Pill> : null}
                         </div>
-                        <div className="mt-4 text-sm leading-6 text-slate-700">{auth?.summary || 'No auth posture configured.'}</div>
-                        {auth?.entry_hint ? <div className="mt-3 text-sm text-slate-600">{auth.entry_hint}</div> : null}
-                        {(auth?.recovery_actions || []).length > 0 ? (
+                        <div className="mt-4 text-sm leading-6 text-slate-700">{authExperience?.summary || 'No auth posture configured.'}</div>
+                        {authExperience?.entry_hint ? <div className="mt-3 text-sm text-slate-600">{authExperience.entry_hint}</div> : null}
+                        {(authExperience?.recovery_actions || []).length > 0 ? (
                           <div className="mt-4 space-y-2 text-sm text-slate-600">
-                            {auth?.recovery_actions.map((action) => <div key={`${customer.customer_id}-auth-${action}`}>- {action}</div>)}
+                            {authExperience?.recovery_actions.map((action) => <div key={`${customer.customer_id}-auth-${action}`}>- {action}</div>)}
                           </div>
                         ) : null}
                       </div>

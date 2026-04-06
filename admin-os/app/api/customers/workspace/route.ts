@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { buildCustomerRuntimePolicyMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { buildCustomerDefaultExperience, buildCustomerRuntimePolicyMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -9,5 +9,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ success: false, error: 'missing_customer_id' }, { status: 400 })
   }
   const runtimePolicy = await loadCustomerRuntimePolicy(customerId)
-  return NextResponse.json({ success: true, preset: runtimePolicy?.workspace || null, runtime_policy: buildCustomerRuntimePolicyMeta(runtimePolicy), runtime_policy_full: runtimePolicy })
+  return NextResponse.json({
+    success: true,
+    preset: runtimePolicy?.workspace || null,
+    default_experience: buildCustomerDefaultExperience(runtimePolicy),
+    runtime_policy: buildCustomerRuntimePolicyMeta(runtimePolicy),
+    runtime_policy_full: runtimePolicy,
+  })
 }

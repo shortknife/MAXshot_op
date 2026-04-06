@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import type { CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
+import type { CustomerDefaultExperience, CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { getStoredSession } from '@/lib/auth'
@@ -71,17 +71,6 @@ type ChatMeta = {
   } | null
 }
 
-type CustomerWorkspacePreset = {
-  customer_id: string
-  primary_plane: string | null
-  default_entry_path: string | null
-  preferred_capabilities: string[]
-  focused_surfaces: string[]
-  recommended_route_order: string[]
-  summary: string | null
-  quick_queries: string[]
-}
-
 type ChatMessage = {
   id: string
   role: 'user' | 'assistant'
@@ -144,21 +133,21 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [sessionId, setSessionId] = useState('')
-  const [workspacePreset, setWorkspacePreset] = useState<CustomerWorkspacePreset | null>(null)
+  const [defaultExperience, setDefaultExperience] = useState<CustomerDefaultExperience | null>(null)
   const [customerRuntimePolicy, setCustomerRuntimePolicy] = useState<CustomerRuntimePolicyMeta | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
 
   const quickQueries = useMemo(
-    () => workspacePreset?.quick_queries?.length
-      ? workspacePreset.quick_queries
+    () => defaultExperience?.quick_queries?.length
+      ? defaultExperience.quick_queries
       : [
           'MAXshot 有哪些 vault 可以用？',
           '当前 vault APY 怎么样？',
           '给我最近一笔 execution 详情',
           '写一条关于新品发布的帖子',
         ],
-    [workspacePreset]
+    [defaultExperience]
   )
 
   useEffect(() => {
@@ -178,7 +167,7 @@ export default function ChatPage() {
       .then((res) => res.json())
       .then((data) => {
         if (data?.success === true) {
-          setWorkspacePreset(data.preset || null)
+          setDefaultExperience(data.default_experience || null)
           setCustomerRuntimePolicy(data.runtime_policy || null)
         }
       })
@@ -312,18 +301,18 @@ export default function ChatPage() {
                   <div className="space-y-2">
                     <SectionTitle>Start Here</SectionTitle>
                     <div className="text-2xl font-semibold tracking-tight">
-                      {workspacePreset?.customer_id ? `${workspacePreset.customer_id} workspace` : '先直接问自然语言问题。'}
+                      {defaultExperience?.customer_id ? `${defaultExperience.customer_id} workspace` : '先直接问自然语言问题。'}
                     </div>
                     <div className="max-w-2xl text-sm leading-6 text-slate-600">
-                      {workspacePreset?.summary || '当前入口已经支持业务查询、产品问答、营销文案。需要澄清时会继续追问，但输入框始终保留，不会覆盖已有对话。'}
+                      {defaultExperience?.summary || '当前入口已经支持业务查询、产品问答、营销文案。需要澄清时会继续追问，但输入框始终保留，不会覆盖已有对话。'}
                     </div>
-                    {(workspacePreset?.focused_surfaces?.length || workspacePreset?.preferred_capabilities?.length) ? (
+                    {(defaultExperience?.focused_surfaces?.length || defaultExperience?.preferred_capabilities?.length) ? (
                       <div className="flex flex-wrap gap-2">
-                        {workspacePreset?.primary_plane ? <MetaBadge label={`primary: ${workspacePreset.primary_plane}`} /> : null}
+                        {defaultExperience?.primary_plane ? <MetaBadge label={`primary: ${defaultExperience.primary_plane}`} /> : null}
                         {customerRuntimePolicy?.policy_version ? <MetaBadge label={`policy: ${customerRuntimePolicy.policy_version}`} /> : null}
                         {customerRuntimePolicy?.auth_primary_method ? <MetaBadge label={`auth: ${customerRuntimePolicy.auth_primary_method}`} /> : null}
-                        {(workspacePreset?.focused_surfaces || []).map((surface) => <MetaBadge key={`surface-${surface}`} label={`surface: ${surface}`} />)}
-                        {(workspacePreset?.preferred_capabilities || []).slice(0, 4).map((capabilityId) => (
+                        {(defaultExperience?.focused_surfaces || []).map((surface) => <MetaBadge key={`surface-${surface}`} label={`surface: ${surface}`} />)}
+                        {(defaultExperience?.preferred_capabilities || []).slice(0, 4).map((capabilityId) => (
                           <MetaBadge key={capabilityId} label={capabilityId.replace('capability.', '')} />
                         ))}
                       </div>
@@ -652,7 +641,7 @@ export default function ChatPage() {
                   </div>
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="text-xs text-slate-500">
-                      当前会话会保留上下文。澄清时直接继续输入，不需要重新开始。{workspacePreset?.default_entry_path ? ` 当前 customer 默认入口：${workspacePreset.default_entry_path}` : ''}
+                      当前会话会保留上下文。澄清时直接继续输入，不需要重新开始。{defaultExperience?.composer_hint ? ` ${defaultExperience.composer_hint}` : ''}
                     </div>
                     <Button onClick={() => void sendQuery(query)} disabled={loading || !query.trim()} className="min-w-28">
                       {loading ? '处理中...' : '发送'}
@@ -686,16 +675,17 @@ export default function ChatPage() {
                 <CardTitle className="text-base">Workspace Preset</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-slate-600">
-                {workspacePreset ? (
+                {defaultExperience ? (
                   <>
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
                       <div className="text-xs uppercase tracking-[0.18em] text-slate-400">customer</div>
-                      <div className="mt-1 font-medium text-slate-800">{workspacePreset.customer_id}</div>
+                      <div className="mt-1 font-medium text-slate-800">{defaultExperience.customer_id}</div>
                     </div>
-                    {workspacePreset.primary_plane ? <div>1. 当前优先 plane：{workspacePreset.primary_plane}。</div> : null}
-                    {workspacePreset.recommended_route_order.length > 0 ? <div>2. 推荐路径：{workspacePreset.recommended_route_order.join(' → ')}。</div> : null}
-                    {workspacePreset.focused_surfaces.length > 0 ? <div>3. 重点 surface：{workspacePreset.focused_surfaces.join(' / ')}。</div> : null}
-                    {customerRuntimePolicy?.policy_version ? <div>4. Runtime policy：{customerRuntimePolicy.policy_version}{customerRuntimePolicy.auth_verification_posture ? ` · verify=${customerRuntimePolicy.auth_verification_posture}` : ''}。</div> : null}
+                    {defaultExperience.primary_plane ? <div>1. 当前优先 plane：{defaultExperience.primary_plane}。</div> : null}
+                    {defaultExperience.recommended_route_order.length > 0 ? <div>2. 推荐路径：{defaultExperience.recommended_route_order.join(' → ')}。</div> : null}
+                    {defaultExperience.focused_surfaces.length > 0 ? <div>3. 重点 surface：{defaultExperience.focused_surfaces.join(' / ')}。</div> : null}
+                    {(defaultExperience.workspace_notes.length > 0 ? defaultExperience.workspace_notes : []).slice(0, 2).map((note, index) => <div key={`workspace-note-${index}`}>{index + 4}. {note}。</div>)}
+                    {customerRuntimePolicy?.policy_version ? <div>{defaultExperience.workspace_notes.length > 0 ? defaultExperience.workspace_notes.length + 4 : 4}. Runtime policy：{customerRuntimePolicy.policy_version}{customerRuntimePolicy.auth_verification_posture ? ` · verify=${customerRuntimePolicy.auth_verification_posture}` : ''}。</div> : null}
                   </>
                 ) : (
                   <>

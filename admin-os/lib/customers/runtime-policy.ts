@@ -28,6 +28,32 @@ export type CustomerRuntimePolicyMeta = {
   clarification_style: string | null
 }
 
+export type CustomerDefaultExperience = {
+  customer_id: string
+  policy_version: string
+  summary: string
+  primary_plane: string | null
+  default_entry_path: string | null
+  quick_queries: string[]
+  focused_surfaces: string[]
+  preferred_capabilities: string[]
+  recommended_route_order: string[]
+  composer_hint: string
+  workspace_notes: string[]
+}
+
+export type CustomerAuthDefaultExperience = {
+  customer_id: string
+  policy_version: string
+  primary_plane: string | null
+  primary_auth_method: string | null
+  verification_posture: string | null
+  wallet_posture: string | null
+  summary: string | null
+  entry_hint: string | null
+  recovery_actions: string[]
+}
+
 export type CustomerRuntimePolicy = {
   customer_id: string
   policy_version: string
@@ -41,6 +67,13 @@ export type CustomerRuntimePolicy = {
   preferred_capabilities: string[]
   recommended_route_order: string[]
   focused_surfaces: string[]
+}
+
+
+function sentenceCase(value: string | null | undefined): string {
+  const normalized = String(value || '').trim().replace(/[_-]+/g, ' ')
+  if (!normalized) return ''
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1)
 }
 
 function uniq(values: Array<string | null | undefined>): string[] {
@@ -126,10 +159,12 @@ export function selectCustomerAuthPosture(policy: CustomerRuntimePolicy | null |
 
 export function buildCustomerAuthResponseMeta(policy: CustomerRuntimePolicy | null | undefined): {
   auth_posture: Record<string, unknown> | null
+  auth_default_experience: CustomerAuthDefaultExperience | null
   customer_runtime_policy: CustomerRuntimePolicyMeta | null
 } {
   return {
     auth_posture: buildAuthPostureMeta(selectCustomerAuthPosture(policy)),
+    auth_default_experience: buildCustomerAuthDefaultExperience(policy),
     customer_runtime_policy: buildCustomerRuntimePolicyMeta(policy),
   }
 }
@@ -159,5 +194,57 @@ export function decorateReviewPayloadWithRuntimePolicy<T extends Record<string, 
       Array.isArray(payload.suggested_actions) && payload.suggested_actions.length > 0
         ? payload.suggested_actions
         : review.suggested_actions,
+  }
+}
+
+export function buildCustomerDefaultExperience(policy: CustomerRuntimePolicy | null | undefined): CustomerDefaultExperience | null {
+  if (!policy) return null
+  const workspace = selectCustomerWorkspacePreset(policy)
+  const summary = workspace?.summary || [
+    policy.primary_plane ? `Current customer prioritizes ${sentenceCase(policy.primary_plane)} requests.` : null,
+    policy.default_entry_path ? `Default entry is ${policy.default_entry_path}.` : null,
+    policy.focused_surfaces.length ? `Focus surfaces: ${policy.focused_surfaces.join(', ')}.` : null,
+  ].filter(Boolean).join(' ')
+
+  const workspaceNotes = [
+    policy.primary_plane ? `Primary plane: ${policy.primary_plane}` : null,
+    policy.recommended_route_order.length ? `Recommended route: ${policy.recommended_route_order.join(' -> ')}` : null,
+    policy.focused_surfaces.length ? `Focused surfaces: ${policy.focused_surfaces.join(' / ')}` : null,
+    policy.auth?.verification_posture ? `Verification posture: ${policy.auth.verification_posture}` : null,
+  ].filter(Boolean) as string[]
+
+  const composerHint = policy.default_entry_path
+    ? `Current customer default entry: ${policy.default_entry_path}`
+    : policy.primary_plane
+      ? `Current customer primary plane: ${policy.primary_plane}`
+      : 'Continue in natural language; the runtime will keep session context.'
+
+  return {
+    customer_id: policy.customer_id,
+    policy_version: policy.policy_version,
+    summary: summary || 'Customer-aware runtime defaults are active for this workspace.',
+    primary_plane: policy.primary_plane,
+    default_entry_path: policy.default_entry_path,
+    quick_queries: workspace?.quick_queries || [],
+    focused_surfaces: policy.focused_surfaces,
+    preferred_capabilities: policy.preferred_capabilities,
+    recommended_route_order: policy.recommended_route_order,
+    composer_hint: composerHint,
+    workspace_notes: workspaceNotes,
+  }
+}
+
+export function buildCustomerAuthDefaultExperience(policy: CustomerRuntimePolicy | null | undefined): CustomerAuthDefaultExperience | null {
+  if (!policy?.auth) return null
+  return {
+    customer_id: policy.customer_id,
+    policy_version: policy.policy_version,
+    primary_plane: policy.primary_plane,
+    primary_auth_method: policy.auth.primary_auth_method,
+    verification_posture: policy.auth.verification_posture,
+    wallet_posture: policy.auth.wallet_posture,
+    summary: policy.auth.summary,
+    entry_hint: policy.auth.entry_hint,
+    recovery_actions: policy.auth.recovery_actions,
   }
 }

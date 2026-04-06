@@ -41,6 +41,7 @@ describe('auth challenge route', () => {
     expect(body.success).toBe(true)
     expect(body.challenge.challenge_id).toBe('email-auth-1')
     expect(body.challenge.auth_posture.customer_id).toBe('maxshot')
+    expect(body.challenge.auth_default_experience.customer_id).toBe('maxshot')
   })
 
   it('issues wallet challenge', async () => {
@@ -65,8 +66,19 @@ describe('auth challenge route', () => {
 
 vi.mock('@/lib/customers/runtime-policy', () => ({
   loadCustomerRuntimePolicy: mocks.loadCustomerRuntimePolicy,
-  buildCustomerAuthResponseMeta: (policy: { auth?: unknown; customer_id?: string; policy_version?: string; primary_plane?: string } | null | undefined) => ({
+  buildCustomerAuthResponseMeta: (policy: { auth?: { customer_id?: string; verification_posture?: string; primary_auth_method?: string; wallet_posture?: string; summary?: string | null; entry_hint?: string | null; recovery_actions?: string[] } | null; customer_id?: string; policy_version?: string; primary_plane?: string } | null | undefined) => ({
     auth_posture: policy?.auth || null,
+    auth_default_experience: policy?.auth ? {
+      customer_id: policy.customer_id || null,
+      policy_version: policy.policy_version || null,
+      primary_plane: policy.primary_plane || null,
+      primary_auth_method: policy.auth.primary_auth_method || null,
+      verification_posture: policy.auth.verification_posture || null,
+      wallet_posture: policy.auth.wallet_posture || null,
+      summary: policy.auth.summary || null,
+      entry_hint: policy.auth.entry_hint || null,
+      recovery_actions: policy.auth.recovery_actions || [],
+    } : null,
     customer_runtime_policy: policy ? { customer_id: policy.customer_id || null, policy_version: policy.policy_version || null, primary_plane: policy.primary_plane || null } : null,
   }),
 }))
