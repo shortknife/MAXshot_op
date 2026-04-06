@@ -56,6 +56,7 @@ export function extractInteractionLearningPayload(params: {
   const sessionKernel = asObject(meta.session_kernel)
   const promptRuntime = asObject(meta.prompt_runtime)
   const promptPolicy = asObject(meta.prompt_policy)
+  const deliveryPosture = asObject(meta.delivery_posture)
 
   const matchedCapabilityIds = asStringArray(meta.matched_capability_ids)
   const primaryCapabilityId =
@@ -120,6 +121,14 @@ export function extractInteractionLearningPayload(params: {
         outcome: asString(promptPolicy.outcome),
         reason: asString(promptPolicy.reason),
         checks: asStringArray(promptPolicy.checks),
+      },
+      delivery_posture: {
+        customer_id: asString(deliveryPosture.customer_id),
+        delivery_version: asString(deliveryPosture.delivery_version),
+        summary_style: asString(deliveryPosture.summary_style),
+        next_action_style: asString(deliveryPosture.next_action_style),
+        review_copy_style: asString(deliveryPosture.review_copy_style),
+        citation_density: asString(deliveryPosture.citation_density),
       },
       session_kernel: {
         kernel_id: asString(sessionKernel.kernel_id),

@@ -18,6 +18,7 @@ import { attachPromptPolicy, evaluatePromptPolicy, type PromptPolicyDecision } f
 import { attachSessionKernel, buildPreparedSessionKernel, finalizeSessionKernel, type SessionKernelSnapshot } from '@/lib/chat/session-kernel'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
 import { loadCustomerWorkspacePreset } from '@/lib/customers/workspace'
+import { loadCustomerDeliveryPosture } from '@/lib/customers/delivery'
 import { applyCustomerRoutingPriority } from '@/lib/chat/customer-routing-priority'
 
 export type ChatAskRuntimeMeta = {
@@ -127,8 +128,12 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
     modelNeedClarification,
     followUpContextApplied,
   } = prepared
+  const customerId = typeof body.customer_id === 'string' ? String(body.customer_id) : null
   const customerWorkspacePreset = await perf.measure('load_customer_workspace_preset', () =>
-    loadCustomerWorkspacePreset(typeof body.customer_id === 'string' ? String(body.customer_id) : null),
+    loadCustomerWorkspacePreset(customerId),
+  )
+  const customerDeliveryPosture = await perf.measure('load_customer_delivery_posture', () =>
+    loadCustomerDeliveryPosture(customerId),
   )
   const routingPriority = applyCustomerRoutingPriority({
     workspacePreset: customerWorkspacePreset,
@@ -222,7 +227,9 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
         const verified = finalizeDelivery(applyRuntimeVerification(attachPromptPolicy({
           payload: withPromptRuntime,
           promptPolicy,
-        })))
+        })), {
+          deliveryPosture: customerDeliveryPosture,
+        })
         const kernel = finalizeSessionKernel({
           kernel: preparedKernel,
           payload: verified,

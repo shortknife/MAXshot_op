@@ -39,6 +39,13 @@ type ChatMeta = {
     message?: string
     examples?: string[]
   } | null
+  delivery_posture?: {
+    customer_id?: string
+    summary_style?: string
+    next_action_style?: string
+    review_copy_style?: string
+    citation_density?: string
+  } | null
   answer_meta?: {
     capability_id?: string
     citations?: Array<{ source_id?: string; title?: string; snippet?: string; score?: number }>
@@ -391,6 +398,8 @@ export default function ChatPage() {
                               )}
                               {meta.answer_meta?.fallback_required && <MetaBadge label="fallback" />}
                               {meta.answer_meta?.review_required && <MetaBadge label="review required" />}
+                              {meta.delivery_posture?.summary_style && <MetaBadge label={`delivery: ${meta.delivery_posture.summary_style}`} />}
+                              {meta.delivery_posture?.next_action_style && <MetaBadge label={`actions: ${meta.delivery_posture.next_action_style}`} />}
                             </div>
                           </div>
 

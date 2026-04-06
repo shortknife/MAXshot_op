@@ -1,6 +1,32 @@
 import { describe, expect, it } from 'vitest'
 
 import { finalizeDelivery } from '@/lib/chat/delivery-critic'
+import type { CustomerDeliveryPosture } from '@/lib/customers/delivery'
+
+
+const demoDeliveryPosture: CustomerDeliveryPosture = {
+  customer_id: 'nexa-demo',
+  delivery_version: '1',
+  summary_style: 'explainer',
+  next_action_style: 'guided',
+  review_copy_style: 'customer',
+  citation_density: 'balanced',
+  default_next_actions: ['继续追问这个工作流', '打开 Customers workspace', '查看 Prompts'],
+  review_next_actions: ['查看 FAQ Review 链路', '让系统解释下一步', '打开 Customers workspace'],
+  file_path: 'customer-assets/nexa-demo/delivery.md',
+}
+
+const observerDeliveryPosture: CustomerDeliveryPosture = {
+  customer_id: 'ops-observer',
+  delivery_version: '1',
+  summary_style: 'observer',
+  next_action_style: 'audit',
+  review_copy_style: 'observer',
+  citation_density: 'compact',
+  default_next_actions: ['打开 Audit', '查看 Interaction Log', '查看 Costs'],
+  review_next_actions: ['打开 Audit', '查看 Interaction Log', '检查 verification 结果'],
+  file_path: 'customer-assets/ops-observer/delivery.md',
+}
 
 describe('Step9 delivery critic', () => {
   it('passes normal business delivery', () => {
@@ -59,6 +85,37 @@ describe('Step9 delivery critic', () => {
     expect(body.delivery_envelope).toMatchObject({ type: 'ops' })
   })
 
+  it('applies guided delivery posture defaults when upstream delivery is sparse', () => {
+    const clarification = finalizeDelivery({
+      success: false,
+      data: {
+        type: 'qna',
+        summary: 'Please narrow the FAQ scope.',
+        error: 'missing_required_clarification',
+        meta: {
+          intent_type: 'general_qna',
+          intent_type_canonical: 'documentation',
+          exit_type: 'needs_clarification',
+          next_actions: [],
+        },
+      },
+    }, {
+      deliveryPosture: demoDeliveryPosture,
+    })
+
+    expect(clarification.delivery_envelope.meta.next_actions).toEqual([
+      '补充一个更具体的上下文',
+      '继续追问这个工作流',
+      '切换到当前 customer workspace',
+    ])
+    expect(clarification.data.meta.delivery_posture).toEqual(expect.objectContaining({
+      customer_id: 'nexa-demo',
+      summary_style: 'explainer',
+      next_action_style: 'guided',
+    }))
+    expect(clarification.delivery_envelope.summary).toContain('Add one more detail')
+  })
+
   it('fills fallback summary and next actions when upstream delivery is sparse', () => {
     const failed = finalizeDelivery({
       success: false,
@@ -102,6 +159,31 @@ describe('Step9 delivery critic', () => {
       '请给出时间范围',
       '请指定查询对象',
       '请说明希望的统计口径',
+    ])
+  })
+
+  it('adds observer framing for observer delivery posture on non-success outcomes', () => {
+    const body = finalizeDelivery({
+      success: false,
+      data: {
+        type: 'ops',
+        summary: '未命中允许的 capability。',
+        error: 'out_of_scope',
+        meta: {
+          intent_type: 'out_of_scope',
+          intent_type_canonical: 'out_of_scope',
+          exit_type: 'rejected',
+        },
+      },
+    }, {
+      deliveryPosture: observerDeliveryPosture,
+    })
+
+    expect(body.delivery_envelope.summary).toContain('Observer note:')
+    expect(body.delivery_envelope.meta.next_actions).toEqual([
+      '查看 Audit',
+      '检查 capability 边界',
+      '查看 Interaction Log',
     ])
   })
 

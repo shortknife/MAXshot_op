@@ -289,3 +289,11 @@
 - Why: customer presets already existed as workspace posture and runtime hints, but routing still treated capability matches as neutral once intent analysis completed.
 - Scope: routing-priority helper, chat runtime integration, session-kernel propagation, interaction-learning extraction, and FAQ-vs-product-doc preference handling.
 - Consequence: Nexa customer workspaces now influence execution posture in a deterministic, auditable way instead of remaining display-only presets.
+
+
+## D-045 Customer-Aware Delivery Posture Baseline Accepted
+- Date: 2026-04-06
+- Decision: add filesystem-managed customer delivery posture assets and apply them during final delivery packaging.
+- Why: customer-aware workspace and routing were already in place, but final answer packaging still looked operationally identical across customers.
+- Scope: delivery markdown assets, delivery posture loader, delivery critic integration, chat meta surfacing, and interaction-learning extraction.
+- Consequence: Nexa can now vary summary style and default next actions per customer without changing capability semantics or reintroducing database-managed product assets.
