@@ -2,7 +2,18 @@ import { describe, expect, it } from 'vitest'
 
 import { finalizeDelivery } from '@/lib/chat/delivery-critic'
 import type { CustomerDeliveryPosture } from '@/lib/customers/delivery'
+import type { CustomerClarificationPosture } from '@/lib/customers/clarification'
 
+const demoClarificationPosture: CustomerClarificationPosture = {
+  customer_id: 'nexa-demo',
+  clarification_version: '1',
+  clarification_style: 'guided',
+  option_style: 'guided',
+  summary: 'demo',
+  question_prefix: '补一个关键上下文，我就继续把这个流程解释完整。',
+  default_actions: ['补一个更具体的上下文', '继续追问这个工作流', '切换到当前 customer workspace'],
+  file_path: 'customer-assets/nexa-demo/clarification.md',
+}
 
 const demoDeliveryPosture: CustomerDeliveryPosture = {
   customer_id: 'nexa-demo',
@@ -101,6 +112,7 @@ describe('Step9 delivery critic', () => {
       },
     }, {
       deliveryPosture: demoDeliveryPosture,
+      clarificationPosture: demoClarificationPosture,
     })
 
     expect(clarification.delivery_envelope.meta.next_actions).toEqual([

@@ -1,6 +1,7 @@
 import { buildBusinessNextActionsByMode, buildBusinessNextActionsFromContract, buildEvidenceChain, inferMetricSemanticsFromContract, inferQueryMode } from '@/lib/chat/query-strategy'
 import type { QueryContractLike } from '@/lib/chat/query-strategy'
 import { buildUserOutcome, mapErrorToUserMessage } from '@/lib/user-chat-core'
+import { applyClarificationPosture, type CustomerClarificationPosture } from '@/lib/customers/clarification'
 import { toCanonicalIntentType } from '@/lib/intent-analyzer/intent-taxonomy'
 import { inferLegacyIntentTypeFromCapabilityIds } from '@/lib/router/capability-catalog'
 
@@ -68,12 +69,18 @@ export function buildModelClarificationBusinessResponse(params: {
   turns: number
   maxTurns: number
   memoryRefsRef?: string[]
+  clarificationPosture?: CustomerClarificationPosture | null
 }) {
+  const adjusted = applyClarificationPosture({
+    question: params.question,
+    options: params.options.length > 0 ? params.options : ['请给出时间范围', '请指定查询对象', '请说明希望的统计口径'],
+    posture: params.clarificationPosture,
+  })
   return {
     success: false,
     data: buildUserOutcome({
       type: 'ops',
-      summary: params.question,
+      summary: adjusted.question,
       rows: [],
       draft: null,
       error: 'missing_required_clarification',
@@ -87,7 +94,14 @@ export function buildModelClarificationBusinessResponse(params: {
         timezone: 'Asia/Shanghai',
         required_slots: Array.isArray(params.requiredSlots) ? params.requiredSlots : [],
         clarification_complete: false,
-        next_actions: params.options.length > 0 ? params.options : ['请给出时间范围', '请指定查询对象', '请说明希望的统计口径'],
+        next_actions: adjusted.options,
+        clarification_posture: params.clarificationPosture ? {
+          customer_id: params.clarificationPosture.customer_id,
+          clarification_version: params.clarificationPosture.clarification_version,
+          clarification_style: params.clarificationPosture.clarification_style,
+          option_style: params.clarificationPosture.option_style,
+          file_path: params.clarificationPosture.file_path,
+        } : null,
         clarification: {
           turns: params.turns,
           max_turns: params.maxTurns,

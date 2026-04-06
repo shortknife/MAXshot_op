@@ -313,3 +313,11 @@
 - Why: customer long-term memory already existed, but recall ranking still treated customer-profile memory as passive metadata instead of an active priority signal.
 - Scope: memory asset frontmatter extension, customer memory runtime, recall scoring in memory selection, and propagation into session-kernel and interaction-log evidence.
 - Consequence: Nexa now applies customer-specific recall posture before routing and delivery, without introducing a second memory source or database-managed product asset.
+
+
+## D-048 Customer-Aware Clarification Posture Baseline Accepted
+- Date: 2026-04-06
+- Decision: add filesystem-managed customer clarification posture assets and apply them during clarification response construction and final delivery packaging.
+- Why: customer-aware workspace, routing, delivery, review escalation, and memory recall were already in place, but clarification flows still used a generic posture that ignored customer-specific product framing.
+- Scope: clarification markdown assets, clarification posture loader, business clarification integration, delivery integration, and chat / interaction-learning visibility.
+- Consequence: Nexa clarification now follows customer-specific posture deterministically without adding a second runtime source or database-managed product asset.

@@ -3,6 +3,7 @@ import { buildBusinessMemoryRefs, resolveBusinessIntentId } from '@/lib/capabili
 import { buildModelClarificationBusinessResponse, buildOutOfScopeBusinessResponse } from '@/lib/chat/business-response'
 import { resolveChatIntentLane } from '@/lib/chat/chat-intent-lane'
 import type { PreparedChatRequest } from '@/lib/chat/chat-request-preprocess'
+import type { CustomerClarificationPosture } from '@/lib/customers/clarification'
 
 export function resolveMaxClarificationTurns(): number {
   const followUpPolicy = getBusinessFollowUpPolicy() || {}
@@ -27,11 +28,12 @@ export function buildEarlyGateResponse(params: {
     | 'modelClarificationOptions'
   >
   maxClarificationTurns: number
+  clarificationPosture?: CustomerClarificationPosture | null
 }): {
   body: unknown
   modelClarificationExhausted: boolean
 } | null {
-  const { prepared, maxClarificationTurns } = params
+  const { prepared, maxClarificationTurns, clarificationPosture } = params
   const clarificationTurns = prepared.previousTurns + 1
   const modelClarificationExhausted = clarificationTurns >= maxClarificationTurns
   const scope = String(prepared.parsed?.intent?.extracted_slots?.scope || 'unknown')

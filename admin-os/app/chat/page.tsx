@@ -46,6 +46,11 @@ type ChatMeta = {
     review_copy_style?: string
     citation_density?: string
   } | null
+  clarification_posture?: {
+    customer_id?: string
+    clarification_style?: string
+    option_style?: string
+  } | null
   answer_meta?: {
     capability_id?: string
     citations?: Array<{ source_id?: string; title?: string; snippet?: string; score?: number }>
@@ -400,6 +405,7 @@ export default function ChatPage() {
                               {meta.answer_meta?.review_required && <MetaBadge label="review required" />}
                               {meta.delivery_posture?.summary_style && <MetaBadge label={`delivery: ${meta.delivery_posture.summary_style}`} />}
                               {meta.delivery_posture?.next_action_style && <MetaBadge label={`actions: ${meta.delivery_posture.next_action_style}`} />}
+                              {meta.clarification_posture?.clarification_style && <MetaBadge label={`clarify: ${meta.clarification_posture.clarification_style}`} />}
                             </div>
                           </div>
 

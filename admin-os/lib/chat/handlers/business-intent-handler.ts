@@ -17,6 +17,8 @@ import { mergeMemoryRefIds } from '@/lib/router/capability-catalog'
 import type { QueryContractV2 } from '@/lib/capabilities/business-query-contract-v2'
 import { buildYieldInterpretationFromContract } from '@/lib/capabilities/business-query-contract-render'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
+import type { CustomerClarificationPosture } from '@/lib/customers/clarification'
+import { applyClarificationPosture } from '@/lib/customers/clarification'
 
 function persistReadyFailureContext(params: {
   sessionId: string | null
@@ -66,6 +68,7 @@ type HandleBusinessIntentParams = {
   modelNeedClarification: boolean
   modelClarificationExhausted: boolean
   followUpContextApplied: boolean
+  clarificationPosture?: CustomerClarificationPosture | null
 }
 
 function extractOnlyMarketTarget(rawQuery: string): string | null {
@@ -100,6 +103,7 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
     modelNeedClarification,
     modelClarificationExhausted,
     followUpContextApplied,
+    clarificationPosture,
   } = params
 
   if (primaryCapabilityId !== 'capability.data_fact_query' && !matchedCapabilityIds.includes('capability.data_fact_query')) {
@@ -157,6 +161,7 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
         turns: previousTurns + 1,
         maxTurns: maxClarificationTurns,
         memoryRefsRef,
+        clarificationPosture,
       }),
     }
   }
@@ -207,13 +212,18 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
 
       if (clarificationNeeded.question) {
         registerClarificationTurn({ sessionId, rawQuery: intentQuery, previousTurns })
+        const adjustedClarification = applyClarificationPosture({
+          question: clarificationNeeded.question,
+          options: clarificationNeeded.nextActions,
+          posture: clarificationPosture,
+        })
         return {
           handled: true,
           body: {
             success: false,
             data: buildUserOutcome({
               type: 'ops',
-              summary: clarificationNeeded.question,
+              summary: adjustedClarification.question,
               error: 'missing_required_clarification',
               meta: {
                 intent_type: intentType,
@@ -227,7 +237,14 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
                 timezone: 'Asia/Shanghai',
                 required_slots: clarificationNeeded.requiredSlots,
                 clarification_complete: false,
-                next_actions: clarificationNeeded.nextActions,
+                next_actions: adjustedClarification.options,
+                clarification_posture: clarificationPosture ? {
+                  customer_id: clarificationPosture.customer_id,
+                  clarification_version: clarificationPosture.clarification_version,
+                  clarification_style: clarificationPosture.clarification_style,
+                  option_style: clarificationPosture.option_style,
+                  file_path: clarificationPosture.file_path,
+                } : null,
                 clarification: {
                   turns: previousTurns + 1,
                   max_turns: maxClarificationTurns,
@@ -263,14 +280,19 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
         : clarification.prompt.question.includes('APY 口径')
           ? ['metric_agg']
           : []
-    const nextActions = clarification.prompt.options
+    const adjustedClarification = applyClarificationPosture({
+      question: clarification.prompt.question,
+      options: clarification.prompt.options,
+      posture: clarificationPosture,
+    })
+    const nextActions = adjustedClarification.options
     return {
       handled: true,
       body: {
         success: false,
         data: buildUserOutcome({
           type: 'ops',
-          summary: clarification.prompt.question,
+          summary: adjustedClarification.question,
           error: clarification.prompt.reason,
           meta: {
             intent_type: intentType,
@@ -285,6 +307,13 @@ export async function handleBusinessIntent(params: HandleBusinessIntentParams): 
             required_slots: requiredSlots,
             clarification_complete: false,
             next_actions: nextActions,
+            clarification_posture: clarificationPosture ? {
+              customer_id: clarificationPosture.customer_id,
+              clarification_version: clarificationPosture.clarification_version,
+              clarification_style: clarificationPosture.clarification_style,
+              option_style: clarificationPosture.option_style,
+              file_path: clarificationPosture.file_path,
+            } : null,
             clarification: {
               turns: previousTurns + 1,
               max_turns: maxClarificationTurns,

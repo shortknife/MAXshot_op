@@ -1,5 +1,6 @@
 import { mapErrorToUserMessage } from '@/lib/user-chat-core'
 import type { CustomerDeliveryPosture } from '@/lib/customers/delivery'
+import type { CustomerClarificationPosture } from '@/lib/customers/clarification'
 
 type DeliveryOutcome = 'deliver' | 'clarify' | 'block' | 'retryable_failure'
 
@@ -20,6 +21,7 @@ export type DeliveryEnvelope = {
 
 type DeliveryFinalizeOptions = {
   deliveryPosture?: CustomerDeliveryPosture | null
+  clarificationPosture?: CustomerClarificationPosture | null
 }
 
 function asRecord(value: unknown): Record<string, unknown> {
@@ -112,6 +114,7 @@ function resolveNextActions(
   meta: Record<string, unknown>,
   criticDecision: CriticDecision,
   deliveryPosture?: CustomerDeliveryPosture | null,
+  clarificationPosture?: CustomerClarificationPosture | null,
 ): string[] {
   if (Array.isArray(meta.next_actions) && meta.next_actions.length > 0) {
     return meta.next_actions as string[]
@@ -121,6 +124,7 @@ function resolveNextActions(
   if (postureActions.length > 0) return postureActions
 
   if (criticDecision.outcome === 'clarify') {
+    if (clarificationPosture?.default_actions?.length) return clarificationPosture.default_actions
     return ['请给出时间范围', '请指定查询对象', '请说明希望的统计口径']
   }
   if (criticDecision.outcome === 'retryable_failure') {
@@ -191,9 +195,16 @@ export function buildDeliveryEnvelope(
       intent_type: intentType || null,
       intent_type_canonical: meta.intent_type_canonical || null,
       exit_type: meta.exit_type || null,
-      next_actions: resolveNextActions(meta, criticDecision, options.deliveryPosture),
+      next_actions: resolveNextActions(meta, criticDecision, options.deliveryPosture, options.clarificationPosture),
       highlights: Array.isArray(meta.highlights) ? meta.highlights : [],
       delivery_posture: buildDeliveryPostureMeta(options.deliveryPosture),
+      clarification_posture: options.clarificationPosture ? {
+        customer_id: options.clarificationPosture.customer_id,
+        clarification_version: options.clarificationPosture.clarification_version,
+        clarification_style: options.clarificationPosture.clarification_style,
+        option_style: options.clarificationPosture.option_style,
+        file_path: options.clarificationPosture.file_path,
+      } : null,
     },
   }
 }
@@ -236,6 +247,13 @@ export function finalizeDelivery(body: Record<string, unknown>, options: Deliver
         critic_decision: meta.critic_decision || criticDecision,
         delivery_envelope: deliveryEnvelope,
         delivery_posture: buildDeliveryPostureMeta(options.deliveryPosture),
+        clarification_posture: options.clarificationPosture ? {
+          customer_id: options.clarificationPosture.customer_id,
+          clarification_version: options.clarificationPosture.clarification_version,
+          clarification_style: options.clarificationPosture.clarification_style,
+        option_style: options.clarificationPosture.option_style,
+        file_path: options.clarificationPosture.file_path,
+      } : null,
       },
     },
   }

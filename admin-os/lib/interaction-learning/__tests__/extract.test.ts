@@ -24,6 +24,8 @@ describe('extractInteractionLearningPayload', () => {
             matched_capability_ids: ['capability.data_fact_query'],
             exit_type: 'answered',
             query_contract: { scope: 'yield', completeness: { ready: true } },
+            session_kernel: { customer_recall_priority_applied: true, customer_recall_priority: 'customer_first' },
+            clarification_posture: { customer_id: 'maxshot', clarification_style: 'operator' },
           },
         },
       },

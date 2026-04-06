@@ -19,6 +19,7 @@ import { attachSessionKernel, buildPreparedSessionKernel, finalizeSessionKernel,
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
 import { loadCustomerWorkspacePreset } from '@/lib/customers/workspace'
 import { loadCustomerDeliveryPosture } from '@/lib/customers/delivery'
+import { loadCustomerClarificationPosture } from '@/lib/customers/clarification'
 import { applyCustomerRoutingPriority } from '@/lib/chat/customer-routing-priority'
 
 export type ChatAskRuntimeMeta = {
@@ -135,6 +136,9 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   const customerDeliveryPosture = await perf.measure('load_customer_delivery_posture', () =>
     loadCustomerDeliveryPosture(customerId),
   )
+  const customerClarificationPosture = await perf.measure('load_customer_clarification_posture', () =>
+    loadCustomerClarificationPosture(customerId),
+  )
   const routingPriority = applyCustomerRoutingPriority({
     workspacePreset: customerWorkspacePreset,
     intentType,
@@ -245,6 +249,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
   const gateResponse = buildEarlyGateResponse({
     prepared,
     maxClarificationTurns,
+    clarificationPosture: customerClarificationPosture,
   })
   const modelClarificationExhausted = gateResponse
     ? gateResponse.modelClarificationExhausted
