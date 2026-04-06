@@ -20,6 +20,8 @@ export type MemoryRuntime = {
   memory_ref_count: number
   learning_ref_count: number
   customer_ref_count: number
+  customer_recall_priority_applied?: boolean
+  customer_recall_priority?: string | null
   summary: string | null
 }
 
@@ -45,13 +47,19 @@ export function buildMemoryRuntime(memoryRefs: unknown[]): MemoryRuntime {
     ? memoryRefs.filter((item) => item && typeof item === 'object' && (item as { memory_origin?: string }).memory_origin === 'customer_profile').length
     : 0
   const hasLearningRefs = learningRefCount > 0 || customerRefCount > 0
+  const customerPrioritySource = Array.isArray(memoryRefs)
+    ? memoryRefs.find((item) => item && typeof item === 'object' && (item as { memory_origin?: string }).memory_origin === 'customer_profile') as { recall_priority?: string } | undefined
+    : undefined
+  const customerRecallPriority = typeof customerPrioritySource?.recall_priority === 'string' ? customerPrioritySource.recall_priority : null
   return {
     source_policy: hasLearningRefs ? 'hybrid_learning' : 'router_context_only',
     ref_ids: refIds,
     memory_ref_count: refIds.length,
     learning_ref_count: learningRefCount,
     customer_ref_count: customerRefCount,
-    summary: hasLearningRefs ? `working mind includes ${learningRefCount} interaction-derived refs and ${customerRefCount} customer-profile refs` : null,
+    customer_recall_priority_applied: customerRefCount > 0 && customerRecallPriority !== null,
+    customer_recall_priority: customerRecallPriority,
+    summary: hasLearningRefs ? `working mind includes ${learningRefCount} interaction-derived refs and ${customerRefCount} customer-profile refs${customerRecallPriority ? ` with ${customerRecallPriority} recall priority` : ''}` : null,
   }
 }
 
@@ -63,6 +71,8 @@ export function resolveInputMemoryRuntime(input: CapabilityInputEnvelope): Memor
   const memoryRefCount = typeof runtime?.memory_ref_count === 'number' ? runtime.memory_ref_count : null
   const learningRefCount = typeof runtime?.learning_ref_count === 'number' ? runtime.learning_ref_count : 0
   const customerRefCount = typeof runtime?.customer_ref_count === 'number' ? runtime.customer_ref_count : 0
+  const customerRecallPriorityApplied = runtime?.customer_recall_priority_applied === true
+  const customerRecallPriority = typeof runtime?.customer_recall_priority === 'string' ? runtime.customer_recall_priority : null
   const summary = typeof runtime?.summary === 'string' ? runtime.summary : null
   if (refIds && (sourcePolicy === 'router_context_only' || sourcePolicy === 'hybrid_learning') && typeof memoryRefCount === 'number') {
     return {
@@ -71,6 +81,8 @@ export function resolveInputMemoryRuntime(input: CapabilityInputEnvelope): Memor
       memory_ref_count: memoryRefCount,
       learning_ref_count: learningRefCount,
       customer_ref_count: customerRefCount,
+      customer_recall_priority_applied: customerRecallPriorityApplied,
+      customer_recall_priority: customerRecallPriority,
       summary,
     }
   }

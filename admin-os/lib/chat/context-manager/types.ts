@@ -98,6 +98,8 @@ export type ContextEnvelope = {
     memory_ref_count: number
     learning_ref_count: number
     customer_ref_count?: number
+    customer_recall_priority_applied?: boolean
+    customer_recall_priority?: string | null
     summary: string | null
   }
   effective_query: string

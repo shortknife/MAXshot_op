@@ -10,6 +10,8 @@ export type CustomerMemoryAsset = {
   preferred_capabilities: string[]
   preferred_query_modes: string[]
   preferred_scopes: string[]
+  recall_priority: 'balanced' | 'customer_first' | 'guided_demo' | 'audit_first'
+  recall_focus_tags: string[]
   summary: string | null
   guardrails: string[]
   file_path: string
@@ -113,6 +115,15 @@ export async function loadCustomerMemoryAsset(customerId: string): Promise<Custo
     preferred_capabilities: listValue(parsed.meta.preferred_capabilities),
     preferred_query_modes: listValue(parsed.meta.preferred_query_modes),
     preferred_scopes: listValue(parsed.meta.preferred_scopes),
+    recall_priority:
+      parsed.meta.recall_priority === 'customer_first'
+        ? 'customer_first'
+        : parsed.meta.recall_priority === 'guided_demo'
+          ? 'guided_demo'
+          : parsed.meta.recall_priority === 'audit_first'
+            ? 'audit_first'
+            : 'balanced',
+    recall_focus_tags: listValue(parsed.meta.recall_focus_tags),
     summary: parsed.sections['Summary'] || null,
     guardrails: lines(parsed.sections['Guardrails']),
     file_path: path.relative(process.cwd(), filePath),

@@ -84,7 +84,9 @@ function buildPreparedRequest(): PreparedChatRequest {
         memory_ref_count: 2,
         learning_ref_count: 1,
         customer_ref_count: 1,
-        summary: 'working mind includes 1 interaction-derived refs and 1 customer-profile refs',
+        customer_recall_priority_applied: true,
+        customer_recall_priority: 'customer_first',
+        summary: 'working mind includes 1 interaction-derived refs and 1 customer-profile refs with customer_first recall priority',
       },
       effective_query: '最近7天 APY 怎么样',
       policy_decision: {
@@ -155,6 +157,8 @@ describe('session kernel', () => {
     expect(kernel.memory_policy).toBe('hybrid_learning')
     expect(kernel.learning_ref_count).toBe(1)
     expect(kernel.customer_ref_count).toBe(1)
+    expect(kernel.customer_recall_priority_applied).toBe(true)
+    expect(kernel.customer_recall_priority).toBe('customer_first')
     expect(kernel.recall_triggered).toBe(true)
     expect(kernel.recall_confidence).toBe(0.78)
     expect(kernel.workspace_primary_plane).toBe('ops_data')

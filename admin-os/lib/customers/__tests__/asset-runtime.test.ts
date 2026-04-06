@@ -42,6 +42,8 @@ describe('customer asset runtime', () => {
       response_style: 'concise_operational',
     })
     expect(memory?.preferred_planes).toContain('ops_data')
+    expect(memory?.recall_priority).toBe('customer_first')
+    expect(memory?.recall_focus_tags).toContain('vault')
     expect(wallet).toMatchObject({
       customer_id: 'maxshot',
       wallet_mode: 'manual_review',
@@ -60,5 +62,6 @@ describe('customer asset runtime', () => {
     })
     expect((ref?.content as { customer_id?: string }).customer_id).toBe('maxshot')
     expect((ref?.content as { preferred_planes?: string[] }).preferred_planes).toContain('ops_data')
+    expect((ref as { recall_priority?: string } | null)?.recall_priority).toBe('customer_first')
   })
 })

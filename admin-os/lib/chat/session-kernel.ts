@@ -28,6 +28,8 @@ export type SessionKernelSnapshot = {
   memory_ref_count: number
   learning_ref_count: number
   customer_ref_count: number
+  customer_recall_priority_applied: boolean
+  customer_recall_priority: string | null
   recall_triggered: boolean
   recall_confidence: number | null
   verification_outcome: string | null
@@ -100,6 +102,8 @@ export function buildPreparedSessionKernel(params: {
     memory_ref_count: memoryRuntime.memory_ref_count,
     learning_ref_count: memoryRuntime.learning_ref_count,
     customer_ref_count: typeof memoryRuntime.customer_ref_count === 'number' ? memoryRuntime.customer_ref_count : 0,
+    customer_recall_priority_applied: memoryRuntime.customer_recall_priority_applied === true,
+    customer_recall_priority: typeof memoryRuntime.customer_recall_priority === 'string' ? memoryRuntime.customer_recall_priority : null,
     recall_triggered: prepared.contextEnvelope.recall !== null,
     recall_confidence: prepared.contextEnvelope.recall?.recall_confidence ?? null,
     verification_outcome: null,

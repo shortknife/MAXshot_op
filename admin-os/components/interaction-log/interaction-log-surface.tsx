@@ -26,6 +26,8 @@ type SessionKernelSummary = {
   memory_ref_count?: number | null
   learning_ref_count?: number | null
   customer_ref_count?: number | null
+  customer_recall_priority_applied?: boolean
+  customer_recall_priority?: string | null
   recall_triggered?: boolean
   verification_outcome?: string | null
   source_plane?: string | null
@@ -241,6 +243,7 @@ export function InteractionLogSurface({ source, items }: { source: 'supabase' | 
                                 {typeof sessionKernel.memory_ref_count === 'number' && <Pill>{`refs: ${sessionKernel.memory_ref_count}`}</Pill>}
                                 {typeof sessionKernel.learning_ref_count === 'number' && <Pill>{`learning_refs: ${sessionKernel.learning_ref_count}`}</Pill>}
                                 {typeof sessionKernel.customer_ref_count === 'number' && <Pill>{`customer_refs: ${sessionKernel.customer_ref_count}`}</Pill>}
+                                {sessionKernel.customer_recall_priority_applied && sessionKernel.customer_recall_priority && <Pill tone="sky">{`customer_recall: ${sessionKernel.customer_recall_priority}`}</Pill>}
                                 {sessionKernel.workspace_primary_plane && <Pill tone="sky">{`workspace: ${sessionKernel.workspace_primary_plane}`}</Pill>}
                                 {sessionKernel.workspace_default_entry_path && <Pill>{`entry: ${sessionKernel.workspace_default_entry_path}`}</Pill>}
                                 {typeof sessionKernel.workspace_capability_count === 'number' && <Pill>{`workspace_caps: ${sessionKernel.workspace_capability_count}`}</Pill>}

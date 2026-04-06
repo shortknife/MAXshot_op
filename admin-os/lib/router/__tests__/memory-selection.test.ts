@@ -65,15 +65,19 @@ describe('memory selection', () => {
       memory_origin: 'customer_profile',
       weight: 0.88,
       confidence: 0.84,
-      content: { summary: 'prefers faq account answers' },
+      recall_priority: 'customer_first',
+      content: { summary: 'prefers faq account answers', preferred_planes: ['faq_kb'], recall_focus_tags: ['faq', 'password'] },
     })
 
     const refs = await selectMemories(['foundation'], ['faq', 'password'], 'maxshot')
     const workingMind = createWorkingMind(refs)
 
     expect(refs.length).toBe(3)
+    expect((refs[0] as { memory_origin?: string }).memory_origin).toBe('customer_profile')
     expect(workingMind.source_policy).toBe('hybrid_learning')
     expect(workingMind.learning_ref_count).toBe(1)
     expect(workingMind.customer_ref_count).toBe(1)
+    expect(workingMind.customer_recall_priority_applied).toBe(true)
+    expect(workingMind.customer_recall_priority).toBe('customer_first')
   })
 })

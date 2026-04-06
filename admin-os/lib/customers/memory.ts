@@ -7,6 +7,7 @@ export type CustomerLongTermMemoryRef = {
   memory_origin: 'customer_profile'
   weight: number
   confidence: number
+  recall_priority: 'balanced' | 'customer_first' | 'guided_demo' | 'audit_first'
   content: Record<string, unknown>
 }
 
@@ -35,7 +36,7 @@ export async function buildCustomerLongTermMemory(customerId: string | null | un
   }
 
   const issueReasons = profile?.top_issue_reasons.map((item) => item.reason) || []
-  const memoryWeight = profile ? 0.88 : 0.72
+  const memoryWeight = asset?.recall_priority === 'customer_first' ? 1.08 : asset?.recall_priority === 'guided_demo' ? 0.96 : asset?.recall_priority === 'audit_first' ? 0.94 : profile ? 0.88 : 0.72
   const confidence = profile ? 0.84 : 0.68
 
   return {
@@ -44,6 +45,7 @@ export async function buildCustomerLongTermMemory(customerId: string | null | un
     memory_origin: 'customer_profile',
     weight: memoryWeight,
     confidence,
+    recall_priority: asset?.recall_priority || 'balanced',
     content: {
       kind: 'customer_long_term_memory',
       customer_id: customerId,
@@ -54,6 +56,8 @@ export async function buildCustomerLongTermMemory(customerId: string | null | un
       preferred_capabilities: [...preferredCapabilities],
       preferred_query_modes: asset?.preferred_query_modes || [],
       preferred_scopes: asset?.preferred_scopes || [],
+      recall_priority: asset?.recall_priority || 'balanced',
+      recall_focus_tags: asset?.recall_focus_tags || [],
       guardrails: asset?.guardrails || [],
       total_interactions: profile?.total_interactions || 0,
       top_issue_reasons: issueReasons,

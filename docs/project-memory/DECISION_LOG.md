@@ -305,3 +305,11 @@
 - Why: customer-aware workspace, routing, and delivery posture were already in place, but review escalation still looked identical across customers.
 - Scope: review markdown assets, review posture loader, FAQ review packaging integration, runtime queue decoration, and `/faq-review` surface updates.
 - Consequence: Nexa review escalation now carries customer-specific queue framing, operator guidance, and suggested next actions without changing runtime queue schema or reintroducing database-managed product assets.
+
+
+## D-047 Customer-Aware Memory Recall Priority Baseline Accepted
+- Date: 2026-04-06
+- Decision: add filesystem-managed customer recall priority and focus tags so customer posture can deterministically influence Working Mind selection.
+- Why: customer long-term memory already existed, but recall ranking still treated customer-profile memory as passive metadata instead of an active priority signal.
+- Scope: memory asset frontmatter extension, customer memory runtime, recall scoring in memory selection, and propagation into session-kernel and interaction-log evidence.
+- Consequence: Nexa now applies customer-specific recall posture before routing and delivery, without introducing a second memory source or database-managed product asset.

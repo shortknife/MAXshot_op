@@ -7,6 +7,8 @@ preferred_planes: faq_kb
 preferred_capabilities: capability.faq_answering
 preferred_query_modes: qna
 preferred_scopes: public,general
+recall_priority: guided_demo
+recall_focus_tags: faq,product,workflow,demo,review
 ---
 ## Summary
 Nexa Demo is optimized for product explanation and FAQ showcase flows rather than operational data work.
