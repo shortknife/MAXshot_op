@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase'
+import type { CustomerPolicyEvidence } from '@/lib/customers/runtime-policy'
+import { normalizeCustomerPolicyEvidence } from '@/lib/customers/runtime-policy'
 
 export type AuthEventItem = {
   event_id: string
@@ -10,6 +12,7 @@ export type AuthEventItem = {
   outcome: 'issued' | 'verified' | 'failed'
   reason: string | null
   created_at: string
+  customer_policy_evidence: CustomerPolicyEvidence | null
 }
 
 const AUTH_EVENTS_TABLE = 'auth_identity_events_op'
@@ -25,6 +28,7 @@ function normalize(items: Array<Record<string, unknown>>): AuthEventItem[] {
     outcome: String(item.outcome || 'issued') === 'verified' ? 'verified' : String(item.outcome || 'issued') === 'failed' ? 'failed' : 'issued',
     reason: item.reason ? String(item.reason) : null,
     created_at: String(item.created_at || ''),
+    customer_policy_evidence: normalizeCustomerPolicyEvidence(item.meta && typeof item.meta === 'object' ? (item.meta as Record<string, unknown>).customer_policy_audit : null),
   })).filter((item) => item.event_id)
 }
 
@@ -34,7 +38,7 @@ export async function loadRecentAuthEvents(identityId: string, limit = 6): Promi
   try {
     const { data, error } = await supabase
       .from(AUTH_EVENTS_TABLE)
-      .select('event_id, identity_id, customer_id, operator_id, auth_method, verification_method, outcome, reason, created_at')
+      .select('event_id, identity_id, customer_id, operator_id, auth_method, verification_method, outcome, reason, created_at, meta')
       .eq('identity_id', normalized)
       .order('created_at', { ascending: false })
       .limit(limit)

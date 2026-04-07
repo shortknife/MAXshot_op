@@ -17,6 +17,7 @@ export function extractRuntimeCostEvent(params: {
   const meta = asRecord(data.meta)
   const answerMeta = asRecord(meta.answer_meta)
   const verification = asRecord(meta.verification)
+  const customerPolicyEvidence = asRecord(meta.customer_policy_evidence)
   const tokensUsed = Number(params.runtimeMeta?.step3_tokens_used || 0)
   const estimatedCostUsd = estimateRuntimeCostUsd({
     model_source: params.runtimeMeta?.model_source || null,
@@ -49,6 +50,21 @@ export function extractRuntimeCostEvent(params: {
       delivery_type: typeof data.type === 'string' ? data.type : null,
       verification_reason: typeof verification.reason === 'string' ? verification.reason : null,
       prompt_slug: params.runtimeMeta?.model_prompt_slug || null,
+      customer_policy_audit: {
+        customer_id: typeof customerPolicyEvidence.customer_id === 'string' ? customerPolicyEvidence.customer_id : null,
+        policy_version: typeof customerPolicyEvidence.policy_version === 'string' ? customerPolicyEvidence.policy_version : null,
+        summary: typeof customerPolicyEvidence.summary === 'string' ? customerPolicyEvidence.summary : null,
+        primary_plane: typeof customerPolicyEvidence.primary_plane === 'string' ? customerPolicyEvidence.primary_plane : null,
+        default_entry_path: typeof customerPolicyEvidence.default_entry_path === 'string' ? customerPolicyEvidence.default_entry_path : null,
+        auth_primary_method: typeof customerPolicyEvidence.auth_primary_method === 'string' ? customerPolicyEvidence.auth_primary_method : null,
+        auth_verification_posture: typeof customerPolicyEvidence.auth_verification_posture === 'string' ? customerPolicyEvidence.auth_verification_posture : null,
+        delivery_summary_style: typeof customerPolicyEvidence.delivery_summary_style === 'string' ? customerPolicyEvidence.delivery_summary_style : null,
+        review_escalation_style: typeof customerPolicyEvidence.review_escalation_style === 'string' ? customerPolicyEvidence.review_escalation_style : null,
+        clarification_style: typeof customerPolicyEvidence.clarification_style === 'string' ? customerPolicyEvidence.clarification_style : null,
+        focused_surfaces: Array.isArray(customerPolicyEvidence.focused_surfaces) ? customerPolicyEvidence.focused_surfaces.map((item) => String(item || '')).filter(Boolean) : [],
+        recommended_route_order: Array.isArray(customerPolicyEvidence.recommended_route_order) ? customerPolicyEvidence.recommended_route_order.map((item) => String(item || '')).filter(Boolean) : [],
+        preferred_capability_count: typeof customerPolicyEvidence.preferred_capability_count === 'number' ? customerPolicyEvidence.preferred_capability_count : 0,
+      },
     },
   }
 }

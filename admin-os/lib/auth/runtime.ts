@@ -3,6 +3,7 @@ import { verifyMessage } from 'ethers'
 
 import { supabase } from '@/lib/supabase'
 import type { HybridIdentityRecord } from '@/lib/auth/identity-registry'
+import type { CustomerPolicyEvidence } from '@/lib/customers/runtime-policy'
 
 const AUTH_CHALLENGE_TABLE = 'auth_verification_challenges_op'
 const AUTH_EVENT_TABLE = 'auth_identity_events_op'
@@ -25,6 +26,7 @@ type PersistAuthEventParams = {
   reason?: string | null
   email?: string | null
   wallet_address?: string | null
+  customer_policy_audit?: CustomerPolicyEvidence | null
   meta?: Record<string, unknown>
 }
 
@@ -115,7 +117,10 @@ async function persistAuthEvent(params: PersistAuthEventParams): Promise<void> {
     reason: params.reason || null,
     email: params.email || null,
     wallet_address: normalizeWallet(params.wallet_address),
-    meta: params.meta || {},
+    meta: {
+      ...(params.meta || {}),
+      customer_policy_audit: params.customer_policy_audit || null,
+    },
     created_at: new Date().toISOString(),
   }
   try {
@@ -125,7 +130,7 @@ async function persistAuthEvent(params: PersistAuthEventParams): Promise<void> {
   }
 }
 
-export async function issueEmailChallenge(identity: HybridIdentityRecord): Promise<EmailChallengeResult | null> {
+export async function issueEmailChallenge(identity: HybridIdentityRecord, customerPolicyAudit?: CustomerPolicyEvidence | null): Promise<EmailChallengeResult | null> {
   const code = randomDigits(6)
   const challengeId = randomId('email-auth')
   const expiresAt = isoAfterMinutes(EMAIL_CODE_TTL_MINUTES)
@@ -148,6 +153,7 @@ export async function issueEmailChallenge(identity: HybridIdentityRecord): Promi
     meta: {
       delivery_mode: 'manual_preview',
       linked_methods: identity.auth_methods,
+      customer_policy_audit: customerPolicyAudit || null,
     },
     created_at: new Date().toISOString(),
   }
@@ -165,6 +171,7 @@ export async function issueEmailChallenge(identity: HybridIdentityRecord): Promi
       challenge_id: challengeId,
       email: identity.email,
       wallet_address: identity.wallet_address,
+      customer_policy_audit: customerPolicyAudit || null,
       meta: { delivery_mode: 'manual_preview' },
     })
     return {
@@ -182,7 +189,7 @@ export async function issueEmailChallenge(identity: HybridIdentityRecord): Promi
   }
 }
 
-export async function issueWalletChallenge(identity: HybridIdentityRecord): Promise<WalletChallengeResult | null> {
+export async function issueWalletChallenge(identity: HybridIdentityRecord, customerPolicyAudit?: CustomerPolicyEvidence | null): Promise<WalletChallengeResult | null> {
   const nonce = crypto.randomBytes(16).toString('hex')
   const challengeId = randomId('wallet-auth')
   const expiresAt = isoAfterMinutes(WALLET_NONCE_TTL_MINUTES)
@@ -212,6 +219,7 @@ export async function issueWalletChallenge(identity: HybridIdentityRecord): Prom
     consumed_at: null,
     meta: {
       linked_methods: identity.auth_methods,
+      customer_policy_audit: customerPolicyAudit || null,
     },
     created_at: new Date().toISOString(),
   }
@@ -229,6 +237,7 @@ export async function issueWalletChallenge(identity: HybridIdentityRecord): Prom
       challenge_id: challengeId,
       email: identity.email,
       wallet_address: identity.wallet_address,
+      customer_policy_audit: customerPolicyAudit || null,
     })
     return {
       challenge_id: challengeId,
@@ -271,7 +280,7 @@ function ensureChallengeUsable(row: Record<string, unknown>, expectedMethod: Ver
   if (Number.isNaN(expiresAt) || Date.now() > expiresAt) throw new Error('challenge_expired')
 }
 
-export async function verifyEmailChallenge(identity: HybridIdentityRecord, challengeId: string, code: string): Promise<IdentitySessionPayload> {
+export async function verifyEmailChallenge(identity: HybridIdentityRecord, challengeId: string, code: string, customerPolicyAudit?: CustomerPolicyEvidence | null): Promise<IdentitySessionPayload> {
   const row = await loadChallenge(challengeId)
   ensureChallengeUsable(row || {}, 'email_code')
   if (String(row?.identity_id || '') !== identity.identity_id) throw new Error('identity_mismatch')
@@ -287,6 +296,7 @@ export async function verifyEmailChallenge(identity: HybridIdentityRecord, chall
       challenge_id: challengeId,
       email: identity.email,
       reason: 'invalid_code',
+      customer_policy_audit: customerPolicyAudit || null,
     })
     throw new Error('invalid_code')
   }
@@ -301,11 +311,12 @@ export async function verifyEmailChallenge(identity: HybridIdentityRecord, chall
     outcome: 'verified',
     challenge_id: challengeId,
     email: identity.email,
+    customer_policy_audit: customerPolicyAudit || null,
   })
   return buildSession(identity, 'email', 'email_code')
 }
 
-export async function verifyWalletChallenge(identity: HybridIdentityRecord, challengeId: string, signature: string): Promise<IdentitySessionPayload> {
+export async function verifyWalletChallenge(identity: HybridIdentityRecord, challengeId: string, signature: string, customerPolicyAudit?: CustomerPolicyEvidence | null): Promise<IdentitySessionPayload> {
   const row = await loadChallenge(challengeId)
   ensureChallengeUsable(row || {}, 'wallet_signature')
   if (String(row?.identity_id || '') !== identity.identity_id) throw new Error('identity_mismatch')
@@ -324,6 +335,7 @@ export async function verifyWalletChallenge(identity: HybridIdentityRecord, chal
       challenge_id: challengeId,
       wallet_address: identity.wallet_address,
       reason: 'invalid_signature',
+      customer_policy_audit: customerPolicyAudit || null,
     })
     throw new Error('invalid_signature')
   }
@@ -338,6 +350,7 @@ export async function verifyWalletChallenge(identity: HybridIdentityRecord, chal
     outcome: 'verified',
     challenge_id: challengeId,
     wallet_address: identity.wallet_address,
+    customer_policy_audit: customerPolicyAudit || null,
   })
   return buildSession(identity, 'wallet', 'wallet_signature')
 }

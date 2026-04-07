@@ -71,6 +71,12 @@ export type CustomerPolicyEvidence = {
   preferred_capability_count: number
 }
 
+export type CustomerPolicyEvidenceCarrier = {
+  customer_id?: string | null
+  meta?: unknown
+  customer_policy_audit?: unknown
+}
+
 export type CustomerRuntimePolicy = {
   customer_id: string
   policy_version: string
@@ -274,6 +280,46 @@ export function buildCustomerPolicyEvidence(policy: CustomerRuntimePolicy | null
   }
 }
 
+function asObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === 'object' ? (value as Record<string, unknown>) : null
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.map((item) => String(item || '').trim()).filter(Boolean) : []
+}
+
+export function normalizeCustomerPolicyEvidence(value: unknown): CustomerPolicyEvidence | null {
+  const record = asObject(value)
+  if (!record) return null
+  const customerId = typeof record.customer_id === 'string' ? record.customer_id : null
+  const policyVersion = typeof record.policy_version === 'string' ? record.policy_version : null
+  if (!customerId || !policyVersion) return null
+
+  return {
+    customer_id: customerId,
+    policy_version: policyVersion,
+    summary: typeof record.summary === 'string' ? record.summary : 'Customer runtime policy is active for this workspace.',
+    primary_plane: typeof record.primary_plane === 'string' ? record.primary_plane : null,
+    default_entry_path: typeof record.default_entry_path === 'string' ? record.default_entry_path : null,
+    auth_primary_method: typeof record.auth_primary_method === 'string' ? record.auth_primary_method : null,
+    auth_verification_posture: typeof record.auth_verification_posture === 'string' ? record.auth_verification_posture : null,
+    delivery_summary_style: typeof record.delivery_summary_style === 'string' ? record.delivery_summary_style : null,
+    review_escalation_style: typeof record.review_escalation_style === 'string' ? record.review_escalation_style : null,
+    clarification_style: typeof record.clarification_style === 'string' ? record.clarification_style : null,
+    focused_surfaces: normalizeStringArray(record.focused_surfaces),
+    recommended_route_order: normalizeStringArray(record.recommended_route_order),
+    preferred_capability_count: typeof record.preferred_capability_count === 'number' ? record.preferred_capability_count : 0,
+  }
+}
+
+export function extractCustomerPolicyEvidenceCarrier(row: CustomerPolicyEvidenceCarrier | null | undefined): CustomerPolicyEvidence | null {
+  if (!row) return null
+  const embedded = normalizeCustomerPolicyEvidence(row.customer_policy_audit)
+  if (embedded) return embedded
+  const meta = asObject(row.meta)
+  return normalizeCustomerPolicyEvidence(meta?.customer_policy_audit)
+}
+
 export function buildCustomerAuthDefaultExperience(policy: CustomerRuntimePolicy | null | undefined): CustomerAuthDefaultExperience | null {
   if (!policy?.auth) return null
   return {
@@ -309,11 +355,13 @@ export async function decorateWithCustomerDefaultExperience<T extends { customer
   return decorated
 }
 
-export async function decorateWithCustomerPolicyEvidence<T extends { customer_id?: string | null }>(
+export async function decorateWithCustomerPolicyEvidence<T extends CustomerPolicyEvidenceCarrier>(
   rows: T[],
 ): Promise<Array<T & { customer_policy_evidence: CustomerPolicyEvidence | null }>> {
   const cache = new Map<string, CustomerPolicyEvidence | null>()
   const decorated = await Promise.all(rows.map(async (row) => {
+    const embedded = extractCustomerPolicyEvidenceCarrier(row)
+    if (embedded) return { ...row, customer_policy_evidence: embedded }
     const customerId = typeof row.customer_id === 'string' ? row.customer_id : null
     if (!customerId) return { ...row, customer_policy_evidence: null }
     if (!cache.has(customerId)) {

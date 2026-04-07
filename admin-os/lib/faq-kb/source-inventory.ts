@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { kbUploadQc } from '@/lib/capabilities/kb-upload-qc'
+import { buildCustomerPolicyEvidence, extractCustomerPolicyEvidenceCarrier, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 import { loadFaqKbManifest } from '@/lib/faq-kb/loaders'
 import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 import { assertCapabilityMutationPolicy } from '@/lib/router/capability-policy'
@@ -28,6 +29,7 @@ export type KbSourceInventoryItem = {
   customer_context: string | null
   created_at: string
   updated_at: string
+  customer_policy_audit?: unknown
 }
 
 export type KbSourceInventoryRuntime = {
@@ -51,6 +53,7 @@ type KbSourceRow = {
   customer_context: string | null
   created_at: string
   updated_at: string
+  customer_policy_audit?: unknown
 }
 
 type RegisterKbSourceDraftParams = {
@@ -115,9 +118,10 @@ function toInventoryItem(row: KbSourceRow): KbSourceInventoryItem {
     chunk_count: Number(row.chunk_count || 0),
     qc_flags: normalizeQcFlags(row.qc_flags),
     uploaded_by: row.uploaded_by,
-    customer_context: row.customer_context,
-    created_at: row.created_at,
-    updated_at: row.updated_at,
+  customer_context: row.customer_context,
+  created_at: row.created_at,
+  updated_at: row.updated_at,
+  customer_policy_audit: extractCustomerPolicyEvidenceCarrier(row),
   }
 }
 
@@ -153,7 +157,7 @@ export async function loadKbSourceInventoryRuntime(): Promise<KbSourceInventoryR
   try {
     const { data, error } = await supabase
       .from(KB_SOURCE_TABLE)
-      .select('source_id,title,customer_id,kb_scope,source_type,source_ref,source_status,qc_status,document_count,chunk_count,qc_flags,uploaded_by,customer_context,created_at,updated_at')
+      .select('source_id,title,customer_id,kb_scope,source_type,source_ref,source_status,qc_status,document_count,chunk_count,qc_flags,uploaded_by,customer_context,created_at,updated_at,customer_policy_audit')
       .order('updated_at', { ascending: false })
       .limit(KB_SOURCE_LIMIT)
 
@@ -210,6 +214,7 @@ export async function registerKbSourceDraft(params: RegisterKbSourceDraftParams)
     document_count: Number(qcResult.document_count || 0),
     chunk_count: Number(qcResult.chunk_count || 0),
     qc_flags: Array.isArray(qcResult.qc_flags) ? qcResult.qc_flags : [],
+    customer_policy_audit: buildCustomerPolicyEvidence(await loadCustomerRuntimePolicy(params.customer_id || null)),
     uploaded_by: params.uploaded_by,
     customer_context: params.customer_context || null,
     created_at: new Date().toISOString(),

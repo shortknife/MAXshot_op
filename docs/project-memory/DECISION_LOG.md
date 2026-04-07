@@ -437,3 +437,17 @@
 - Why: the intended end state was reached once mutation surfaces stopped inventing their own customer-facing context layer and clearly separated bounded operator controls from policy evidence.
 - Scope: mutation-surface evidence rollout, operator-control clarification, focused tests, build, live Supabase evidence, and block acceptance.
 - Consequence: the next block should target a broader weak runtime behavior layer rather than more mutation-surface cleanup.
+
+## D-065 Customer Policy Audit Baseline Accepted
+- Date: 2026-04-07
+- Decision: persist customer policy evidence at event time across auth, chat-derived operational logs, and mutation runtime tables.
+- Why: rendering customer policy evidence from current customer state was acceptable for UI defaults, but not sufficient for audit because the evidence could drift after customer policy changes.
+- Scope: runtime policy normalization helpers, auth runtime metadata, interaction learning extraction, runtime cost extraction, FAQ review queue, KB source inventory, migration, and focused validation.
+- Consequence: customer-aware audit evidence is now captured at write time and can be trusted independently of future customer policy edits.
+
+## D-066 Customer Policy Audit Block Accepted
+- Date: 2026-04-07
+- Decision: freeze the customer policy audit block after event-time policy evidence was persisted across the targeted runtime sinks and validated live.
+- Why: the block reached the intended end state once audit sinks stopped depending on read-time customer policy reconstruction and Supabase rows confirmed the stored snapshots.
+- Scope: auth challenge/verify, auth events, interaction log, runtime cost events, FAQ review queue, KB source inventory, schema migration, concentrated tests, build, and live acceptance.
+- Consequence: the next block should move to a broader remaining weak runtime behavior layer rather than more audit-only normalization.

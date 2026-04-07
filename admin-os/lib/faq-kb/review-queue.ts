@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { loadFaqReviewQueue, type FaqReviewQueueItem } from '@/lib/faq-kb/loaders'
-import { decorateReviewPayloadWithRuntimePolicy, loadCustomerRuntimePolicy, selectCustomerReviewPosture } from '@/lib/customers/runtime-policy'
+import { buildCustomerPolicyEvidence, decorateReviewPayloadWithRuntimePolicy, extractCustomerPolicyEvidenceCarrier, loadCustomerRuntimePolicy, selectCustomerReviewPosture } from '@/lib/customers/runtime-policy'
 import { assertOperatorCustomerAccess } from '@/lib/customers/access'
 import { assertCapabilityMutationPolicy } from '@/lib/router/capability-policy'
 import { acquireWriteLane, releaseWriteLane } from '@/lib/router/write-lane'
@@ -36,6 +36,7 @@ type ReviewQueueRow = {
   created_at: string
   draft_answer: string | null
   citations: unknown
+  customer_policy_audit: unknown
 }
 
 type EnqueueParams = {
@@ -88,6 +89,7 @@ async function toQueueItem(row: ReviewQueueRow): Promise<FaqReviewQueueItem> {
     created_at: row.created_at,
     draft_answer: row.draft_answer,
     citations: normalizeCitations(row.citations),
+    customer_policy_audit: extractCustomerPolicyEvidenceCarrier(row),
     review_queue_label: reviewPosture?.review_queue_label || null,
     operator_hint: reviewPosture?.operator_hint || null,
     suggested_actions: reviewPosture?.suggested_actions || [],
@@ -103,7 +105,7 @@ export async function loadFaqReviewQueueRuntime(): Promise<FaqReviewQueueRuntime
   try {
     const { data, error } = await supabase
       .from(FAQ_REVIEW_QUEUE_TABLE)
-      .select('review_id,question,reason,priority,queue_status,customer_id,kb_scope,channel,confidence,created_at,draft_answer,citations')
+      .select('review_id,question,reason,priority,queue_status,customer_id,kb_scope,channel,confidence,created_at,draft_answer,citations,customer_policy_audit')
       .order('created_at', { ascending: false })
       .limit(FAQ_REVIEW_QUEUE_LIMIT)
 
@@ -143,6 +145,7 @@ export async function enqueueFaqReviewItem(params: EnqueueParams): Promise<{ rev
     created_at: new Date().toISOString(),
     draft_answer: params.draft_answer || null,
     citations: params.citations || [],
+    customer_policy_audit: buildCustomerPolicyEvidence(await loadCustomerRuntimePolicy(params.customer_id || null)),
     customer_context: params.customer_context || null,
     source_capability: params.source_capability || 'capability.faq_qa_review',
   }

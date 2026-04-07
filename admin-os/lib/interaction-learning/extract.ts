@@ -58,6 +58,7 @@ export function extractInteractionLearningPayload(params: {
   const promptPolicy = asObject(meta.prompt_policy)
   const deliveryPosture = asObject(meta.delivery_posture)
   const customerRuntimePolicy = asObject(meta.customer_runtime_policy)
+  const customerPolicyEvidence = asObject(meta.customer_policy_evidence)
 
   const matchedCapabilityIds = asStringArray(meta.matched_capability_ids)
   const primaryCapabilityId =
@@ -132,6 +133,21 @@ export function extractInteractionLearningPayload(params: {
         auth_primary_method: asString(customerRuntimePolicy.auth_primary_method),
         clarification_style: asString(customerRuntimePolicy.clarification_style),
         review_escalation_style: asString(customerRuntimePolicy.review_escalation_style),
+      },
+      customer_policy_audit: {
+        customer_id: asString(customerPolicyEvidence.customer_id),
+        policy_version: asString(customerPolicyEvidence.policy_version),
+        summary: asString(customerPolicyEvidence.summary),
+        primary_plane: asString(customerPolicyEvidence.primary_plane),
+        default_entry_path: asString(customerPolicyEvidence.default_entry_path),
+        auth_primary_method: asString(customerPolicyEvidence.auth_primary_method),
+        auth_verification_posture: asString(customerPolicyEvidence.auth_verification_posture),
+        delivery_summary_style: asString(customerPolicyEvidence.delivery_summary_style),
+        review_escalation_style: asString(customerPolicyEvidence.review_escalation_style),
+        clarification_style: asString(customerPolicyEvidence.clarification_style),
+        focused_surfaces: asStringArray(customerPolicyEvidence.focused_surfaces),
+        recommended_route_order: asStringArray(customerPolicyEvidence.recommended_route_order),
+        preferred_capability_count: asNumber(customerPolicyEvidence.preferred_capability_count),
       },
       delivery_posture: {
         customer_id: asString(deliveryPosture.customer_id),

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 
 import { clearStoredToken, getStoredSession, type IdentitySession } from '@/lib/auth'
 import { Button } from '@/components/ui/button'
+import type { CustomerPolicyEvidence } from '@/lib/customers/runtime-policy'
 
 type AuthEventItem = {
   event_id: string
@@ -12,6 +13,7 @@ type AuthEventItem = {
   verification_method: 'email_code' | 'wallet_signature' | null
   outcome: 'issued' | 'verified' | 'failed'
   created_at: string
+  customer_policy_evidence?: CustomerPolicyEvidence | null
 }
 
 function tone(outcome: AuthEventItem['outcome']) {
@@ -58,6 +60,9 @@ export function IdentityContextStrip() {
           <Pill className={tone(latest.outcome)}>
             last auth: {latest.outcome} · {latest.verification_method || latest.auth_method}
           </Pill>
+        ) : null}
+        {latest?.customer_policy_evidence?.policy_version ? (
+          <Pill>policy: {latest.customer_policy_evidence.policy_version}</Pill>
         ) : null}
         <Button size="sm" variant="outline" onClick={() => { clearStoredToken(); router.push('/login') }}>Sign out</Button>
       </div>

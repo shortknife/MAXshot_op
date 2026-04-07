@@ -24,3 +24,6 @@ alter table if exists faq_kb_source_inventory_op
   add column if not exists customer_id text null;
 
 create index if not exists idx_faq_kb_source_inventory_customer on faq_kb_source_inventory_op (customer_id);
+
+alter table if exists faq_kb_source_inventory_op
+  add column if not exists customer_policy_audit jsonb not null default '{}'::jsonb;

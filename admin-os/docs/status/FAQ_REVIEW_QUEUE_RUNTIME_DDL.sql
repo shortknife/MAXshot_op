@@ -29,3 +29,6 @@ alter table if exists public.faq_review_queue_op
 
 create index if not exists faq_review_queue_op_customer_idx
   on public.faq_review_queue_op (customer_id);
+
+alter table if exists public.faq_review_queue_op
+  add column if not exists customer_policy_audit jsonb not null default '{}'::jsonb;

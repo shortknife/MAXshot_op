@@ -73,4 +73,32 @@ describe('customer runtime policy', () => {
     expect(rows[1].customer_policy_evidence?.primary_plane).toBe('ops_data')
     expect(rows[2].customer_policy_evidence).toBeNull()
   })
+
+  it('prefers embedded customer policy audit evidence over live customer lookup', async () => {
+    const rows = await decorateWithCustomerPolicyEvidence([
+      {
+        customer_id: 'nexa-demo',
+        meta: {
+          customer_policy_audit: {
+            customer_id: 'nexa-demo',
+            policy_version: '9.9',
+            summary: 'embedded audit snapshot',
+            primary_plane: 'faq_kb',
+            default_entry_path: '/chat',
+            auth_primary_method: 'wallet',
+            auth_verification_posture: 'guided',
+            delivery_summary_style: 'explainer',
+            review_escalation_style: 'guided',
+            clarification_style: 'guided',
+            focused_surfaces: ['chat'],
+            recommended_route_order: ['capability.faq_answering'],
+            preferred_capability_count: 1,
+          },
+        },
+      },
+    ])
+
+    expect(rows[0].customer_policy_evidence?.policy_version).toBe('9.9')
+    expect(rows[0].customer_policy_evidence?.summary).toBe('embedded audit snapshot')
+  })
 })

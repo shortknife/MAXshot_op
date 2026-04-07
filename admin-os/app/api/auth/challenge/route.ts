@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 import { resolveIdentityByEmail, resolveIdentityByWallet } from '@/lib/auth/identity-registry'
-import { buildCustomerAuthResponseMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { buildCustomerAuthResponseMeta, buildCustomerPolicyEvidence, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 import { issueEmailChallenge, issueWalletChallenge } from '@/lib/auth/runtime'
 
 export async function POST(request: NextRequest) {
@@ -13,9 +13,9 @@ export async function POST(request: NextRequest) {
     if (!email) return NextResponse.json({ success: false, error: 'missing_email' }, { status: 400 })
     const identity = await resolveIdentityByEmail(email)
     if (!identity) return NextResponse.json({ success: false, error: 'identity_not_found' }, { status: 403 })
-    const challenge = await issueEmailChallenge(identity)
-    if (!challenge) return NextResponse.json({ success: false, error: 'challenge_issue_failed' }, { status: 500 })
     const runtimePolicy = await loadCustomerRuntimePolicy(identity.customer_id)
+    const challenge = await issueEmailChallenge(identity, buildCustomerPolicyEvidence(runtimePolicy))
+    if (!challenge) return NextResponse.json({ success: false, error: 'challenge_issue_failed' }, { status: 500 })
     return NextResponse.json({ success: true, challenge: { ...challenge, ...buildCustomerAuthResponseMeta(runtimePolicy) } })
   }
 
@@ -24,9 +24,9 @@ export async function POST(request: NextRequest) {
     if (!walletAddress) return NextResponse.json({ success: false, error: 'missing_wallet_address' }, { status: 400 })
     const identity = await resolveIdentityByWallet(walletAddress)
     if (!identity) return NextResponse.json({ success: false, error: 'identity_not_found' }, { status: 403 })
-    const challenge = await issueWalletChallenge(identity)
-    if (!challenge) return NextResponse.json({ success: false, error: 'challenge_issue_failed' }, { status: 500 })
     const runtimePolicy = await loadCustomerRuntimePolicy(identity.customer_id)
+    const challenge = await issueWalletChallenge(identity, buildCustomerPolicyEvidence(runtimePolicy))
+    if (!challenge) return NextResponse.json({ success: false, error: 'challenge_issue_failed' }, { status: 500 })
     return NextResponse.json({ success: true, challenge: { ...challenge, ...buildCustomerAuthResponseMeta(runtimePolicy) } })
   }
 
