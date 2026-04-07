@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { CustomerPolicyEvidenceCard } from '@/components/customers/customer-policy-evidence-card'
+import type { CustomerPolicyEvidence } from '@/lib/customers/runtime-policy'
 import { READ_ONLY_DEMO, WRITE_ENABLED } from '@/lib/utils'
 
 type ManifestDoc = {
@@ -42,6 +44,7 @@ type InventoryItem = {
   customer_context: string | null
   created_at: string
   updated_at: string
+  customer_policy_evidence?: CustomerPolicyEvidence | null
 }
 
 function TonePill({ children, tone = 'slate' }: { children: React.ReactNode; tone?: 'slate' | 'blue' | 'amber' | 'emerald' | 'rose' }) {
@@ -237,10 +240,15 @@ export function KbManagementSurface({
                       </div>
                     </div>
 
-                    <div className="mt-4 rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
-                      <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Source Ref</div>
-                      <div className="mt-2 break-all text-sm leading-6 text-slate-700">{item.source_ref}</div>
-                      {item.customer_context ? <div className="mt-3 text-sm text-slate-500">customer_context: {item.customer_context}</div> : null}
+                    <div className="mt-4 grid gap-4 xl:grid-cols-2">
+                      <div className="rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
+                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Source Ref</div>
+                        <div className="mt-2 break-all text-sm leading-6 text-slate-700">{item.source_ref}</div>
+                        {item.customer_context ? <div className="mt-3 text-sm text-slate-500">customer_context: {item.customer_context}</div> : null}
+                      </div>
+                      {item.customer_policy_evidence ? (
+                        <CustomerPolicyEvidenceCard evidence={item.customer_policy_evidence} title="Customer Mutation Context" compact />
+                      ) : null}
                     </div>
 
                     {item.qc_flags.length > 0 ? (
@@ -368,6 +376,9 @@ export function KbManagementSurface({
                     <input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} className="size-4 rounded border-slate-300" />
                     I acknowledge this is a bounded KB mutation action.
                   </label>
+                  <div className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-600">
+                    Operator ID、confirm token 与 approval checkbox 仅用于受控 KB mutation；customer policy evidence 负责解释当前 customer 的默认工作姿态，不参与授权。
+                  </div>
                   {message ? (
                     <div className={`rounded-2xl border px-4 py-3 text-sm ${messageTone === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
                       {message}

@@ -423,3 +423,17 @@
 - Why: the block reached the intended end state once surfaces stopped treating raw runtime policy as a user-facing display source and live auth/workspace checks confirmed the composed evidence path.
 - Scope: customer policy evidence contract, shared evidence rendering, auth/workspace/chat metadata expansion, surface migration, concentrated tests, build, and live acceptance.
 - Consequence: the next block should target a remaining weak behavior layer instead of continuing evidence normalization.
+
+## D-063 Customer Mutation Surface Baseline Accepted
+- Date: 2026-04-07
+- Decision: align FAQ review and KB management with the shared `customer_policy_evidence` contract before any further mutation-surface expansion.
+- Why: these two operator-heavy surfaces were the remaining weak point after customer policy evidence rollout because they still mixed customer context with local mutation-control rendering.
+- Scope: FAQ review page/surface, KB management page/surface, shared evidence decoration on mutation rows, and clearer separation of operator-only mutation controls.
+- Consequence: future mutation-surface work can build on one customer policy evidence contract instead of reintroducing surface-local customer logic.
+
+## D-064 Customer Mutation Surface Block Accepted
+- Date: 2026-04-07
+- Decision: freeze the customer mutation surface block after FAQ review and KB management adopted shared customer policy evidence and passed concentrated validation.
+- Why: the intended end state was reached once mutation surfaces stopped inventing their own customer-facing context layer and clearly separated bounded operator controls from policy evidence.
+- Scope: mutation-surface evidence rollout, operator-control clarification, focused tests, build, live Supabase evidence, and block acceptance.
+- Consequence: the next block should target a broader weak runtime behavior layer rather than more mutation-surface cleanup.

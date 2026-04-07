@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { CustomerPolicyEvidenceCard } from '@/components/customers/customer-policy-evidence-card'
+import type { CustomerPolicyEvidence } from '@/lib/customers/runtime-policy'
 import { READ_ONLY_DEMO, WRITE_ENABLED } from '@/lib/utils'
 
 type ReviewItem = {
@@ -28,6 +30,7 @@ type ReviewItem = {
   operator_hint?: string | null
   suggested_actions?: string[]
   escalation_style?: 'operator' | 'guided' | 'observer' | null
+  customer_policy_evidence?: CustomerPolicyEvidence | null
 }
 
 type ReviewSurfaceProps = {
@@ -210,12 +213,17 @@ export function FaqReviewSurface({ queueId, queueSource, items }: ReviewSurfaceP
                         </div>
                       </div>
 
-                      {item.operator_hint && (
-                        <div className="mt-5 rounded-3xl border border-sky-200 bg-sky-50/80 p-4 text-sm leading-7 text-sky-900">
-                          <div className="text-[11px] uppercase tracking-[0.18em] text-sky-600">Operator Hint</div>
-                          <div className="mt-2">{item.operator_hint}</div>
-                        </div>
-                      )}
+                      <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                        {item.customer_policy_evidence ? (
+                          <CustomerPolicyEvidenceCard evidence={item.customer_policy_evidence} title="Customer Mutation Context" compact />
+                        ) : null}
+                        {item.operator_hint ? (
+                          <div className="rounded-3xl border border-sky-200 bg-sky-50/80 p-4 text-sm leading-7 text-sky-900">
+                            <div className="text-[11px] uppercase tracking-[0.18em] text-sky-600">Operator Hint</div>
+                            <div className="mt-2">{item.operator_hint}</div>
+                          </div>
+                        ) : null}
+                      </div>
 
                       <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
                         <div className="space-y-3 rounded-3xl border border-slate-200 bg-slate-50/80 p-4">
@@ -320,6 +328,9 @@ export function FaqReviewSurface({ queueId, queueSource, items }: ReviewSurfaceP
                   <div className="text-[11px] uppercase tracking-[0.18em] text-slate-500">Bounded Actions</div>
                   <div className="mt-3 text-sm leading-7 text-slate-700">
                     prepared {'->'} approved/rejected；approved {'->'} resolved。其余状态不提供进一步动作，避免越权修改 review 结果。
+                  </div>
+                  <div className="mt-3 rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 text-sm text-slate-600">
+                    Operator ID、confirm token 与 approval checkbox 仅用于受控 mutation 审批；customer policy evidence 负责解释当前 customer 的默认 review posture，不参与授权。
                   </div>
                 </div>
               </CardContent>
