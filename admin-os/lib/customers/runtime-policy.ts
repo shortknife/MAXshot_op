@@ -248,3 +248,23 @@ export function buildCustomerAuthDefaultExperience(policy: CustomerRuntimePolicy
     recovery_actions: policy.auth.recovery_actions,
   }
 }
+
+
+export async function decorateWithCustomerDefaultExperience<T extends { customer_id?: string | null }>(
+  rows: T[],
+): Promise<Array<T & { customer_default_experience: CustomerDefaultExperience | null }>> {
+  const cache = new Map<string, CustomerDefaultExperience | null>()
+  const decorated = await Promise.all(rows.map(async (row) => {
+    const customerId = typeof row.customer_id === 'string' ? row.customer_id : null
+    if (!customerId) return { ...row, customer_default_experience: null }
+    if (!cache.has(customerId)) {
+      const policy = await loadCustomerRuntimePolicy(customerId)
+      cache.set(customerId, buildCustomerDefaultExperience(policy))
+    }
+    return {
+      ...row,
+      customer_default_experience: cache.get(customerId) || null,
+    }
+  }))
+  return decorated
+}

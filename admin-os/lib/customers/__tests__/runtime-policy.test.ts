@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { buildCustomerAuthDefaultExperience, buildCustomerDefaultExperience, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { buildCustomerAuthDefaultExperience, buildCustomerDefaultExperience, decorateWithCustomerDefaultExperience, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 
 describe('customer runtime policy', () => {
   it('loads a unified policy from filesystem assets', async () => {
@@ -32,5 +32,18 @@ describe('customer runtime policy', () => {
       primary_auth_method: 'wallet',
       verification_posture: 'guided',
     })
+  })
+
+  it('decorates operational rows with customer default experience', async () => {
+    const rows = await decorateWithCustomerDefaultExperience([
+      { customer_id: 'nexa-demo', raw_query: 'How do I reset my password?' },
+      { customer_id: 'maxshot', raw_query: '最新 vault APY 怎么样？' },
+      { customer_id: null, raw_query: 'anonymous' },
+    ])
+
+    expect(rows[0].customer_default_experience?.customer_id).toBe('nexa-demo')
+    expect(rows[0].customer_default_experience?.quick_queries.length).toBeGreaterThan(0)
+    expect(rows[1].customer_default_experience?.primary_plane).toBe('ops_data')
+    expect(rows[2].customer_default_experience).toBeNull()
   })
 })

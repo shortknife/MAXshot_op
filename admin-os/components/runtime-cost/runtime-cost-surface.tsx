@@ -6,6 +6,18 @@ import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { RuntimeCostEventRow } from '@/lib/runtime-cost/runtime'
 
+type CustomerDefaultExperience = {
+  customer_id: string
+  policy_version: string
+  summary: string
+  primary_plane: string | null
+  default_entry_path: string | null
+}
+
+type RuntimeCostSurfaceRow = RuntimeCostEventRow & {
+  customer_default_experience?: CustomerDefaultExperience | null
+}
+
 function Pill({ children, tone = 'slate' }: { children: React.ReactNode; tone?: 'slate' | 'emerald' | 'amber' | 'rose' | 'sky' }) {
   const styles = {
     slate: 'border-slate-200 bg-slate-50 text-slate-700',
@@ -27,7 +39,7 @@ function Metric({ label, value, hint }: { label: string; value: string; hint?: s
   )
 }
 
-export function RuntimeCostSurface({ source, items }: { source: 'supabase' | 'empty'; items: RuntimeCostEventRow[] }) {
+export function RuntimeCostSurface({ source, items }: { source: 'supabase' | 'empty'; items: RuntimeCostSurfaceRow[] }) {
   const totalCost = items.reduce((sum, item) => sum + item.estimated_cost_usd, 0)
   const totalTokens = items.reduce((sum, item) => sum + item.tokens_used, 0)
   const avgLatency = items.length ? Math.round(items.reduce((sum, item) => sum + item.duration_ms, 0) / items.length) : 0
@@ -130,6 +142,17 @@ export function RuntimeCostSurface({ source, items }: { source: 'supabase' | 'em
                           {item.entry_channel && <Pill>{`channel: ${item.entry_channel}`}</Pill>}
                           {item.session_id && <Pill>{`session: ${item.session_id}`}</Pill>}
                         </div>
+                        {item.customer_default_experience ? (
+                          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
+                            <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">customer_default_experience</div>
+                            <div className="mt-2 text-sm leading-6 text-slate-700">{item.customer_default_experience.summary}</div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {item.customer_default_experience.primary_plane && <Pill tone="sky">{`plane: ${item.customer_default_experience.primary_plane}`}</Pill>}
+                              {item.customer_default_experience.default_entry_path && <Pill>{`entry: ${item.customer_default_experience.default_entry_path}`}</Pill>}
+                              <Pill tone="emerald">{`policy: ${item.customer_default_experience.policy_version}`}</Pill>
+                            </div>
+                          </div>
+                        ) : null}
                         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
                           <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">matched capabilities</div>
                           <div className="mt-1 break-all">{item.matched_capability_ids.join(', ') || 'none'}</div>

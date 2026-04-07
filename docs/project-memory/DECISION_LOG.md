@@ -395,3 +395,17 @@
 - Why: the right next step after policy composition was to remove preset-derived copy shaping from secondary surfaces before extending customer defaults further.
 - Scope: workspace API, chat surface, customers surface, login surface, auth response client types, and concentrated validation with live acceptance.
 - Consequence: future customer-aware surface work can extend the composed default layer instead of rebuilding surface-local copy logic.
+
+## D-059 Customer Secondary Surface Rollout Baseline Accepted
+- Date: 2026-04-07
+- Decision: extend composed customer default experience into interaction log and runtime cost secondary surfaces through one shared runtime-policy decorator.
+- Why: after the customer default experience block, the remaining inconsistency was that secondary operational screens still exposed raw policy evidence without the same customer-aware default contract used in primary surfaces.
+- Scope: runtime policy decorator, interaction log page, runtime cost page, secondary surface rendering, and supporting tests.
+- Consequence: future secondary surface rollout can reuse one decorator instead of rebuilding customer-aware shaping per page.
+
+## D-060 Customer Secondary Surface Rollout Block Accepted
+- Date: 2026-04-07
+- Decision: freeze the customer secondary surface rollout block after migrating interaction log and runtime cost onto composed customer defaults.
+- Why: the block reached the intended end state once secondary operational evidence screens stopped depending on raw preset/posture mapping and validated successfully through concentrated tests and live Supabase evidence.
+- Scope: interaction log, runtime cost, runtime policy decorator, concentrated validation, and block acceptance.
+- Consequence: the customer-aware experience now extends across both primary and secondary surfaces, so the next work can focus on broader rollout or deeper policy behaviors instead of this normalization step.
