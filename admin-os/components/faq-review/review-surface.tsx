@@ -154,7 +154,7 @@ export function FaqReviewSurface({ queueId, queueSource, items }: ReviewSurfaceP
   }
 
   return (
-    <AuthGuard>
+    <AuthGuard requiredSurface="faq-review">
       <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fff4e8_0%,#f8fafc_40%,#eef2ff_100%)] text-slate-950">
         <header className="border-b border-white/70 bg-white/80 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">

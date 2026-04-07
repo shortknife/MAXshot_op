@@ -451,3 +451,18 @@
 - Why: the block reached the intended end state once audit sinks stopped depending on read-time customer policy reconstruction and Supabase rows confirmed the stored snapshots.
 - Scope: auth challenge/verify, auth events, interaction log, runtime cost events, FAQ review queue, KB source inventory, schema migration, concentrated tests, build, and live acceptance.
 - Consequence: the next block should move to a broader remaining weak runtime behavior layer rather than more audit-only normalization.
+
+
+## D-067 Customer Policy Enforcement Baseline Accepted
+- Date: 2026-04-07
+- Decision: persist customer policy metadata in the stored session and use it for deterministic client-side surface enforcement.
+- Why: audit and evidence were already in place, but several customer policy decisions still existed only as hints because session storage dropped policy metadata after verification and surface guards only checked authentication.
+- Scope: auth session storage, auth guard surface gating, login redirect handling, wallet posture rejection, and the targeted customer-sensitive surfaces.
+- Consequence: customer policy now survives login and can enforce access on the main client-side surfaces instead of only shaping copy or defaults.
+
+## D-068 Customer Policy Enforcement Block Accepted
+- Date: 2026-04-07
+- Decision: freeze the customer policy enforcement block after deterministic surface gating and wallet-auth enforcement validated successfully.
+- Why: the intended end state was reached once customer policy moved from display-only/default-only metadata into enforceable runtime behavior on auth and the targeted hot-path surfaces.
+- Scope: stored session enrichment, shared auth guard expansion, sensitive surface rollout, login redirect normalization, focused tests, build, and live browser acceptance.
+- Consequence: the next block should target a broader weak platform layer rather than more local customer-policy hardening.

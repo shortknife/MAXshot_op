@@ -35,6 +35,9 @@ export async function POST(request: NextRequest) {
     if (!identity) return NextResponse.json({ success: false, error: 'identity_not_found' }, { status: 403 })
     try {
       const runtimePolicy = await loadCustomerRuntimePolicy(identity.customer_id)
+      if (runtimePolicy?.auth?.wallet_posture === 'disabled') {
+        return NextResponse.json({ success: false, error: 'wallet_auth_disabled', ...buildCustomerAuthResponseMeta(runtimePolicy) }, { status: 403 })
+      }
       const session = await verifyWalletChallenge(identity, challengeId, signature, buildCustomerPolicyEvidence(runtimePolicy))
       return NextResponse.json({ success: true, session, ...buildCustomerAuthResponseMeta(runtimePolicy) })
     } catch (error) {

@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CustomerPolicyEvidenceCard } from '@/components/customers/customer-policy-evidence-card'
 import type { CustomerAuthDefaultExperience, CustomerPolicyEvidence } from '@/lib/customers/runtime-policy'
-import { requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type AuthPostureMeta, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
+import { getSessionDefaultEntryPath, requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type AuthPostureMeta, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
 
 type EmailState = {
   email: string
@@ -86,7 +86,7 @@ export default function LoginPage() {
       setAuthPosture(result.session.auth_posture || emailState.challenge?.auth_posture || null)
       setAuthExperience(result.session.auth_default_experience || emailState.challenge?.auth_default_experience || null)
       setPolicyEvidence(result.session.customer_policy_evidence || emailState.challenge?.customer_policy_evidence || null)
-      router.push('/chat')
+      router.push(getSessionDefaultEntryPath(result.session))
     } finally {
       setLoadingMode(null)
     }
@@ -125,7 +125,7 @@ export default function LoginPage() {
       setAuthPosture(result.session.auth_posture || walletState.challenge?.auth_posture || null)
       setAuthExperience(result.session.auth_default_experience || walletState.challenge?.auth_default_experience || null)
       setPolicyEvidence(result.session.customer_policy_evidence || walletState.challenge?.customer_policy_evidence || null)
-      router.push('/chat')
+      router.push(getSessionDefaultEntryPath(result.session))
     } finally {
       setLoadingMode(null)
     }

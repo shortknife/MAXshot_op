@@ -60,7 +60,7 @@ export function RuntimeCostSurface({ source, items }: { source: 'supabase' | 'em
   }, {})
 
   return (
-    <AuthGuard>
+    <AuthGuard requiredSurface="costs">
       <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#fff7ed_0%,#f8fafc_36%,#eef2ff_100%)] text-slate-950">
         <header className="border-b border-white/70 bg-white/80 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">

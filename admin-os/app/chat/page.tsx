@@ -284,7 +284,7 @@ export default function ChatPage() {
   const conversationStarted = messages.length > 0
 
   return (
-    <AuthGuard>
+    <AuthGuard requiredSurface="chat">
       <div className="min-h-screen bg-[radial-gradient(circle_at_top,#f4f8ff_0%,#f7f7f8_45%,#eef2f7_100%)] text-slate-900">
         <header className="border-b border-white/70 bg-white/80 backdrop-blur">
           <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">

@@ -57,6 +57,15 @@ describe('auth challenge route', () => {
     expect(body.challenge.customer_policy_evidence.customer_id).toBe('maxshot')
   })
 
+  it('rejects wallet challenge when customer disables wallet auth', async () => {
+    mocks.resolveIdentityByWallet.mockResolvedValue({ identity_id: 'ops-auditor', customer_id: 'ops-observer' })
+    mocks.loadCustomerRuntimePolicy.mockResolvedValue({ customer_id: 'ops-observer', policy_version: '1.5', primary_plane: 'ops_data', auth: { customer_id: 'ops-observer', verification_posture: 'audit', wallet_posture: 'disabled' } })
+    const res = await POST(buildRequest({ mode: 'wallet', wallet_address: '0xBEEF000000000000000000000000000000000001' }) as never)
+    const body = await res.json()
+    expect(res.status).toBe(403)
+    expect(body.error).toBe('wallet_auth_disabled')
+  })
+
   it('rejects unknown identity', async () => {
     mocks.resolveIdentityByEmail.mockResolvedValue(null)
     const res = await POST(buildRequest({ mode: 'email', email: 'missing@example.com' }) as never)

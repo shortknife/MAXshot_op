@@ -15,14 +15,13 @@ export interface IdentitySession {
   linked_methods: Array<'email' | 'wallet'>
   token: string
   timestamp: number
-}
-
-export interface IdentitySessionResult extends IdentitySession {
   auth_posture?: AuthPostureMeta | null
   auth_default_experience?: CustomerAuthDefaultExperience | null
   customer_runtime_policy?: CustomerRuntimePolicyMeta | null
   customer_policy_evidence?: CustomerPolicyEvidence | null
 }
+
+export type IdentitySessionResult = IdentitySession
 
 export interface AuthPostureMeta {
   customer_id: string
@@ -105,6 +104,18 @@ export function getStoredToken(): { email: string; token: string; timestamp: num
   return { email: session.email, token: session.token, timestamp: session.timestamp }
 }
 
+export function getSessionDefaultEntryPath(session: IdentitySession | null | undefined): string {
+  return session?.customer_policy_evidence?.default_entry_path || session?.customer_runtime_policy?.default_entry_path || '/chat'
+}
+
+export function isSurfaceAllowed(session: IdentitySession | null | undefined, surface: string | null | undefined): boolean {
+  const normalizedSurface = String(surface || '').trim()
+  if (!normalizedSurface) return true
+  const focusedSurfaces = session?.customer_policy_evidence?.focused_surfaces || []
+  if (!focusedSurfaces.length) return true
+  return focusedSurfaces.includes(normalizedSurface)
+}
+
 export function setStoredSession(session: IdentitySession): void {
   if (typeof window === 'undefined') return
   localStorage.setItem(TOKEN_KEY, JSON.stringify(session))
@@ -141,8 +152,9 @@ export async function verifyEmailCode(email: string, challengeId: string, code: 
   if (!res.ok || data.success !== true || !isValidSession(data.session)) {
     return { success: false as const, error: String(data.error || 'email_verification_failed') }
   }
-  setStoredSession(data.session)
-  return { success: true as const, session: { ...(data.session as IdentitySession), auth_posture: (data.auth_posture as AuthPostureMeta | null | undefined) || null, auth_default_experience: (data.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null, customer_runtime_policy: (data.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null, customer_policy_evidence: (data.customer_policy_evidence as CustomerPolicyEvidence | null | undefined) || null } as IdentitySessionResult }
+  const session: IdentitySessionResult = { ...(data.session as IdentitySession), auth_posture: (data.auth_posture as AuthPostureMeta | null | undefined) || null, auth_default_experience: (data.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null, customer_runtime_policy: (data.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null, customer_policy_evidence: (data.customer_policy_evidence as CustomerPolicyEvidence | null | undefined) || null }
+  setStoredSession(session)
+  return { success: true as const, session }
 }
 
 export async function requestWalletChallenge(walletAddress: string) {
@@ -181,8 +193,9 @@ export async function verifyWalletSignature(walletAddress: string, challenge: Wa
     if (!res.ok || data.success !== true || !isValidSession(data.session)) {
       return { success: false as const, error: String(data.error || 'wallet_verification_failed') }
     }
-    setStoredSession(data.session)
-    return { success: true as const, session: { ...(data.session as IdentitySession), auth_posture: (data.auth_posture as AuthPostureMeta | null | undefined) || null, auth_default_experience: (data.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null, customer_runtime_policy: (data.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null, customer_policy_evidence: (data.customer_policy_evidence as CustomerPolicyEvidence | null | undefined) || null } as IdentitySessionResult, signature }
+    const session: IdentitySessionResult = { ...(data.session as IdentitySession), auth_posture: (data.auth_posture as AuthPostureMeta | null | undefined) || null, auth_default_experience: (data.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null, customer_runtime_policy: (data.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null, customer_policy_evidence: (data.customer_policy_evidence as CustomerPolicyEvidence | null | undefined) || null }
+    setStoredSession(session)
+    return { success: true as const, session, signature }
   } catch (error) {
     return { success: false as const, error: error instanceof Error ? error.message : 'wallet_verification_failed' }
   }

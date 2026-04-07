@@ -1,27 +1,27 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { isAuthenticated } from '@/lib/auth'
 
-export function AuthGuard({ children }: { children: React.ReactNode }) {
+import { getSessionDefaultEntryPath, getStoredSession, isSurfaceAllowed } from '@/lib/auth'
+
+export function AuthGuard({ children, requiredSurface }: { children: React.ReactNode; requiredSurface?: string }) {
   const router = useRouter()
-  const [isAuth, setIsAuth] = useState<boolean | null>(null)
+  const session = typeof window !== 'undefined' ? getStoredSession() : null
+  const isAllowed = Boolean(session) && (!requiredSurface || isSurfaceAllowed(session, requiredSurface))
 
   useEffect(() => {
-    const checkAuth = () => {
-      const auth = isAuthenticated()
-      setIsAuth(auth)
-      
-      if (!auth) {
-        router.push('/login')
-      }
+    if (typeof window === 'undefined') return
+    if (!session) {
+      router.push('/login')
+      return
     }
+    if (!isAllowed) {
+      router.push(getSessionDefaultEntryPath(session))
+    }
+  }, [isAllowed, router, session])
 
-    checkAuth()
-  }, [router])
-
-  if (isAuth === null) {
+  if (!session) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="text-center">
@@ -31,7 +31,7 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     )
   }
 
-  if (!isAuth) {
+  if (!isAllowed) {
     return null
   }
 
