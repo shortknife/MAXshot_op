@@ -5,10 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { loadOperatorRegistry } from '@/lib/customers/access'
 import { loadCustomerMemoryWorkbench } from '@/lib/customers/memory'
 import { loadCustomerWalletAsset } from '@/lib/customers/asset-runtime'
-import { buildCustomerAuthDefaultExperience, buildCustomerDefaultExperience, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { buildCustomerAuthDefaultExperience, buildCustomerDefaultExperience, buildCustomerPolicyEvidence, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 import { listActiveCustomers } from '@/lib/customers/runtime'
 import { getCapabilityExecutionPolicy } from '@/lib/router/capability-catalog'
 import { CurrentCustomerBadge } from '@/components/customers/current-customer-badge'
+import { CustomerPolicyEvidenceCard } from '@/components/customers/customer-policy-evidence-card'
 
 export const dynamic = 'force-dynamic'
 
@@ -55,7 +56,7 @@ export default async function CustomersPage() {
               <CardTitle className="text-base font-semibold">Customer Workspace</CardTitle>
             </CardHeader>
             <CardContent className="space-y-5 p-4 sm:p-6">
-              {cards.map(({ customer, memory, wallet, runtimePolicy }) => { const experience = buildCustomerDefaultExperience(runtimePolicy); const authExperience = buildCustomerAuthDefaultExperience(runtimePolicy); return (
+              {cards.map(({ customer, memory, wallet, runtimePolicy }) => { const experience = buildCustomerDefaultExperience(runtimePolicy); const authExperience = buildCustomerAuthDefaultExperience(runtimePolicy); const policyEvidence = buildCustomerPolicyEvidence(runtimePolicy); return (
                 <div key={customer.customer_id} className="rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,rgba(255,255,255,0.97),rgba(248,250,252,0.93))] p-5 shadow-[0_16px_34px_rgba(15,23,42,0.06)]">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                     <div className="space-y-3">
@@ -197,17 +198,7 @@ export default async function CustomersPage() {
                       </div>
 
                       <div className="rounded-3xl border border-slate-200 bg-white/80 p-4">
-                        <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Runtime Policy</div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {runtimePolicy?.policy_version ? <Pill tone="emerald">policy: {runtimePolicy.policy_version}</Pill> : null}
-                          {runtimePolicy?.primary_plane ? <Pill tone="sky">plane: {runtimePolicy.primary_plane}</Pill> : null}
-                          {runtimePolicy?.default_entry_path ? <Pill tone="violet">entry: {runtimePolicy.default_entry_path}</Pill> : null}
-                        </div>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <Pill>caps: {runtimePolicy?.preferred_capabilities.length || 0}</Pill>
-                          <Pill>routes: {runtimePolicy?.recommended_route_order.length || 0}</Pill>
-                          <Pill>surfaces: {runtimePolicy?.focused_surfaces.length || 0}</Pill>
-                        </div>
+                        <CustomerPolicyEvidenceCard evidence={policyEvidence} title="Customer Policy Evidence" />
                       </div>
                     </div>
                   </div>

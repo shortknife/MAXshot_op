@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import type { CustomerDefaultExperience, CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
+import { CustomerPolicyEvidenceCard } from '@/components/customers/customer-policy-evidence-card'
+import type { CustomerDefaultExperience, CustomerPolicyEvidence, CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AuthGuard } from '@/components/auth-guard'
 import { getStoredSession } from '@/lib/auth'
@@ -135,6 +136,7 @@ export default function ChatPage() {
   const [sessionId, setSessionId] = useState('')
   const [defaultExperience, setDefaultExperience] = useState<CustomerDefaultExperience | null>(null)
   const [customerRuntimePolicy, setCustomerRuntimePolicy] = useState<CustomerRuntimePolicyMeta | null>(null)
+  const [customerPolicyEvidence, setCustomerPolicyEvidence] = useState<CustomerPolicyEvidence | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const endRef = useRef<HTMLDivElement | null>(null)
 
@@ -169,6 +171,7 @@ export default function ChatPage() {
         if (data?.success === true) {
           setDefaultExperience(data.default_experience || null)
           setCustomerRuntimePolicy(data.runtime_policy || null)
+          setCustomerPolicyEvidence(data.customer_policy_evidence || null)
         }
       })
       .catch(() => {})
@@ -677,15 +680,10 @@ export default function ChatPage() {
               <CardContent className="space-y-3 text-sm text-slate-600">
                 {defaultExperience ? (
                   <>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.18em] text-slate-400">customer</div>
-                      <div className="mt-1 font-medium text-slate-800">{defaultExperience.customer_id}</div>
-                    </div>
-                    {defaultExperience.primary_plane ? <div>1. 当前优先 plane：{defaultExperience.primary_plane}。</div> : null}
-                    {defaultExperience.recommended_route_order.length > 0 ? <div>2. 推荐路径：{defaultExperience.recommended_route_order.join(' → ')}。</div> : null}
-                    {defaultExperience.focused_surfaces.length > 0 ? <div>3. 重点 surface：{defaultExperience.focused_surfaces.join(' / ')}。</div> : null}
-                    {(defaultExperience.workspace_notes.length > 0 ? defaultExperience.workspace_notes : []).slice(0, 2).map((note, index) => <div key={`workspace-note-${index}`}>{index + 4}. {note}。</div>)}
-                    {customerRuntimePolicy?.policy_version ? <div>{defaultExperience.workspace_notes.length > 0 ? defaultExperience.workspace_notes.length + 4 : 4}. Runtime policy：{customerRuntimePolicy.policy_version}{customerRuntimePolicy.auth_verification_posture ? ` · verify=${customerRuntimePolicy.auth_verification_posture}` : ''}。</div> : null}
+                    <CustomerPolicyEvidenceCard evidence={customerPolicyEvidence} title="customer_policy_evidence" />
+                    {defaultExperience.recommended_route_order.length > 0 ? <div>1. 推荐路径：{defaultExperience.recommended_route_order.join(' → ')}。</div> : null}
+                    {defaultExperience.focused_surfaces.length > 0 ? <div>2. 重点 surface：{defaultExperience.focused_surfaces.join(' / ')}。</div> : null}
+                    {(defaultExperience.workspace_notes.length > 0 ? defaultExperience.workspace_notes : []).slice(0, 2).map((note, index) => <div key={`workspace-note-${index}`}>{index + 3}. {note}。</div>)}
                   </>
                 ) : (
                   <>

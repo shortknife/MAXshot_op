@@ -1,6 +1,6 @@
 'use client'
 
-import type { CustomerAuthDefaultExperience, CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
+import type { CustomerAuthDefaultExperience, CustomerPolicyEvidence, CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
 
 export interface IdentitySession {
   identity_id: string
@@ -21,6 +21,7 @@ export interface IdentitySessionResult extends IdentitySession {
   auth_posture?: AuthPostureMeta | null
   auth_default_experience?: CustomerAuthDefaultExperience | null
   customer_runtime_policy?: CustomerRuntimePolicyMeta | null
+  customer_policy_evidence?: CustomerPolicyEvidence | null
 }
 
 export interface AuthPostureMeta {
@@ -46,6 +47,7 @@ export interface EmailChallenge {
   auth_posture?: AuthPostureMeta | null
   auth_default_experience?: CustomerAuthDefaultExperience | null
   customer_runtime_policy?: CustomerRuntimePolicyMeta | null
+  customer_policy_evidence?: CustomerPolicyEvidence | null
 }
 
 export interface WalletChallenge {
@@ -59,6 +61,7 @@ export interface WalletChallenge {
   auth_posture?: AuthPostureMeta | null
   auth_default_experience?: CustomerAuthDefaultExperience | null
   customer_runtime_policy?: CustomerRuntimePolicyMeta | null
+  customer_policy_evidence?: CustomerPolicyEvidence | null
 }
 
 const TOKEN_KEY = 'nexa_identity_session'
@@ -122,7 +125,7 @@ export async function requestEmailChallenge(email: string) {
   })
   const data = await parseJson(res)
   if (!res.ok || data.success !== true) return { success: false as const, error: String(data.error || 'challenge_failed') }
-  return { success: true as const, challenge: data.challenge as EmailChallenge, customer_runtime_policy: (data.challenge?.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null, auth_default_experience: (data.challenge?.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null }
+  return { success: true as const, challenge: data.challenge as EmailChallenge, customer_runtime_policy: (data.challenge?.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null, customer_policy_evidence: (data.challenge?.customer_policy_evidence as CustomerPolicyEvidence | null | undefined) || null, auth_default_experience: (data.challenge?.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null }
 }
 
 export async function verifyEmailCode(email: string, challengeId: string, code: string) {
@@ -139,7 +142,7 @@ export async function verifyEmailCode(email: string, challengeId: string, code: 
     return { success: false as const, error: String(data.error || 'email_verification_failed') }
   }
   setStoredSession(data.session)
-  return { success: true as const, session: { ...(data.session as IdentitySession), auth_posture: (data.auth_posture as AuthPostureMeta | null | undefined) || null, auth_default_experience: (data.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null, customer_runtime_policy: (data.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null } as IdentitySessionResult }
+  return { success: true as const, session: { ...(data.session as IdentitySession), auth_posture: (data.auth_posture as AuthPostureMeta | null | undefined) || null, auth_default_experience: (data.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null, customer_runtime_policy: (data.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null, customer_policy_evidence: (data.customer_policy_evidence as CustomerPolicyEvidence | null | undefined) || null } as IdentitySessionResult }
 }
 
 export async function requestWalletChallenge(walletAddress: string) {
@@ -153,7 +156,7 @@ export async function requestWalletChallenge(walletAddress: string) {
   })
   const data = await parseJson(res)
   if (!res.ok || data.success !== true) return { success: false as const, error: String(data.error || 'challenge_failed') }
-  return { success: true as const, challenge: data.challenge as WalletChallenge, customer_runtime_policy: (data.challenge?.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null, auth_default_experience: (data.challenge?.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null }
+  return { success: true as const, challenge: data.challenge as WalletChallenge, customer_runtime_policy: (data.challenge?.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null, customer_policy_evidence: (data.challenge?.customer_policy_evidence as CustomerPolicyEvidence | null | undefined) || null, auth_default_experience: (data.challenge?.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null }
 }
 
 async function signWalletMessage(walletAddress: string, message: string): Promise<string> {
@@ -179,7 +182,7 @@ export async function verifyWalletSignature(walletAddress: string, challenge: Wa
       return { success: false as const, error: String(data.error || 'wallet_verification_failed') }
     }
     setStoredSession(data.session)
-    return { success: true as const, session: { ...(data.session as IdentitySession), auth_posture: (data.auth_posture as AuthPostureMeta | null | undefined) || null, auth_default_experience: (data.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null, customer_runtime_policy: (data.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null } as IdentitySessionResult, signature }
+    return { success: true as const, session: { ...(data.session as IdentitySession), auth_posture: (data.auth_posture as AuthPostureMeta | null | undefined) || null, auth_default_experience: (data.auth_default_experience as CustomerAuthDefaultExperience | null | undefined) || null, customer_runtime_policy: (data.customer_runtime_policy as CustomerRuntimePolicyMeta | null | undefined) || null, customer_policy_evidence: (data.customer_policy_evidence as CustomerPolicyEvidence | null | undefined) || null } as IdentitySessionResult, signature }
   } catch (error) {
     return { success: false as const, error: error instanceof Error ? error.message : 'wallet_verification_failed' }
   }

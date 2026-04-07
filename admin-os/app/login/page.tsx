@@ -8,7 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { CustomerAuthDefaultExperience, CustomerRuntimePolicyMeta } from '@/lib/customers/runtime-policy'
+import { CustomerPolicyEvidenceCard } from '@/components/customers/customer-policy-evidence-card'
+import type { CustomerAuthDefaultExperience, CustomerPolicyEvidence } from '@/lib/customers/runtime-policy'
 import { requestEmailChallenge, requestWalletChallenge, verifyEmailCode, verifyWalletSignature, type AuthPostureMeta, type EmailChallenge, type WalletChallenge } from '@/lib/auth'
 
 type EmailState = {
@@ -30,7 +31,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [authPosture, setAuthPosture] = useState<AuthPostureMeta | null>(null)
   const [authExperience, setAuthExperience] = useState<CustomerAuthDefaultExperience | null>(null)
-  const [runtimePolicy, setRuntimePolicy] = useState<CustomerRuntimePolicyMeta | null>(null)
+  const [policyEvidence, setPolicyEvidence] = useState<CustomerPolicyEvidence | null>(null)
 
   const emailStep = emailState.challenge ? 2 : 1
   const walletStep = walletState.challenge ? 2 : 1
@@ -65,7 +66,7 @@ export default function LoginPage() {
       setEmailState((prev) => ({ ...prev, challenge: result.challenge }))
       setAuthPosture(result.challenge.auth_posture || null)
       setAuthExperience(result.auth_default_experience || result.challenge.auth_default_experience || null)
-      setRuntimePolicy(result.customer_runtime_policy || result.challenge.customer_runtime_policy || null)
+      setPolicyEvidence(result.customer_policy_evidence || result.challenge.customer_policy_evidence || null)
     } finally {
       setLoadingMode(null)
     }
@@ -84,7 +85,7 @@ export default function LoginPage() {
       }
       setAuthPosture(result.session.auth_posture || emailState.challenge?.auth_posture || null)
       setAuthExperience(result.session.auth_default_experience || emailState.challenge?.auth_default_experience || null)
-      setRuntimePolicy(result.session.customer_runtime_policy || emailState.challenge?.customer_runtime_policy || null)
+      setPolicyEvidence(result.session.customer_policy_evidence || emailState.challenge?.customer_policy_evidence || null)
       router.push('/chat')
     } finally {
       setLoadingMode(null)
@@ -104,7 +105,7 @@ export default function LoginPage() {
       setWalletState((prev) => ({ ...prev, challenge: result.challenge }))
       setAuthPosture(result.challenge.auth_posture || null)
       setAuthExperience(result.auth_default_experience || result.challenge.auth_default_experience || null)
-      setRuntimePolicy(result.customer_runtime_policy || result.challenge.customer_runtime_policy || null)
+      setPolicyEvidence(result.customer_policy_evidence || result.challenge.customer_policy_evidence || null)
     } finally {
       setLoadingMode(null)
     }
@@ -123,7 +124,7 @@ export default function LoginPage() {
       }
       setAuthPosture(result.session.auth_posture || walletState.challenge?.auth_posture || null)
       setAuthExperience(result.session.auth_default_experience || walletState.challenge?.auth_default_experience || null)
-      setRuntimePolicy(result.session.customer_runtime_policy || walletState.challenge?.customer_runtime_policy || null)
+      setPolicyEvidence(result.session.customer_policy_evidence || walletState.challenge?.customer_policy_evidence || null)
       router.push('/chat')
     } finally {
       setLoadingMode(null)
@@ -169,14 +170,10 @@ export default function LoginPage() {
                 </div>
                 <div className="mt-3 leading-6">{authExperience?.summary || authPosture.summary}</div>
                 {(authExperience?.entry_hint || authPosture.entry_hint) ? <div className="mt-2 text-xs opacity-80">{authExperience?.entry_hint || authPosture.entry_hint}</div> : null}
-                {runtimePolicy ? (
-                  <div className="mt-2 flex flex-wrap gap-2 text-xs opacity-85">
-                    <span className="rounded-full border border-current/15 px-2.5 py-1">policy: {runtimePolicy.policy_version}</span>
-                    {runtimePolicy.primary_plane ? <span className="rounded-full border border-current/15 px-2.5 py-1">plane: {runtimePolicy.primary_plane}</span> : null}
-                    {runtimePolicy.auth_primary_method ? <span className="rounded-full border border-current/15 px-2.5 py-1">runtime auth: {runtimePolicy.auth_primary_method}</span> : null}
-                  </div>
-                ) : null}
-{(authExperience?.recovery_actions || authPosture.recovery_actions).length > 0 ? (
+                <div className="mt-3">
+                  <CustomerPolicyEvidenceCard evidence={policyEvidence} compact title="customer_policy_evidence" />
+                </div>
+                {(authExperience?.recovery_actions || authPosture.recovery_actions).length > 0 ? (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {(authExperience?.recovery_actions || authPosture.recovery_actions).map((action) => (
                       <span key={action} className="rounded-full border border-current/15 px-3 py-1 text-xs">{action}</span>

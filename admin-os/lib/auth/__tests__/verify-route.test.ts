@@ -42,6 +42,7 @@ describe('auth verify route', () => {
     expect(body.session.verification_method).toBe('email_code')
     expect(body.auth_posture.customer_id).toBe('maxshot')
     expect(body.auth_default_experience.customer_id).toBe('maxshot')
+    expect(body.customer_policy_evidence.customer_id).toBe('maxshot')
   })
 
   it('verifies wallet challenge', async () => {
@@ -53,6 +54,7 @@ describe('auth verify route', () => {
     expect(body.success).toBe(true)
     expect(body.session.verification_method).toBe('wallet_signature')
     expect(body.auth_posture.customer_id).toBe('maxshot')
+    expect(body.customer_policy_evidence.customer_id).toBe('maxshot')
   })
 
   it('returns verifier errors as 403', async () => {
@@ -81,5 +83,6 @@ vi.mock('@/lib/customers/runtime-policy', () => ({
       recovery_actions: policy.auth.recovery_actions || [],
     } : null,
     customer_runtime_policy: policy ? { customer_id: policy.customer_id || null, policy_version: policy.policy_version || null, primary_plane: policy.primary_plane || null } : null,
+    customer_policy_evidence: policy ? { customer_id: policy.customer_id || null, policy_version: policy.policy_version || null, primary_plane: policy.primary_plane || null, default_entry_path: null, summary: 'policy', auth_primary_method: policy.auth?.primary_auth_method || null, auth_verification_posture: policy.auth?.verification_posture || null, delivery_summary_style: null, review_escalation_style: null, clarification_style: null, focused_surfaces: [], recommended_route_order: [], preferred_capability_count: 0 } : null,
   }),
 }))

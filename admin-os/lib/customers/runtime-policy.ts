@@ -54,6 +54,23 @@ export type CustomerAuthDefaultExperience = {
   recovery_actions: string[]
 }
 
+
+export type CustomerPolicyEvidence = {
+  customer_id: string
+  policy_version: string
+  summary: string
+  primary_plane: string | null
+  default_entry_path: string | null
+  auth_primary_method: string | null
+  auth_verification_posture: string | null
+  delivery_summary_style: string | null
+  review_escalation_style: string | null
+  clarification_style: string | null
+  focused_surfaces: string[]
+  recommended_route_order: string[]
+  preferred_capability_count: number
+}
+
 export type CustomerRuntimePolicy = {
   customer_id: string
   policy_version: string
@@ -161,11 +178,13 @@ export function buildCustomerAuthResponseMeta(policy: CustomerRuntimePolicy | nu
   auth_posture: Record<string, unknown> | null
   auth_default_experience: CustomerAuthDefaultExperience | null
   customer_runtime_policy: CustomerRuntimePolicyMeta | null
+  customer_policy_evidence: CustomerPolicyEvidence | null
 } {
   return {
     auth_posture: buildAuthPostureMeta(selectCustomerAuthPosture(policy)),
     auth_default_experience: buildCustomerAuthDefaultExperience(policy),
     customer_runtime_policy: buildCustomerRuntimePolicyMeta(policy),
+    customer_policy_evidence: buildCustomerPolicyEvidence(policy),
   }
 }
 
@@ -234,6 +253,27 @@ export function buildCustomerDefaultExperience(policy: CustomerRuntimePolicy | n
   }
 }
 
+
+export function buildCustomerPolicyEvidence(policy: CustomerRuntimePolicy | null | undefined): CustomerPolicyEvidence | null {
+  if (!policy) return null
+  const defaultExperience = buildCustomerDefaultExperience(policy)
+  return {
+    customer_id: policy.customer_id,
+    policy_version: policy.policy_version,
+    summary: defaultExperience?.summary || 'Customer runtime policy is active for this workspace.',
+    primary_plane: policy.primary_plane,
+    default_entry_path: policy.default_entry_path,
+    auth_primary_method: policy.auth?.primary_auth_method || null,
+    auth_verification_posture: policy.auth?.verification_posture || null,
+    delivery_summary_style: policy.delivery?.summary_style || null,
+    review_escalation_style: policy.review?.escalation_style || null,
+    clarification_style: policy.clarification?.clarification_style || null,
+    focused_surfaces: policy.focused_surfaces,
+    recommended_route_order: policy.recommended_route_order,
+    preferred_capability_count: policy.preferred_capabilities.length,
+  }
+}
+
 export function buildCustomerAuthDefaultExperience(policy: CustomerRuntimePolicy | null | undefined): CustomerAuthDefaultExperience | null {
   if (!policy?.auth) return null
   return {
@@ -264,6 +304,25 @@ export async function decorateWithCustomerDefaultExperience<T extends { customer
     return {
       ...row,
       customer_default_experience: cache.get(customerId) || null,
+    }
+  }))
+  return decorated
+}
+
+export async function decorateWithCustomerPolicyEvidence<T extends { customer_id?: string | null }>(
+  rows: T[],
+): Promise<Array<T & { customer_policy_evidence: CustomerPolicyEvidence | null }>> {
+  const cache = new Map<string, CustomerPolicyEvidence | null>()
+  const decorated = await Promise.all(rows.map(async (row) => {
+    const customerId = typeof row.customer_id === 'string' ? row.customer_id : null
+    if (!customerId) return { ...row, customer_policy_evidence: null }
+    if (!cache.has(customerId)) {
+      const policy = await loadCustomerRuntimePolicy(customerId)
+      cache.set(customerId, buildCustomerPolicyEvidence(policy))
+    }
+    return {
+      ...row,
+      customer_policy_evidence: cache.get(customerId) || null,
     }
   }))
   return decorated

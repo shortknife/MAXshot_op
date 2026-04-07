@@ -409,3 +409,17 @@
 - Why: the block reached the intended end state once secondary operational evidence screens stopped depending on raw preset/posture mapping and validated successfully through concentrated tests and live Supabase evidence.
 - Scope: interaction log, runtime cost, runtime policy decorator, concentrated validation, and block acceptance.
 - Consequence: the customer-aware experience now extends across both primary and secondary surfaces, so the next work can focus on broader rollout or deeper policy behaviors instead of this normalization step.
+
+## D-061 Customer Policy Evidence Baseline Accepted
+- Date: 2026-04-07
+- Decision: add one composed `customer_policy_evidence` contract and use it as the default UI-facing policy summary across auth, workspace, chat, and secondary operational surfaces.
+- Why: the remaining weak point after secondary-surface rollout was that user-facing policy summaries still mixed raw runtime policy metadata with per-surface display logic.
+- Scope: runtime policy helpers, shared evidence component, auth/workspace/chat response metadata, and migration of login/chat/customers/interaction-log/costs to the shared evidence layer.
+- Consequence: future customer-aware UI work can consume one evidence contract while raw runtime policy remains reserved for debugging and audit evidence.
+
+## D-062 Customer Policy Evidence Block Accepted
+- Date: 2026-04-07
+- Decision: freeze the customer policy evidence block after all targeted primary and secondary surfaces adopted the shared evidence contract and passed concentrated validation.
+- Why: the block reached the intended end state once surfaces stopped treating raw runtime policy as a user-facing display source and live auth/workspace checks confirmed the composed evidence path.
+- Scope: customer policy evidence contract, shared evidence rendering, auth/workspace/chat metadata expansion, surface migration, concentrated tests, build, and live acceptance.
+- Consequence: the next block should target a remaining weak behavior layer instead of continuing evidence normalization.

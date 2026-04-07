@@ -17,7 +17,7 @@ import { attachPromptRuntime, buildPromptRuntime, type PromptRuntimeSnapshot } f
 import { attachPromptPolicy, evaluatePromptPolicy, type PromptPolicyDecision } from '@/lib/chat/prompt-policy'
 import { attachSessionKernel, buildPreparedSessionKernel, finalizeSessionKernel, type SessionKernelSnapshot } from '@/lib/chat/session-kernel'
 import { buildPerfQueryMeta, createPerfTrace } from '@/lib/observability/request-performance'
-import { buildCustomerRuntimePolicyMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { buildCustomerPolicyEvidence, buildCustomerRuntimePolicyMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 import { applyCustomerRoutingPriority } from '@/lib/chat/customer-routing-priority'
 
 export type ChatAskRuntimeMeta = {
@@ -248,6 +248,7 @@ export async function runChatAsk(body: Record<string, unknown>): Promise<ChatAsk
             meta: {
               ...meta,
               customer_runtime_policy: buildCustomerRuntimePolicyMeta(customerRuntimePolicy),
+              customer_policy_evidence: buildCustomerPolicyEvidence(customerRuntimePolicy),
             },
           },
         }

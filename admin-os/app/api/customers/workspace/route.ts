@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { buildCustomerDefaultExperience, buildCustomerRuntimePolicyMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
+import { buildCustomerDefaultExperience, buildCustomerPolicyEvidence, buildCustomerRuntimePolicyMeta, loadCustomerRuntimePolicy } from '@/lib/customers/runtime-policy'
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -14,6 +14,7 @@ export async function GET(req: Request) {
     preset: runtimePolicy?.workspace || null,
     default_experience: buildCustomerDefaultExperience(runtimePolicy),
     runtime_policy: buildCustomerRuntimePolicyMeta(runtimePolicy),
+    customer_policy_evidence: buildCustomerPolicyEvidence(runtimePolicy),
     runtime_policy_full: runtimePolicy,
   })
 }

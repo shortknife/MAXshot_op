@@ -3,6 +3,7 @@
 import { AppNav } from '@/components/app-nav'
 import { AuthGuard } from '@/components/auth-guard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CustomerPolicyEvidenceCard } from '@/components/customers/customer-policy-evidence-card'
 
 type PromptPolicySummary = {
   outcome?: string | null
@@ -37,18 +38,20 @@ type SessionKernelSummary = {
   workspace_focus_count?: number | null
 }
 
-type CustomerDefaultExperience = {
+type CustomerPolicyEvidence = {
   customer_id: string
   policy_version: string
   summary: string
   primary_plane: string | null
   default_entry_path: string | null
-  quick_queries: string[]
+  auth_primary_method: string | null
+  auth_verification_posture: string | null
+  delivery_summary_style: string | null
+  review_escalation_style: string | null
+  clarification_style: string | null
   focused_surfaces: string[]
-  preferred_capabilities: string[]
   recommended_route_order: string[]
-  composer_hint: string
-  workspace_notes: string[]
+  preferred_capability_count: number
 }
 
 type InteractionLogItem = {
@@ -76,7 +79,7 @@ type InteractionLogItem = {
   query_mode: string | null
   scope: string | null
   meta: Record<string, unknown>
-  customer_default_experience?: CustomerDefaultExperience | null
+  customer_policy_evidence?: CustomerPolicyEvidence | null
 }
 
 function Pill({ children, tone = 'slate' }: { children: React.ReactNode; tone?: 'slate' | 'emerald' | 'amber' | 'rose' | 'sky' }) {
@@ -211,17 +214,11 @@ export function InteractionLogSurface({ source, items }: { source: 'supabase' | 
                           {item.requester_id && <Pill>{`requester: ${item.requester_id}`}</Pill>}
                           {item.session_id && <Pill>{`session: ${item.session_id}`}</Pill>}
                         </div>
-                        {item.customer_default_experience ? (
-                          <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                            <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">customer_default_experience</div>
-                            <div className="mt-2 text-sm leading-6 text-slate-700">{item.customer_default_experience.summary}</div>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {item.customer_default_experience.primary_plane && <Pill tone="sky">{`plane: ${item.customer_default_experience.primary_plane}`}</Pill>}
-                              {item.customer_default_experience.default_entry_path && <Pill>{`entry: ${item.customer_default_experience.default_entry_path}`}</Pill>}
-                              <Pill tone="emerald">{`policy: ${item.customer_default_experience.policy_version}`}</Pill>
-                            </div>
-                          </div>
-                        ) : null}
+                        <CustomerPolicyEvidenceCard
+                          evidence={item.customer_policy_evidence}
+                          title="customer_policy_evidence"
+                          compact
+                        />
                         {(() => {
                           const promptPolicy = asPromptPolicySummary(item.meta)
                           if (!promptPolicy) return null
