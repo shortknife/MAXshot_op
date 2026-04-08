@@ -19,7 +19,7 @@ vi.mock('@/lib/customers/access', () => ({ assertOperatorCustomerAccess: mocks.a
 vi.mock('@/lib/router/audit-logging', () => ({ appendAuditEvent: mocks.appendAuditEvent }))
 vi.mock('@/lib/utils', () => ({ buildWriteBlockedEvent: mocks.buildWriteBlockedEvent }))
 
-import { assertExecutionEntryAccess, enforceChatEntryIdentityContext, resolveExecutionCustomerContext } from '@/lib/customers/runtime-entry'
+import { assertExecutionEntryAccess, enforceChatEntryIdentityContext, enforceRequesterCustomerContext, resolveExecutionCustomerContext } from '@/lib/customers/runtime-entry'
 
 describe('customer runtime entry helpers', () => {
   beforeEach(() => {
@@ -41,6 +41,16 @@ describe('customer runtime entry helpers', () => {
     const entry = await enforceChatEntryIdentityContext({ raw_query: 'hi', requester_id: 'maxshot-ops', customer_id: null, entry_channel: 'web_app' })
 
     expect(entry.customer_id).toBe('maxshot')
+  })
+
+
+
+  it('rejects mismatched requester and customer ids', async () => {
+    mocks.resolveIdentityById.mockResolvedValueOnce({ identity_id: 'maxshot-ops', customer_id: 'maxshot' })
+
+    await expect(
+      enforceRequesterCustomerContext({ requesterId: 'maxshot-ops', customerId: 'ops-observer' }),
+    ).rejects.toThrow('requester_customer_mismatch')
   })
 
   it('derives execution customer from requester identity when payload has none', async () => {

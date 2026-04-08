@@ -100,9 +100,11 @@ export async function assertExecutionEntryAccess(params: { executionId: string; 
   return context
 }
 
-export async function enforceChatEntryIdentityContext(entry: ChatEntryEnvelope): Promise<ChatEntryEnvelope> {
-  const requesterId = readString(entry.requester_id)
-  if (!requesterId) return entry
+export async function enforceRequesterCustomerContext(params: { requesterId?: string | null; customerId?: string | null }) {
+  const requesterId = readString(params.requesterId)
+  if (!requesterId) {
+    return { requester_id: null, customer_id: readString(params.customerId) || null }
+  }
 
   const identity = await resolveIdentityById(requesterId)
   if (!identity) {
@@ -110,14 +112,27 @@ export async function enforceChatEntryIdentityContext(entry: ChatEntryEnvelope):
   }
 
   const identityCustomerId = readString(identity.customer_id)
-  const requestedCustomerId = readString(entry.customer_id)
+  const requestedCustomerId = readString(params.customerId)
 
   if (requestedCustomerId && identityCustomerId && requestedCustomerId !== identityCustomerId) {
     throw new Error('requester_customer_mismatch')
   }
 
   return {
-    ...entry,
+    requester_id: requesterId,
     customer_id: requestedCustomerId || identityCustomerId || null,
+  }
+}
+
+export async function enforceChatEntryIdentityContext(entry: ChatEntryEnvelope): Promise<ChatEntryEnvelope> {
+  const normalized = await enforceRequesterCustomerContext({
+    requesterId: entry.requester_id,
+    customerId: entry.customer_id,
+  })
+
+  return {
+    ...entry,
+    requester_id: normalized.requester_id,
+    customer_id: normalized.customer_id,
   }
 }

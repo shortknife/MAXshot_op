@@ -496,3 +496,18 @@
 - Why: the intended end state was reached once customer/operator mismatches were denied at API entry and allowed operator paths still completed successfully against real runtime rows.
 - Scope: chat ask, execution run/confirm/replay/retry/expire/evolve, memory writeback, memory weight apply, marketing feedback, concentrated tests, build, live acceptance.
 - Consequence: the next block should target another weak runtime layer or broader enforcement coverage rather than more entry-level hardening in the same slice.
+
+
+## D-073 Customer Policy Runtime Coverage Audit Baseline Accepted
+- Date: 2026-04-08
+- Decision: run a focused runtime coverage audit and immediately close the remaining highest-risk uncovered write paths instead of continuing broad surface expansion.
+- Why: after the runtime-entry block, the main residual risk shifted to a small number of uncovered server entries rather than general customer-policy absence.
+- Scope: runtime coverage audit, task create requester/customer enforcement, evolution hypothesis execution-scope enforcement, focused validation, and next-gap classification.
+- Consequence: remaining customer-policy work can move to a dedicated read/reporting coverage block instead of another mixed entry pass.
+
+## D-074 Customer Policy Runtime Coverage Audit Block Accepted
+- Date: 2026-04-08
+- Decision: freeze the runtime coverage audit block after the targeted uncovered write paths passed focused tests, build, and live allow/deny acceptance.
+- Why: the intended end state was reached once task sealing and hypothesis generation no longer trusted mismatched requester/customer context and the audit surfaced a clear next set of uncovered read paths.
+- Scope: task create, evolution hypothesis, runtime-entry helper extension, concentrated tests, build, live acceptance, and audit findings.
+- Consequence: the next block should target read/reporting execution APIs, not another generic customer-policy audit pass.

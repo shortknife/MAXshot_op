@@ -20,11 +20,12 @@ const mocks = vi.hoisted(() => {
     }
     throw new Error(`unexpected table ${table}`)
   })
-  return { maybeSingle, eq, insertTask, selectTask, insertExec, selectExec, from, assertWriteEnabled: vi.fn() }
+  return { maybeSingle, eq, insertTask, selectTask, insertExec, selectExec, from, assertWriteEnabled: vi.fn(), enforceRequesterCustomerContext: vi.fn(async ({ requesterId, customerId }) => ({ requester_id: requesterId || null, customer_id: customerId || null })) }
 })
 
 vi.mock('@/lib/supabase', () => ({ supabase: { from: mocks.from } }))
 vi.mock('@/lib/utils', () => ({ assertWriteEnabled: mocks.assertWriteEnabled }))
+vi.mock('@/lib/customers/runtime-entry', () => ({ enforceRequesterCustomerContext: mocks.enforceRequesterCustomerContext }))
 
 import { POST } from '@/app/api/intent/task/create/route'
 
@@ -46,9 +47,30 @@ describe('Step5 task create route', () => {
     mocks.selectExec.mockClear()
     mocks.from.mockClear()
     mocks.assertWriteEnabled.mockClear()
+    mocks.enforceRequesterCustomerContext.mockReset()
+    mocks.enforceRequesterCustomerContext.mockImplementation(async ({ requesterId, customerId }) => ({ requester_id: requesterId || null, customer_id: customerId || null }))
     mocks.maybeSingle.mockResolvedValue({ data: null, error: null })
     mocks.selectTask.mockResolvedValue({ data: [{ task_id: 'task-1' }], error: null })
     mocks.selectExec.mockResolvedValue({ data: [{ execution_id: 'exec-1' }], error: null })
+  })
+
+  it('returns 403 for requester/customer mismatch before sealing', async () => {
+    mocks.enforceRequesterCustomerContext.mockRejectedValueOnce(new Error('requester_customer_mismatch'))
+
+    const res = await POST(buildRequest({
+      requester_id: 'maxshot-ops',
+      metadata: { context: { customer_id: 'ops-observer' } },
+      intent_name: 'business_query',
+      payload: { extracted_slots: { scope: 'yield' } },
+      gate: { gate_result: 'pass', require_confirmation: false, safe_to_seal: true },
+      operator_id: 'op',
+      confirm_token: 'token',
+    }))
+    const body = await res.json()
+
+    expect(res.status).toBe(403)
+    expect(body.error).toBe('requester_customer_mismatch')
+    expect(mocks.insertTask).not.toHaveBeenCalled()
   })
 
   it('rejects continue_chat before sealing', async () => {

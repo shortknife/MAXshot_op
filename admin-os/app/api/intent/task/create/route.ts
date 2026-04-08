@@ -4,6 +4,7 @@ import { assertWriteEnabled } from '@/lib/utils';
 import { randomUUID } from 'crypto';
 import { buildAuditEvent } from '@/lib/router/audit-event';
 import { assertSealable, buildSealedExecutionEnvelope, normalizeSealerGate } from '@/lib/router/sealed-execution';
+import { enforceRequesterCustomerContext } from '@/lib/customers/runtime-entry';
 import {
   getCapabilityDefinition,
   getPrimaryCapabilityId,
@@ -75,7 +76,28 @@ export async function POST(req: NextRequest) {
 
     // 1. EntryRequest 扩展字段校验（与 §6 对齐）
     const finalEntryType = entry_type || 'raw_query'; // 默认 raw_query（兼容现有 M2）
-    const finalRequesterId = requester_id || metadata?.user_id || 'system_external-orchestrator (disabled)';
+    let normalizedRequester
+    try {
+      normalizedRequester = await enforceRequesterCustomerContext({
+        requesterId: requester_id || metadata?.user_id || null,
+        customerId:
+          (typeof metadata?.context?.customer_id === 'string' ? String(metadata.context.customer_id) : null) ||
+          (typeof payload?.customer_id === 'string' ? String(payload.customer_id) : null) ||
+          (typeof payload?.context?.customer_id === 'string' ? String(payload.context.customer_id) : null) ||
+          (typeof payload?.slots?.customer_id === 'string' ? String(payload.slots.customer_id) : null) ||
+          (typeof payload?.extracted_slots?.customer_id === 'string' ? String(payload.extracted_slots.customer_id) : null),
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'requester_customer_mismatch'
+      if (message === 'requester_identity_not_found') {
+        return NextResponse.json({ error: message }, { status: 404 });
+      }
+      if (message === 'requester_customer_mismatch') {
+        return NextResponse.json({ error: message }, { status: 403 });
+      }
+      throw error
+    }
+    const finalRequesterId = normalizedRequester.requester_id || 'system_external-orchestrator (disabled)';
     const finalEntryChannel = entry_channel || metadata?.source || 'external-orchestrator (disabled)_v2';
     const finalTaskId = task_id || randomUUID();
     const finalGate = normalizeSealerGate(gate, require_confirmation === true);
@@ -190,13 +212,13 @@ export async function POST(req: NextRequest) {
           idempotency_key: idempotency_key || null,
           payload: {
             intent: finalIntent,
-            slots: finalSlots,
+            slots: { ...finalSlots, customer_id: normalizedRequester.customer_id || (typeof finalSlots.customer_id === 'string' ? finalSlots.customer_id : null) },
             matched_capability_ids: finalMatchedCapabilityIds,
             primary_capability_id: primaryCapabilityId,
             gate: sealed.sealed_execution.gate,
           },
           raw_query: metadata?.raw_query || '',
-          context: metadata?.context || {},
+          context: { ...(metadata?.context || {}), customer_id: normalizedRequester.customer_id || (metadata?.context?.customer_id || null) },
           timestamp: new Date().toISOString(),
         },
         status: 'active',
@@ -259,12 +281,12 @@ export async function POST(req: NextRequest) {
             },
             confidence: 0.8,
           },
-          slots: finalSlots,
+          slots: { ...finalSlots, customer_id: normalizedRequester.customer_id || (typeof finalSlots.customer_id === 'string' ? finalSlots.customer_id : null) },
           matched_capability_ids: finalMatchedCapabilityIds,
           primary_capability_id: primaryCapabilityId,
           capability_binding: primaryCapabilityId ? { capability_id: primaryCapabilityId } : null,
           user_id: finalRequesterId,
-          context: metadata?.context || {},
+          context: { ...(metadata?.context || {}), customer_id: normalizedRequester.customer_id || (metadata?.context?.customer_id || null) },
           gate: sealed.sealed_execution.gate,
           sealed_execution: sealed.sealed_execution,
         },

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { assertWriteEnabled } from '@/lib/utils'
 import { AuditLog } from '@/lib/types'
 import { buildExecutionHypotheses, summarizeHypothesisPortfolio } from '@/lib/evolution/hypothesis'
+import { assertExecutionEntryAccess } from '@/lib/customers/runtime-entry'
 import { buildAuditEvent } from '@/lib/router/audit-event'
 
 export async function POST(req: Request) {
@@ -20,6 +21,17 @@ export async function POST(req: Request) {
 
     if (!executionId) {
       return NextResponse.json({ error: 'missing_execution_id' }, { status: 400 })
+    }
+
+    try {
+      await assertExecutionEntryAccess({ executionId, operatorId, requestPath: '/api/evolution/hypothesis' })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'operator_customer_scope_not_allowed'
+      if (message === 'execution_not_found') return NextResponse.json({ error: 'execution_not_found' }, { status: 404 })
+      if (message.startsWith('execution_context_load_failed:')) {
+        return NextResponse.json({ error: 'execution_context_load_failed', details: message.slice('execution_context_load_failed:'.length) }, { status: 500 })
+      }
+      return NextResponse.json({ error: message }, { status: 403 })
     }
 
     const { data: execution, error: loadError } = await supabase
