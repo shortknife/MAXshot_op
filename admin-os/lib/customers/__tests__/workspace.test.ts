@@ -8,7 +8,16 @@ describe('customer workspace preset', () => {
     expect(preset?.customer_id).toBe('maxshot')
     expect(preset?.primary_plane).toBe('ops_data')
     expect(preset?.focused_surfaces).toContain('kb-management')
+    expect(preset?.focused_surfaces).toContain('operations')
+    expect(preset?.focused_surfaces).toContain('learning-assets')
     expect(preset?.quick_queries.length).toBeGreaterThan(0)
+  })
+
+  it('extends ops-observer coverage to audit-first operational surfaces', async () => {
+    const preset = await loadCustomerWorkspacePreset('ops-observer')
+    expect(preset?.focused_surfaces).toContain('audit')
+    expect(preset?.focused_surfaces).toContain('operations')
+    expect(preset?.focused_surfaces).not.toContain('kb-management')
   })
 
   it('returns null for unknown customer', async () => {

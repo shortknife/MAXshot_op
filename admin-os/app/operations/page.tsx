@@ -463,7 +463,7 @@ export default function OperationsPage() {
   }
 
   return (
-    <AuthGuard>
+    <AuthGuard requiredSurface="operations">
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white border-b">
           <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">

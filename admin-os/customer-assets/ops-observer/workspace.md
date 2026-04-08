@@ -4,7 +4,7 @@ workspace_version: 1
 primary_plane: ops_data
 default_entry_path: /chat
 preferred_capabilities: capability.data_fact_query,capability.product_doc_qna
-focused_surfaces: chat,interaction-log,audit,costs
+focused_surfaces: chat,interaction-log,audit,costs,operations
 recommended_route_order: ops_data,product_docs
 ---
 ## Summary

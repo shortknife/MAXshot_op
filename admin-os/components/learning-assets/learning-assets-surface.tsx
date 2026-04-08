@@ -28,7 +28,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 
 export function LearningAssetsSurface({ snapshot }: { snapshot: LearningAssetSnapshot }) {
   return (
-    <AuthGuard>
+    <AuthGuard requiredSurface="learning-assets">
       <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,#f0fdf4_0%,#f8fafc_35%,#eff6ff_100%)] text-slate-950">
         <header className="border-b border-white/70 bg-white/80 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">

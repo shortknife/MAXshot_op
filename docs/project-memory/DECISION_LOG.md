@@ -466,3 +466,18 @@
 - Why: the intended end state was reached once customer policy moved from display-only/default-only metadata into enforceable runtime behavior on auth and the targeted hot-path surfaces.
 - Scope: stored session enrichment, shared auth guard expansion, sensitive surface rollout, login redirect normalization, focused tests, build, and live browser acceptance.
 - Consequence: the next block should target a broader weak platform layer rather than more local customer-policy hardening.
+
+
+## D-069 Customer Policy Coverage Baseline Accepted
+- Date: 2026-04-08
+- Decision: extend shared customer surface enforcement to the remaining operator-heavy pages by expanding filesystem workspace coverage and reusing the existing `requiredSurface` guard contract.
+- Why: after the first enforcement block, several secondary operational pages still relied on authentication alone, leaving customer policy coverage uneven across the product.
+- Scope: workspace asset coverage, audit/learning-assets/ops/operations/outcome guards, focused workspace coverage tests, and live browser validation.
+- Consequence: the customer-policy enforcement model now covers both primary and the main secondary operational surfaces without introducing a second enforcement mechanism.
+
+## D-070 Customer Policy Coverage Block Accepted
+- Date: 2026-04-08
+- Decision: freeze the customer policy coverage block after the remaining operator-heavy surfaces were aligned with the shared customer surface guard and validated through concentrated browser checks.
+- Why: the block reached its intended end state once the target surfaces used the same deterministic customer-policy contract and both allow/deny paths were demonstrated live.
+- Scope: filesystem workspace updates, protected surface rollout, focused tests, build, and browser acceptance for maxshot and ops-observer identities.
+- Consequence: the next work should move to broader runtime or policy-model weak points, not another incremental surface coverage pass.

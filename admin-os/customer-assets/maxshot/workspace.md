@@ -4,7 +4,7 @@ workspace_version: 1
 primary_plane: ops_data
 default_entry_path: /chat
 preferred_capabilities: capability.data_fact_query,capability.faq_answering,capability.kb_upload_qc
-focused_surfaces: chat,kb-management,faq-review,interaction-log,costs
+focused_surfaces: chat,kb-management,faq-review,interaction-log,costs,ops,operations,outcome,learning-assets
 recommended_route_order: ops_data,faq_kb,learning
 ---
 ## Summary
