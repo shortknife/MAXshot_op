@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => {
   const from = vi.fn(() => ({ select, update }))
   const assertWriteEnabled = vi.fn()
   const buildWriteBlockedEvent = vi.fn(() => ({ event_type: 'write_blocked' }))
+  const assertExecutionEntryAccess = vi.fn()
   return {
     executeRouter,
     maybeSingle,
@@ -19,6 +20,7 @@ const mocks = vi.hoisted(() => {
     from,
     assertWriteEnabled,
     buildWriteBlockedEvent,
+    assertExecutionEntryAccess,
   }
 })
 
@@ -28,6 +30,10 @@ vi.mock('@/lib/router/execute', () => ({
 
 vi.mock('@/lib/supabase', () => ({
   supabase: { from: mocks.from },
+}))
+
+vi.mock('@/lib/customers/runtime-entry', () => ({
+  assertExecutionEntryAccess: mocks.assertExecutionEntryAccess,
 }))
 
 vi.mock('@/lib/utils', () => ({
@@ -54,6 +60,7 @@ describe('Step6 execution run route', () => {
     mocks.select.mockClear()
     mocks.from.mockClear()
     mocks.assertWriteEnabled.mockReset()
+    mocks.assertExecutionEntryAccess.mockReset()
   })
 
   it('returns router output for successful dispatch', async () => {
@@ -97,6 +104,17 @@ describe('Step6 execution run route', () => {
       dispatch_ready: false,
       reason: 'status_not_confirmed',
     })
+  })
+
+  it('returns 403 when execution entry access is denied', async () => {
+    mocks.assertExecutionEntryAccess.mockRejectedValueOnce(new Error('operator_customer_scope_not_allowed'))
+
+    const res = await POST(buildRequest({ execution_id: 'exec-1', operator_id: 'op', confirm_token: 'token' }))
+    const body = await res.json()
+
+    expect(res.status).toBe(403)
+    expect(body.error).toBe('operator_customer_scope_not_allowed')
+    expect(mocks.executeRouter).not.toHaveBeenCalled()
   })
 
   it('returns 200 when router ran but capability execution failed', async () => {

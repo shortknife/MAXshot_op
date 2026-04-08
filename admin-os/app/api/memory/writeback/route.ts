@@ -4,6 +4,7 @@ import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils'
 import { buildMemoryInsert, buildWritebackEvents, isValidMemoryType } from '@/lib/memory/writeback'
 import { AuditLog } from '@/lib/types'
 import { buildAuditEvent } from '@/lib/router/audit-event'
+import { assertExecutionEntryAccess } from '@/lib/customers/runtime-entry'
 
 export async function POST(req: Request) {
   try {
@@ -42,12 +43,23 @@ export async function POST(req: Request) {
       }
       return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 })
     }
-    if (!approved) {
-      return NextResponse.json({ error: 'approval_required' }, { status: 400 })
-    }
     if (!sourceExecutionId || typeof sourceExecutionId !== 'string') {
       return NextResponse.json({ error: 'missing_source_execution_id' }, { status: 400 })
     }
+    if (!approved) {
+      return NextResponse.json({ error: 'approval_required' }, { status: 400 })
+    }
+    try {
+      await assertExecutionEntryAccess({ executionId: sourceExecutionId, operatorId: approvedBy, requestPath: '/api/memory/writeback' })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'operator_customer_scope_not_allowed'
+      if (message === 'execution_not_found') return NextResponse.json({ error: 'execution_not_found' }, { status: 404 })
+      if (message.startsWith('execution_context_load_failed:')) {
+        return NextResponse.json({ error: 'execution_context_load_failed', details: message.slice('execution_context_load_failed:'.length) }, { status: 500 })
+      }
+      return NextResponse.json({ error: message }, { status: 403 })
+    }
+
     if (!approvedBy || typeof approvedBy !== 'string') {
       return NextResponse.json({ error: 'missing_approved_by' }, { status: 400 })
     }

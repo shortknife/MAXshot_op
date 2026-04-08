@@ -6,6 +6,7 @@ import { extractInteractionLearningPayload } from '@/lib/interaction-learning/ex
 import { persistInteractionLearningLog } from '@/lib/interaction-learning/runtime'
 import { extractRuntimeCostEvent } from '@/lib/runtime-cost/extract'
 import { persistRuntimeCostEvent } from '@/lib/runtime-cost/runtime'
+import { enforceChatEntryIdentityContext } from '@/lib/customers/runtime-entry'
 
 export async function POST(req: NextRequest) {
   const readJsonStartedAt = Date.now()
@@ -13,7 +14,8 @@ export async function POST(req: NextRequest) {
   let perf: ReturnType<typeof createPerfTrace> | null = null
   try {
     const body = await req.json()
-    const entry = normalizeChatEntryEnvelope(body)
+    const normalizedEntry = normalizeChatEntryEnvelope(body)
+    const entry = await enforceChatEntryIdentityContext(normalizedEntry)
     perf = createPerfTrace('api.chat.ask', buildPerfQueryMeta(String(entry?.raw_query || ''), { has_session_id: Boolean(entry?.session_id) }))
     perf.stage('read_json', { stage_duration_ms: Date.now() - readJsonStartedAt })
     perf.stage('normalize_entry')
@@ -46,8 +48,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(result.body, { status: result.status })
   } catch (error) {
     perf?.fail(error)
+    const message = error instanceof Error ? error.message : String(error)
+    if (message === 'requester_identity_not_found') {
+      return NextResponse.json({ error: message }, { status: 404 })
+    }
+    if (message === 'requester_customer_mismatch') {
+      return NextResponse.json({ error: message }, { status: 403 })
+    }
     return NextResponse.json(
-      { error: 'chat_ask_failed', details: error instanceof Error ? error.message : String(error) },
+      { error: 'chat_ask_failed', details: message },
       { status: 500 }
     )
   }

@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils'
 import { AuditLog } from '@/lib/types'
 import { buildAuditEvent } from '@/lib/router/audit-event'
+import { assertExecutionEntryAccess } from '@/lib/customers/runtime-entry'
 
 export async function POST(req: Request) {
   try {
@@ -44,6 +45,17 @@ export async function POST(req: Request) {
     }
     if (!approved) return NextResponse.json({ error: 'approval_required' }, { status: 400 })
     if (!memoryId || !sourceExecutionId || !operatorId) return NextResponse.json({ error: 'missing_fields' }, { status: 400 })
+
+    try {
+      await assertExecutionEntryAccess({ executionId: sourceExecutionId, operatorId: operatorId, requestPath: '/api/memory/weight-apply' })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'operator_customer_scope_not_allowed'
+      if (message === 'execution_not_found') return NextResponse.json({ error: 'execution_not_found' }, { status: 404 })
+      if (message.startsWith('execution_context_load_failed:')) {
+        return NextResponse.json({ error: 'execution_context_load_failed', details: message.slice('execution_context_load_failed:'.length) }, { status: 500 })
+      }
+      return NextResponse.json({ error: message }, { status: 403 })
+    }
     if (typeof recommendedWeight !== 'number') return NextResponse.json({ error: 'invalid_weight' }, { status: 400 })
 
     const { data: memoryRow, error: memoryError } = await supabase

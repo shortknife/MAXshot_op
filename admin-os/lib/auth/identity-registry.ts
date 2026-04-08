@@ -110,3 +110,10 @@ export async function resolveIdentityByWallet(walletAddress: string): Promise<Hy
   const registry = await loadHybridIdentityRegistry()
   return registry.find((item) => item.status === 'active' && item.wallet_address === normalized && item.auth_methods.includes('wallet')) || null
 }
+
+export async function resolveIdentityById(identityId: string): Promise<HybridIdentityRecord | null> {
+  const normalized = String(identityId || '').trim()
+  if (!normalized) return null
+  const registry = await loadHybridIdentityRegistry()
+  return registry.find((item) => item.status === 'active' && item.identity_id === normalized) || null
+}

@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
 import { buildAuditEvent } from '@/lib/router/audit-event';
+import { assertExecutionEntryAccess } from '@/lib/customers/runtime-entry';
+import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
+import { appendAuditEvent } from '@/lib/router/audit-logging';
 
 /**
  * POST /api/execution/evolve
@@ -10,10 +13,37 @@ import { buildAuditEvent } from '@/lib/router/audit-event';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { execution_id } = body;
+    const { execution_id, actor_id, actor_role, confirm_token } = body;
+
+    try {
+      assertWriteEnabled({ operatorId: actor_id, confirmToken: confirm_token });
+    } catch (e) {
+      if (execution_id) {
+        const blocked = buildWriteBlockedEvent({
+          reason: e instanceof Error ? e.message : 'write_blocked',
+          operatorId: actor_id,
+          requestPath: '/api/execution/evolve',
+        });
+        await appendAuditEvent(execution_id, blocked);
+      }
+      return NextResponse.json({ error: e instanceof Error ? e.message : 'write_blocked' }, { status: 403 });
+    }
 
     if (!execution_id) {
       return NextResponse.json({ error: 'Missing execution_id' }, { status: 400 });
+    }
+
+    try {
+      await assertExecutionEntryAccess({ executionId: execution_id, operatorId: actor_id, requestPath: '/api/execution/evolve' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'operator_customer_scope_not_allowed';
+      if (message === 'execution_not_found') {
+        return NextResponse.json({ error: 'Execution not found', execution_id }, { status: 404 });
+      }
+      if (message.startsWith('execution_context_load_failed:')) {
+        return NextResponse.json({ error: 'execution_context_load_failed', details: message.slice('execution_context_load_failed:'.length) }, { status: 500 });
+      }
+      return NextResponse.json({ error: message }, { status: 403 });
     }
 
     const { data: execution, error: execError } = await supabase
@@ -67,6 +97,8 @@ export async function POST(req: NextRequest) {
               description: summary,
               target: 'working_mind',
             },
+            actor_id: actor_id || null,
+            actor_role: actor_role || null,
           },
         }),
       ],

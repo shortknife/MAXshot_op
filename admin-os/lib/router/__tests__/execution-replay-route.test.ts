@@ -8,7 +8,8 @@ const mocks = vi.hoisted(() => {
   const from = vi.fn(() => ({ select }))
   const assertWriteEnabled = vi.fn()
   const appendAuditEvent = vi.fn()
-  return { maybeSingle, eq, select, from, assertWriteEnabled, appendAuditEvent }
+  const assertExecutionEntryAccess = vi.fn()
+  return { maybeSingle, eq, select, from, assertWriteEnabled, appendAuditEvent, assertExecutionEntryAccess }
 })
 
 vi.mock('@/lib/supabase', () => ({
@@ -22,6 +23,10 @@ vi.mock('@/lib/utils', () => ({
 
 vi.mock('@/lib/router/audit-logging', () => ({
   appendAuditEvent: mocks.appendAuditEvent,
+}))
+
+vi.mock('@/lib/customers/runtime-entry', () => ({
+  assertExecutionEntryAccess: mocks.assertExecutionEntryAccess,
 }))
 
 import { POST } from '@/app/api/execution/replay/route'
@@ -42,6 +47,7 @@ describe('Step8 execution replay route', () => {
     mocks.from.mockClear()
     mocks.assertWriteEnabled.mockReset()
     mocks.appendAuditEvent.mockReset()
+    mocks.assertExecutionEntryAccess.mockReset()
   })
 
   it('appends replay marker and returns updated audit log', async () => {

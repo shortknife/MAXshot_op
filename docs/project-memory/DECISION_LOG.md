@@ -481,3 +481,18 @@
 - Why: the block reached its intended end state once the target surfaces used the same deterministic customer-policy contract and both allow/deny paths were demonstrated live.
 - Scope: filesystem workspace updates, protected surface rollout, focused tests, build, and browser acceptance for maxshot and ops-observer identities.
 - Consequence: the next work should move to broader runtime or policy-model weak points, not another incremental surface coverage pass.
+
+
+## D-071 Customer Policy Runtime Entry Baseline Accepted
+- Date: 2026-04-08
+- Decision: add a shared runtime-entry enforcement layer for chat, execution-backed mutations, and operator-heavy APIs.
+- Why: customer policy was already present in surfaces, session state, and audit evidence, but several server entry points still trusted request bodies or page guards instead of enforcing customer/operator consistency at the boundary.
+- Scope: runtime-entry helper, identity-by-id lookup, chat requester/customer consistency, execution-backed routes, memory writeback, memory weight apply, marketing feedback, focused validation.
+- Consequence: customer policy now constrains both UI entry and server/runtime entry, reducing the remaining bypass surface.
+
+## D-072 Customer Policy Runtime Entry Block Accepted
+- Date: 2026-04-08
+- Decision: freeze the customer policy runtime entry block after focused tests, build, and live allow/deny acceptance validated the targeted entry points.
+- Why: the intended end state was reached once customer/operator mismatches were denied at API entry and allowed operator paths still completed successfully against real runtime rows.
+- Scope: chat ask, execution run/confirm/replay/retry/expire/evolve, memory writeback, memory weight apply, marketing feedback, concentrated tests, build, live acceptance.
+- Consequence: the next block should target another weak runtime layer or broader enforcement coverage rather than more entry-level hardening in the same slice.

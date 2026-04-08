@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { NextRequest } from 'next/server'
 
 const mocks = vi.hoisted(() => ({
@@ -23,10 +23,12 @@ const mocks = vi.hoisted(() => ({
   })),
   persistInteractionLearningLog: vi.fn(async () => null),
   persistRuntimeCostEvent: vi.fn(async () => null),
+  enforceChatEntryIdentityContext: vi.fn(async (entry: unknown) => entry),
 }))
 
 vi.mock('@/lib/chat/chat-ask-service', () => ({ runChatAsk: mocks.runChatAsk }))
 vi.mock('@/lib/interaction-learning/runtime', () => ({ persistInteractionLearningLog: mocks.persistInteractionLearningLog }))
+vi.mock('@/lib/customers/runtime-entry', () => ({ enforceChatEntryIdentityContext: mocks.enforceChatEntryIdentityContext }))
 vi.mock('@/lib/runtime-cost/runtime', async () => {
   const actual = await vi.importActual<typeof import('@/lib/runtime-cost/runtime')>('@/lib/runtime-cost/runtime')
   return { ...actual, persistRuntimeCostEvent: mocks.persistRuntimeCostEvent }
@@ -35,6 +37,12 @@ vi.mock('@/lib/runtime-cost/runtime', async () => {
 import { POST } from '@/app/api/chat/ask/route'
 
 describe('/api/chat/ask entry envelope', () => {
+  beforeEach(() => {
+    mocks.runChatAsk.mockClear()
+    mocks.enforceChatEntryIdentityContext.mockReset()
+    mocks.enforceChatEntryIdentityContext.mockImplementation(async (entry: unknown) => entry)
+  })
+
   it('normalizes the request into an entry envelope before dispatch', async () => {
     const req = new NextRequest('http://localhost/api/chat/ask', {
       method: 'POST',
@@ -56,5 +64,22 @@ describe('/api/chat/ask entry envelope', () => {
       customer_id: 'maxshot',
     })
     expect(body.success).toBe(true)
+  })
+
+  it('returns deterministic mismatch errors from entry enforcement', async () => {
+    mocks.enforceChatEntryIdentityContext.mockRejectedValueOnce(new Error('requester_customer_mismatch'))
+
+    const req = new NextRequest('http://localhost/api/chat/ask', {
+      method: 'POST',
+      body: JSON.stringify({ raw_query: 'test', requester_id: 'maxshot-ops', customer_id: 'ops-observer' }),
+      headers: { 'content-type': 'application/json' },
+    })
+
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(403)
+    expect(body.error).toBe('requester_customer_mismatch')
+    expect(mocks.runChatAsk).not.toHaveBeenCalled()
   })
 })

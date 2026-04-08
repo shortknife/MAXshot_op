@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { assertWriteEnabled, buildWriteBlockedEvent } from '@/lib/utils';
 import { buildAuditEvent } from '@/lib/router/audit-event';
+import { assertExecutionEntryAccess } from '@/lib/customers/runtime-entry';
 
 /**
  * POST /api/execution/expire
@@ -14,6 +15,19 @@ export async function POST(req: NextRequest) {
 
     if (!execution_id) {
       return NextResponse.json({ error: 'Missing execution_id' }, { status: 400 });
+    }
+
+    try {
+      await assertExecutionEntryAccess({ executionId: execution_id, operatorId: actor_id, requestPath: '/api/execution/expire' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'operator_customer_scope_not_allowed';
+      if (message === 'execution_not_found') {
+        return NextResponse.json({ error: 'Execution not found', execution_id }, { status: 404 });
+      }
+      if (message.startsWith('execution_context_load_failed:')) {
+        return NextResponse.json({ error: 'execution_context_load_failed', details: message.slice('execution_context_load_failed:'.length) }, { status: 500 });
+      }
+      return NextResponse.json({ error: message }, { status: 403 });
     }
 
 
