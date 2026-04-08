@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { assertExecutionReadAccess } from '@/lib/customers/runtime-entry';
 
 type AuditEvent = { timestamp?: string; event_type?: string; data?: Record<string, unknown> };
 
@@ -56,12 +57,31 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const executionId = searchParams.get('execution_id');
+    const requesterId = searchParams.get('requester_id');
+    const operatorId = searchParams.get('operator_id');
     const counterpartParam = searchParams.get('counterpart_execution_id');
     const limitParam = searchParams.get('limit');
     const limit = Math.min(Math.max(Number(limitParam || 50) || 50, 1), 200);
 
     if (!executionId) {
       return NextResponse.json({ error: 'Missing execution_id' }, { status: 400 });
+    }
+
+    try {
+      await assertExecutionReadAccess({ executionId, requesterId, operatorId });
+      if (counterpartParam) {
+        await assertExecutionReadAccess({ executionId: counterpartParam, requesterId, operatorId });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'read_scope_not_allowed';
+      if (message === 'execution_not_found') {
+        return NextResponse.json({ error: 'Execution not found', execution_id: executionId }, { status: 404 });
+      }
+      if (message === 'requester_identity_not_found') {
+        return NextResponse.json({ error: message }, { status: 404 });
+      }
+      const status = message === 'missing_reader_identity' ? 400 : 403;
+      return NextResponse.json({ error: message }, { status });
     }
 
     const { data: execution, error: execError } = await supabase

@@ -6,12 +6,14 @@ const mocks = vi.hoisted(() => {
   const eq = vi.fn(() => ({ maybeSingle }))
   const select = vi.fn(() => ({ eq }))
   const from = vi.fn(() => ({ select }))
-  return { maybeSingle, eq, select, from }
+  const assertExecutionReadAccess = vi.fn()
+  return { maybeSingle, eq, select, from, assertExecutionReadAccess }
 })
 
 vi.mock('@/lib/supabase', () => ({
   supabase: { from: mocks.from },
 }))
+vi.mock('@/lib/customers/runtime-entry', () => ({ assertExecutionReadAccess: mocks.assertExecutionReadAccess }))
 
 import { GET } from '@/app/api/execution/[id]/route'
 
@@ -21,9 +23,11 @@ describe('Step8 execution read route', () => {
     mocks.eq.mockClear()
     mocks.select.mockClear()
     mocks.from.mockClear()
+    mocks.assertExecutionReadAccess.mockReset()
   })
 
   it('returns canonical trace read model', async () => {
+    mocks.assertExecutionReadAccess.mockResolvedValueOnce({ execution_id: 'exec-1', customer_id: 'maxshot' })
     mocks.maybeSingle.mockResolvedValue({
       data: {
         execution_id: 'exec-1',

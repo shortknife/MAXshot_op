@@ -511,3 +511,18 @@
 - Why: the intended end state was reached once task sealing and hypothesis generation no longer trusted mismatched requester/customer context and the audit surfaced a clear next set of uncovered read paths.
 - Scope: task create, evolution hypothesis, runtime-entry helper extension, concentrated tests, build, live acceptance, and audit findings.
 - Consequence: the next block should target read/reporting execution APIs, not another generic customer-policy audit pass.
+
+
+## D-075 Customer Policy Read-Scope Baseline Accepted
+- Date: 2026-04-08
+- Decision: add deterministic server-side customer policy enforcement to the remaining execution/reporting read paths instead of relying on page guards or anonymous fetches.
+- Why: after write-side and runtime-entry hardening, the main residual risk shifted to read APIs that could still expose customer-scoped execution and reporting data without equivalent server checks.
+- Scope: shared read-scope helper, execution read routes, reporting routes, authenticated client propagation, focused validation.
+- Consequence: customer policy now constrains both write and read runtime paths using the same customer-aware access model.
+
+## D-076 Customer Policy Read-Scope Block Accepted
+- Date: 2026-04-08
+- Decision: freeze the customer policy read-scope block after focused tests, build, and live allow/deny acceptance validated the targeted read/reporting paths.
+- Why: the intended end state was reached once execution snapshots, lineage/causality/delta reads, and customer-scoped reports no longer trusted unauthenticated or cross-customer requests.
+- Scope: execution read APIs, reporting APIs, read-context propagation in protected pages, concentrated tests, build, live acceptance, and cleanup.
+- Consequence: the next weak area is no longer generic customer policy coverage on reads; future work should move to the next runtime layer rather than more surface-by-surface access patching.

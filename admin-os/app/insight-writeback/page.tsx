@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { READ_ONLY_DEMO, WRITE_ENABLED, getDemoSnapshotById } from '@/lib/demo-data'
 import { ReadOnlyBanner } from '@/components/read-only-banner'
+import { getStoredSession } from '@/lib/auth'
 import { buildAttribution } from '@/lib/evolution/attribution'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
@@ -20,6 +21,18 @@ type Snapshot = {
   audit_log: unknown
   created_at: string
   updated_at: string
+}
+
+function appendReadScopeParams(url: string, customerOverride?: string | null) {
+  const session = getStoredSession()
+  const search = new URLSearchParams()
+  if (session?.identity_id) search.set('requester_id', session.identity_id)
+  if (session?.operator_id) search.set('operator_id', session.operator_id)
+  const customerId = customerOverride || session?.customer_id
+  if (customerId) search.set('customer_id', customerId)
+  const suffix = search.toString()
+  if (!suffix) return url
+  return `${url}${url.includes('?') ? '&' : '?'}${suffix}`
 }
 
 type CapabilityOutput = {
@@ -166,7 +179,7 @@ function InsightWritebackPageContent() {
         const res = await fetch('/api/execution/snapshot', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ execution_id: execId.trim() }),
+          body: JSON.stringify({ execution_id: execId.trim(), requester_id: getStoredSession()?.identity_id || null, operator_id: getStoredSession()?.operator_id || null }),
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error || data.details || 'Failed to load snapshot')

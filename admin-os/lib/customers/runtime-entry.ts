@@ -100,6 +100,71 @@ export async function assertExecutionEntryAccess(params: { executionId: string; 
   return context
 }
 
+
+
+type ReadActorContext = {
+  requester_id: string | null
+  operator_id: string | null
+  identity_customer_id: string | null
+}
+
+async function resolveReadActorContext(params: { requesterId?: string | null; operatorId?: string | null }): Promise<ReadActorContext> {
+  const requesterId = readString(params.requesterId)
+  const explicitOperatorId = readString(params.operatorId)
+
+  if (!requesterId) {
+    return {
+      requester_id: null,
+      operator_id: explicitOperatorId,
+      identity_customer_id: null,
+    }
+  }
+
+  const identity = await resolveIdentityById(requesterId)
+  if (!identity) {
+    throw new Error('requester_identity_not_found')
+  }
+
+  return {
+    requester_id: requesterId,
+    operator_id: explicitOperatorId || readString(identity.operator_id),
+    identity_customer_id: readString(identity.customer_id),
+  }
+}
+
+export async function assertCustomerReadAccess(params: { customerId?: string | null; requesterId?: string | null; operatorId?: string | null }) {
+  const customerId = readString(params.customerId)
+  const actor = await resolveReadActorContext(params)
+
+  if (customerId) {
+    if (actor.operator_id) {
+      assertOperatorCustomerAccess({ operatorId: actor.operator_id, customerId })
+      return { ...actor, customer_id: customerId }
+    }
+    if (actor.identity_customer_id && actor.identity_customer_id === customerId) {
+      return { ...actor, customer_id: customerId }
+    }
+    if (actor.requester_id) {
+      throw new Error('requester_customer_scope_not_allowed')
+    }
+    throw new Error('missing_reader_identity')
+  }
+
+  if (actor.operator_id) {
+    assertOperatorPlatformAccess(actor.operator_id)
+    return { ...actor, customer_id: null }
+  }
+
+  throw new Error('missing_reader_identity')
+}
+
+export async function assertExecutionReadAccess(params: { executionId: string; requesterId?: string | null; operatorId?: string | null }) {
+  const context = await resolveExecutionCustomerContext(params.executionId)
+  if (!context) throw new Error('execution_not_found')
+  await assertCustomerReadAccess({ customerId: context.customer_id, requesterId: params.requesterId, operatorId: params.operatorId })
+  return context
+}
+
 export async function enforceRequesterCustomerContext(params: { requesterId?: string | null; customerId?: string | null }) {
   const requesterId = readString(params.requesterId)
   if (!requesterId) {

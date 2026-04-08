@@ -10,6 +10,7 @@ import { READ_ONLY_DEMO, getDemoSnapshotById } from '@/lib/demo-data'
 import { buildAttribution } from '@/lib/evolution/attribution'
 import { buildRecommendation } from '@/lib/evolution/candidate'
 import { ReadOnlyBanner } from '@/components/read-only-banner'
+import { getStoredSession } from '@/lib/auth'
 
 type Snapshot = {
   execution_id: string
@@ -26,6 +27,18 @@ type CapabilityOutput = {
   evidence?: { sources?: unknown[]; fallback_reason?: string }
   metadata?: { fallback_reason?: string }
   result?: unknown
+}
+
+function appendReadScopeParams(url: string, customerOverride?: string | null) {
+  const session = getStoredSession()
+  const search = new URLSearchParams()
+  if (session?.identity_id) search.set('requester_id', session.identity_id)
+  if (session?.operator_id) search.set('operator_id', session.operator_id)
+  const customerId = customerOverride || session?.customer_id
+  if (customerId) search.set('customer_id', customerId)
+  const suffix = search.toString()
+  if (!suffix) return url
+  return `${url}${url.includes('?') ? '&' : '?'}${suffix}`
 }
 
 export default function InsightReviewPage() {
@@ -69,7 +82,7 @@ function InsightReviewPageContent() {
       const res = await fetch('/api/execution/snapshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ execution_id: id.trim() }),
+        body: JSON.stringify({ execution_id: id.trim(), requester_id: getStoredSession()?.identity_id || null, operator_id: getStoredSession()?.operator_id || null }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || data.details || 'Failed to load snapshot')

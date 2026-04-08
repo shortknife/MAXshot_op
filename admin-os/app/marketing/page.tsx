@@ -11,6 +11,7 @@ import { useRouter } from 'next/navigation'
 import { READ_ONLY_DEMO, WRITE_ENABLED } from '@/lib/demo-data'
 import { AppNav } from '@/components/app-nav'
 import { humanizeMarketingError, humanizeWriteBlockedReason } from '@/lib/ui/error-messages'
+import { getStoredSession } from '@/lib/auth'
 
 const MARKETING_STATE_KEY = 'maxshot_marketing_console_state_v1'
 
@@ -18,6 +19,18 @@ function formatRate(value: unknown): string {
   const n = Number(value)
   if (!Number.isFinite(n)) return '-'
   return `${(n * 100).toFixed(2)}%`
+}
+
+function appendReadScopeParams(url: string, customerOverride?: string | null) {
+  const session = getStoredSession()
+  const search = new URLSearchParams()
+  if (session?.identity_id) search.set('requester_id', session.identity_id)
+  if (session?.operator_id) search.set('operator_id', session.operator_id)
+  const customerId = customerOverride || session?.customer_id
+  if (customerId) search.set('customer_id', customerId)
+  const suffix = search.toString()
+  if (!suffix) return url
+  return `${url}${url.includes('?') ? '&' : '?'}${suffix}`
 }
 
 export default function MarketingRequestPage() {
@@ -223,7 +236,7 @@ export default function MarketingRequestPage() {
     setActionMessage(null)
     try {
       const days = encodeURIComponent(reportDays.trim() || '7')
-      const res = await fetch(`/api/marketing/cycle-report?days=${days}`)
+      const res = await fetch(appendReadScopeParams(`/api/marketing/cycle-report?days=${days}`))
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || data.details || 'cycle_report_failed')
       setCycleReport(data.report || null)

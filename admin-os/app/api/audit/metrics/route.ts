@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { normalizeAuditEvent } from '@/lib/router/audit-event'
+import { assertCustomerReadAccess } from '@/lib/customers/runtime-entry'
 
 const DEFAULT_LIMIT = 200
 const DEFAULT_DAYS = 7
@@ -18,6 +19,9 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const rawLimit = searchParams.get('limit')
+    const requesterId = searchParams.get('requester_id')
+    const operatorId = searchParams.get('operator_id')
+    const customerId = searchParams.get('customer_id')
     const rawDays = searchParams.get('days')
     const parsedLimit = rawLimit ? Number.parseInt(rawLimit, 10) : Number.NaN
     const parsedDays = rawDays ? Number.parseInt(rawDays, 10) : Number.NaN
@@ -26,6 +30,17 @@ export async function GET(request: Request) {
       : DEFAULT_LIMIT
     const days = Number.isFinite(parsedDays) && parsedDays > 0 ? parsedDays : DEFAULT_DAYS
     const sinceIso = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+
+    try {
+      await assertCustomerReadAccess({ customerId, requesterId, operatorId })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'read_scope_not_allowed'
+      if (message === 'requester_identity_not_found') {
+        return NextResponse.json({ error: message }, { status: 404 })
+      }
+      const status = message === 'missing_reader_identity' ? 400 : 403
+      return NextResponse.json({ error: message }, { status })
+    }
 
     const { data, error } = await supabase
       .from('task_executions_op')

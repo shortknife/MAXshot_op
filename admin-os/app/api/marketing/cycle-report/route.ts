@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { buildCycleReport } from '@/lib/marketing/analytics'
+import { assertCustomerReadAccess } from '@/lib/customers/runtime-entry'
 
 const DEFAULT_DAYS = 7
 const MAX_ROWS = 500
@@ -9,8 +10,22 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const daysRaw = Number(searchParams.get('days') || DEFAULT_DAYS)
+    const requesterId = searchParams.get('requester_id')
+    const operatorId = searchParams.get('operator_id')
+    const customerId = searchParams.get('customer_id')
     const days = Number.isFinite(daysRaw) && daysRaw > 0 ? Math.min(daysRaw, 90) : DEFAULT_DAYS
     const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+
+    try {
+      await assertCustomerReadAccess({ customerId, requesterId, operatorId })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'read_scope_not_allowed'
+      if (message === 'requester_identity_not_found') {
+        return NextResponse.json({ error: message }, { status: 404 })
+      }
+      const status = message === 'missing_reader_identity' ? 400 : 403
+      return NextResponse.json({ error: message }, { status })
+    }
 
     const { data, error } = await supabase
       .from('task_executions_op')

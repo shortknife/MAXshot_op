@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { assertExecutionReadAccess } from '@/lib/customers/runtime-entry';
 
 /**
  * POST /api/execution/snapshot
@@ -8,10 +9,24 @@ import { supabase } from '@/lib/supabase';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { execution_id } = body;
+    const { execution_id, requester_id, operator_id } = body;
 
     if (!execution_id) {
       return NextResponse.json({ error: 'Missing execution_id' }, { status: 400 });
+    }
+
+    try {
+      await assertExecutionReadAccess({ executionId: execution_id, requesterId: requester_id, operatorId: operator_id });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'read_scope_not_allowed';
+      if (message === 'execution_not_found') {
+        return NextResponse.json({ error: 'Execution not found', execution_id }, { status: 404 });
+      }
+      if (message === 'requester_identity_not_found') {
+        return NextResponse.json({ error: message }, { status: 404 });
+      }
+      const status = message === 'missing_reader_identity' ? 400 : 403;
+      return NextResponse.json({ error: message }, { status });
     }
 
     const { data: execution, error: execError } = await supabase

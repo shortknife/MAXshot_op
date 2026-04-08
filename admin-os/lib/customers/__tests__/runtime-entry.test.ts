@@ -19,7 +19,7 @@ vi.mock('@/lib/customers/access', () => ({ assertOperatorCustomerAccess: mocks.a
 vi.mock('@/lib/router/audit-logging', () => ({ appendAuditEvent: mocks.appendAuditEvent }))
 vi.mock('@/lib/utils', () => ({ buildWriteBlockedEvent: mocks.buildWriteBlockedEvent }))
 
-import { assertExecutionEntryAccess, enforceChatEntryIdentityContext, enforceRequesterCustomerContext, resolveExecutionCustomerContext } from '@/lib/customers/runtime-entry'
+import { assertCustomerReadAccess, assertExecutionEntryAccess, assertExecutionReadAccess, enforceChatEntryIdentityContext, enforceRequesterCustomerContext, resolveExecutionCustomerContext } from '@/lib/customers/runtime-entry'
 
 describe('customer runtime entry helpers', () => {
   beforeEach(() => {
@@ -51,6 +51,29 @@ describe('customer runtime entry helpers', () => {
     await expect(
       enforceRequesterCustomerContext({ requesterId: 'maxshot-ops', customerId: 'ops-observer' }),
     ).rejects.toThrow('requester_customer_mismatch')
+  })
+
+  it('allows read access when requester belongs to the same customer', async () => {
+    mocks.resolveIdentityById.mockResolvedValueOnce({ identity_id: 'maxshot-user', customer_id: 'maxshot', operator_id: null })
+
+    const result = await assertCustomerReadAccess({ customerId: 'maxshot', requesterId: 'maxshot-user' })
+
+    expect(result.customer_id).toBe('maxshot')
+  })
+
+  it('rejects read access when requester belongs to another customer', async () => {
+    mocks.resolveIdentityById.mockResolvedValueOnce({ identity_id: 'ops-user', customer_id: 'ops-observer', operator_id: null })
+
+    await expect(assertCustomerReadAccess({ customerId: 'maxshot', requesterId: 'ops-user' })).rejects.toThrow('requester_customer_scope_not_allowed')
+  })
+
+  it('derives read access from execution customer context', async () => {
+    mocks.maybeSingle.mockResolvedValueOnce({ data: { execution_id: 'exec-1', requester_id: 'maxshot-user', payload: { customer_id: 'maxshot' } }, error: null })
+    mocks.resolveIdentityById.mockResolvedValueOnce({ identity_id: 'maxshot-user', customer_id: 'maxshot', operator_id: null })
+
+    const context = await assertExecutionReadAccess({ executionId: 'exec-1', requesterId: 'maxshot-user' })
+
+    expect(context.customer_id).toBe('maxshot')
   })
 
   it('derives execution customer from requester identity when payload has none', async () => {

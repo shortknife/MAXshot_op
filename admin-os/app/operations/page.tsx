@@ -11,6 +11,7 @@ import { READ_ONLY_DEMO, WRITE_ENABLED, demoExecutions, getDemoSnapshotById, val
 import { formatDateTime } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { AppNav } from '@/components/app-nav'
+import { getStoredSession } from '@/lib/auth'
 
 interface ExecutionRow {
   execution_id: string
@@ -23,6 +24,18 @@ interface ExecutionRow {
 }
 
 type ActionKind = 'run' | 'confirm' | 'reject' | 'replay' | 'retry' | 'expire'
+
+function appendReadScopeParams(url: string, customerOverride?: string | null) {
+  const session = getStoredSession()
+  const search = new URLSearchParams()
+  if (session?.identity_id) search.set('requester_id', session.identity_id)
+  if (session?.operator_id) search.set('operator_id', session.operator_id)
+  const customerId = customerOverride || session?.customer_id
+  if (customerId) search.set('customer_id', customerId)
+  const suffix = search.toString()
+  if (!suffix) return url
+  return `${url}${url.includes('?') ? '&' : '?'}${suffix}`
+}
 
 const OPS_STATE_KEY = 'maxshot_ops_console_state_v1'
 
@@ -310,7 +323,7 @@ export default function OperationsPage() {
     setCompareDeltaError(null)
     setCompareDelta(null)
     try {
-      const res = await fetch(`/api/outcome-delta?execution_id=${encodeURIComponent(aId)}&counterpart_execution_id=${encodeURIComponent(bId)}`)
+      const res = await fetch(appendReadScopeParams(`/api/outcome-delta?execution_id=${encodeURIComponent(aId)}&counterpart_execution_id=${encodeURIComponent(bId)}`))
       const data = await res.json()
       if (!res.ok) throw new Error(String(data.error || data.details || 'Compare delta failed'))
       setCompareDelta({

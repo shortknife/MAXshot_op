@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import { formatDateTime } from '@/lib/utils'
 import { READ_ONLY_DEMO, getDemoExecutionById, getDemoAuditSteps } from '@/lib/demo-data'
 import { AppNav } from '@/components/app-nav'
+import { getStoredSession } from '@/lib/auth'
 
 interface ExecutionRow {
   execution_id: string
@@ -33,6 +34,18 @@ interface AuditEvent {
   timestamp?: string
   event_type?: string
   data?: Record<string, unknown>
+}
+
+function appendReadScopeParams(url: string, customerOverride?: string | null) {
+  const session = getStoredSession()
+  const search = new URLSearchParams()
+  if (session?.identity_id) search.set('requester_id', session.identity_id)
+  if (session?.operator_id) search.set('operator_id', session.operator_id)
+  const customerId = customerOverride || session?.customer_id
+  if (customerId) search.set('customer_id', customerId)
+  const suffix = search.toString()
+  if (!suffix) return url
+  return `${url}${url.includes('?') ? '&' : '?'}${suffix}`
 }
 
 function summarizeEvent(step: AuditEvent): string {
@@ -107,7 +120,7 @@ function AuditContent() {
 
   const fetchMetrics = useCallback(async () => {
     try {
-      const metricsRes = await fetch(`/api/audit/metrics?limit=${timeWindow}&days=${sinceDays}`)
+      const metricsRes = await fetch(appendReadScopeParams(`/api/audit/metrics?limit=${timeWindow}&days=${sinceDays}`))
       const metricsData = await metricsRes.json()
       if (metricsRes.ok && metricsData?.success) {
         setMetrics({
@@ -168,7 +181,7 @@ function AuditContent() {
         setDelta(null)
         return
       }
-      const res = await fetch(`/api/execution/${encodeURIComponent(id.trim())}`)
+      const res = await fetch(appendReadScopeParams(`/api/execution/${encodeURIComponent(id.trim())}`))
       const data = await res.json()
       if (!res.ok) {
         setError(data.error || data.details || 'Failed to load execution')
@@ -180,9 +193,9 @@ function AuditContent() {
       setAuditSteps(data.audit_steps ?? [])
 
       const [lineageRes, causalityRes, deltaRes] = await Promise.all([
-        fetch(`/api/lineage?execution_id=${encodeURIComponent(id.trim())}`),
-        fetch(`/api/causality?execution_id=${encodeURIComponent(id.trim())}`),
-        fetch(`/api/outcome-delta?execution_id=${encodeURIComponent(id.trim())}`),
+        fetch(appendReadScopeParams(`/api/lineage?execution_id=${encodeURIComponent(id.trim())}`)),
+        fetch(appendReadScopeParams(`/api/causality?execution_id=${encodeURIComponent(id.trim())}`)),
+        fetch(appendReadScopeParams(`/api/outcome-delta?execution_id=${encodeURIComponent(id.trim())}`)),
       ])
 
       const lineageData = await lineageRes.json()

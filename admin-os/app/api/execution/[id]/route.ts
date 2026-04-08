@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { buildTraceReadModel } from '@/lib/router/audit-read';
+import { assertExecutionReadAccess } from '@/lib/customers/runtime-entry';
 
 /**
  * GET /api/execution/[id]
@@ -13,8 +14,24 @@ export async function GET(
 ) {
   try {
     const { id: execution_id } = await params;
+    const requesterId = req.nextUrl.searchParams.get('requester_id');
+    const operatorId = req.nextUrl.searchParams.get('operator_id');
     if (!execution_id) {
       return NextResponse.json({ error: 'Missing execution_id' }, { status: 400 });
+    }
+
+    try {
+      await assertExecutionReadAccess({ executionId: execution_id, requesterId, operatorId });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'read_scope_not_allowed';
+      if (message === 'execution_not_found') {
+        return NextResponse.json({ error: 'Execution not found', execution_id }, { status: 404 });
+      }
+      if (message === 'requester_identity_not_found') {
+        return NextResponse.json({ error: message }, { status: 404 });
+      }
+      const status = message === 'missing_reader_identity' ? 400 : 403;
+      return NextResponse.json({ error: message }, { status });
     }
 
     // 1. task_executions_op 主记录（必有）
